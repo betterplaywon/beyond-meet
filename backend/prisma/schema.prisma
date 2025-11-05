@@ -1,0 +1,235 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  nickname        String    @db.VarChar(50)
+  birthDate       DateTime  @map("birth_date")
+  gender          Gender
+  country         String    @db.VarChar(2) // ISO 3166-1 alpha-2
+  bio             String?   @db.VarChar(200)
+  profilePhotos   String[]  @map("profile_photos")
+  interests       String[]
+
+  // 매칭 필터 설정
+  preferredGender Gender    @map("preferred_gender")
+  minAge          Int       @map("min_age")
+  maxAge          Int       @map("max_age")
+  preferredCountries String[] @map("preferred_countries")
+
+  // 상태 관리
+  onlineStatus    OnlineStatus @default(OFFLINE) @map("online_status")
+  lastActive      DateTime  @default(now()) @map("last_active")
+
+  // 알림 설정
+  pushEnabled     Boolean   @default(true) @map("push_enabled")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  callsAsCaller    CallRecord[]   @relation("CallerCalls")
+  callsAsReceiver  CallRecord[]   @relation("ReceiverCalls")
+  friendships      Friendship[]   @relation("UserFriendships")
+  friends          Friendship[]   @relation("FriendOf")
+  blockedUsers     BlockList[]    @relation("BlockedBy")
+  blockedBy        BlockList[]    @relation("Blocking")
+  deviceTokens     DeviceToken[]
+  matchSessionsAsUser1 MatchSession[] @relation("User1Sessions")
+  matchSessionsAsUser2 MatchSession[] @relation("User2Sessions")
+
+  @@map("users")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum OnlineStatus {
+  ONLINE
+  OFFLINE
+  IN_CALL
+}
+
+model MatchSession {
+  id              String    @id @default(uuid())
+  userId1         String    @map("user_id_1")
+  userId2         String    @map("user_id_2")
+  channelName     String    @unique @map("channel_name")
+  status          MatchStatus @default(PENDING)
+  matchType       MatchType @map("match_type")
+  startTime       DateTime? @map("start_time")
+  endTime         DateTime? @map("end_time")
+  duration        Int?      // seconds
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user1           User      @relation("User1Sessions", fields: [userId1], references: [id])
+  user2           User      @relation("User2Sessions", fields: [userId2], references: [id])
+  callRecords     CallRecord[]
+  callEvents      CallEvent[]
+
+  @@map("match_sessions")
+}
+
+enum MatchStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum MatchType {
+  DIRECT    // 선택 매칭
+  RANDOM    // 랜덤 매칭
+}
+
+model CallRecord {
+  id              String    @id @default(uuid())
+  sessionId       String    @map("session_id")
+  callerId        String    @map("caller_id")
+  receiverId      String    @map("receiver_id")
+  status          CallStatus @default(INITIATED)
+  startTime       DateTime? @map("start_time")
+  endTime         DateTime? @map("end_time")
+  duration        Int?      // seconds
+  quality         Int?      // 1-5 scale
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  session         MatchSession @relation(fields: [sessionId], references: [id])
+  caller          User      @relation("CallerCalls", fields: [callerId], references: [id])
+  receiver        User      @relation("ReceiverCalls", fields: [receiverId], references: [id])
+
+  @@map("call_records")
+}
+
+enum CallStatus {
+  INITIATED
+  RINGING
+  ONGOING
+  COMPLETED
+  MISSED
+  REJECTED
+  FAILED
+}
+
+model CallEvent {
+  id              String    @id @default(uuid())
+  sessionId       String    @map("session_id")
+  eventType       CallEventType @map("event_type")
+  timestamp       DateTime  @default(now())
+  metadata        Json?
+
+  // Relations
+  session         MatchSession @relation(fields: [sessionId], references: [id])
+
+  @@map("call_events")
+}
+
+enum CallEventType {
+  CALL_INITIATED
+  CALL_RINGING
+  CALL_ACCEPTED
+  CALL_REJECTED
+  CALL_STARTED
+  CALL_ENDED
+  CAMERA_SWITCHED
+  BACKGROUND_BLUR_ENABLED
+  BACKGROUND_CHANGED
+  AUDIO_MUTED
+  VIDEO_DISABLED
+  POOR_NETWORK
+  CONNECTION_LOST
+}
+
+model Friendship {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  friendId        String    @map("friend_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user            User      @relation("UserFriendships", fields: [userId], references: [id])
+  friend          User      @relation("FriendOf", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model BlockList {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  blockedUserId   String    @map("blocked_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user            User      @relation("BlockedBy", fields: [userId], references: [id])
+  blockedUser     User      @relation("Blocking", fields: [blockedUserId], references: [id])
+
+  @@unique([userId, blockedUserId])
+  @@map("block_list")
+}
+
+model DeviceToken {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  token           String    @unique
+  platform        Platform
+  lastUpdated     DateTime  @default(now()) @map("last_updated")
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@map("device_tokens")
+}
+
+enum Platform {
+  IOS
+  ANDROID
+}
+
+model InviteCode {
+  id              String    @id @default(uuid())
+  code            String    @unique @db.VarChar(20)
+  maxUses         Int       @default(1) @map("max_uses")
+  usedCount       Int       @default(0) @map("used_count")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdBy       String?   @map("created_by")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  usedBy          InviteCodeUsage[]
+
+  @@map("invite_codes")
+}
+
+model InviteCodeUsage {
+  id              String    @id @default(uuid())
+  inviteCodeId    String    @map("invite_code_id")
+  userId          String    @map("user_id")
+  usedAt          DateTime  @default(now()) @map("used_at")
+
+  // Relations
+  inviteCode      InviteCode @relation(fields: [inviteCodeId], references: [id])
+
+  @@unique([inviteCodeId, userId])
+  @@map("invite_code_usage")
+}

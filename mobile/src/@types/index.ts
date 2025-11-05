@@ -1,0 +1,130 @@
+/**
+ * TypeScript 타입 정의
+ */
+
+// User Types
+export interface User {
+  id: string;
+  email: string;
+  nickname: string;
+  birthDate: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  country: string;
+  bio?: string;
+  profilePhotos: string[];
+  interests: string[];
+  onlineStatus: 'ONLINE' | 'OFFLINE' | 'IN_CALL';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Auth Types
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  inviteCode: string;
+  email: string;
+  password: string;
+  nickname: string;
+  birthDate: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  country: string;
+  bio?: string;
+  profilePhotos: string[];
+  interests?: string[];
+}
+
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+}
+
+// Match Types
+export type MatchType = 'RANDOM' | 'DIRECT';
+export type MatchStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
+
+export interface MatchSession {
+  id: string;
+  userId1: string;
+  userId2: string;
+  channelName: string;
+  status: MatchStatus;
+  matchType: MatchType;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  createdAt: string;
+}
+
+// Call Types
+export type CallStatus =
+  | 'INITIATED'
+  | 'RINGING'
+  | 'ONGOING'
+  | 'COMPLETED'
+  | 'MISSED'
+  | 'REJECTED'
+  | 'FAILED';
+
+export interface CallRecord {
+  id: string;
+  sessionId: string;
+  callerId: string;
+  receiverId: string;
+  status: CallStatus;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+  quality?: number;
+  createdAt: string;
+}
+
+// Friend Types
+export interface Friendship {
+  id: string;
+  userId: string;
+  friendId: string;
+  friend: User;
+  createdAt: string;
+}
+
+// API Response Types
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+// Navigation Types
+export type RootStackParamList = {
+  Auth: undefined;
+  Main: undefined;
+  Matching: undefined;
+  IncomingCall: { sessionId: string; caller: User };
+  VideoCall: { sessionId: string; channelName: string; token: string };
+  CallEnd: { sessionId: string };
+};
+
+export type AuthStackParamList = {
+  Splash: undefined;
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+  RegisterStep1: undefined;
+  RegisterStep2: undefined;
+  RegisterStep3: undefined;
+  Onboarding: undefined;
+};
+
+export type MainTabParamList = {
+  Home: undefined;
+  Friends: undefined;
+  Profile: undefined;
+};
