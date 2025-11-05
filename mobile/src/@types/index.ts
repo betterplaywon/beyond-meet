@@ -33,8 +33,12 @@ export interface RegisterData {
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   country: string;
   bio?: string;
-  profilePhotos: string[];
   interests?: string[];
+  // 매칭 필터
+  preferredGender: 'MALE' | 'FEMALE' | 'OTHER';
+  minAge: number;
+  maxAge: number;
+  preferredCountries?: string[];
 }
 
 export interface AuthResponse {
