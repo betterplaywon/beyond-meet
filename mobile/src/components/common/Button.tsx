@@ -9,10 +9,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacityProps,
-  ViewStyle,
-  TextStyle,
 } from 'react-native';
-import { colors, typography, borderRadius, spacing } from '../../styles/theme';
+import { colors, typography, spacing } from '../../styles/theme';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -34,21 +32,26 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   ...props
 }) => {
-  const buttonStyle: ViewStyle[] = [
+  const getVariantStyle = () => {
+    if (variant === 'text') return styles.textVariant;
+    return styles[variant];
+  };
+
+  const buttonStyle = [
     styles.base,
-    styles[variant],
+    getVariantStyle(),
     styles[`${size}Size`],
     fullWidth && styles.fullWidth,
     disabled && styles.disabled,
     style,
-  ];
+  ].filter(Boolean);
 
-  const textStyle: TextStyle[] = [
-    styles.text,
+  const textStyle = [
+    styles.textStyle,
     styles[`${variant}Text`],
     styles[`${size}Text`],
     disabled && styles.disabledText,
-  ];
+  ].filter(Boolean);
 
   return (
     <TouchableOpacity
@@ -76,7 +79,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.medium,
+    borderRadius: 8,
     paddingHorizontal: spacing.lg,
   },
   fullWidth: {
@@ -95,7 +98,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary,
   },
-  text: {
+  textVariant: {
     backgroundColor: colors.transparent,
   },
 
@@ -116,7 +119,7 @@ const styles = StyleSheet.create({
   },
 
   // Text Styles
-  text: {
+  textStyle: {
     ...typography.button,
   },
   primaryText: {
