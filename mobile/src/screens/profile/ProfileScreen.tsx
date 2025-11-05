@@ -8,7 +8,7 @@ import { Avatar } from '../../components/common/Avatar';
 import { Button } from '../../components/common/Button';
 import { useAuthStore } from '../../store/authStore';
 import { useLogout } from '../../hooks/useAuth';
-import { colors, typography, spacing } from '../../styles/theme';
+import { colors, typography, spacing, borderRadius } from '../../styles/theme';
 
 const ProfileScreen: React.FC = () => {
   const user = useAuthStore((state) => state.user);
