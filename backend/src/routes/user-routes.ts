@@ -1,0 +1,45 @@
+/**
+ * User 라우트
+ */
+
+import { Router } from 'express';
+import { UserController } from '../controllers/user-controller';
+import { authenticate } from '../middlewares/auth';
+
+const router = Router();
+const userController = new UserController();
+
+// 모든 라우트에 인증 필요
+router.use(authenticate);
+
+/**
+ * GET /api/users/me
+ * 내 프로필 조회
+ */
+router.get('/me', userController.getMyProfile);
+
+/**
+ * PATCH /api/users/me
+ * 내 프로필 업데이트
+ */
+router.patch('/me', userController.updateProfile);
+
+/**
+ * POST /api/users/me/photos
+ * 프로필 사진 업데이트
+ */
+router.post('/me/photos', userController.updatePhotos);
+
+/**
+ * GET /api/users/me/stats
+ * 내 통계 조회
+ */
+router.get('/me/stats', userController.getStats);
+
+/**
+ * GET /api/users/:userId
+ * 다른 사용자 프로필 조회
+ */
+router.get('/:userId', userController.getUserById);
+
+export default router;
