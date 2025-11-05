@@ -770,6 +770,103 @@ cd mobile/android && ./gradlew clean && cd ..
 
 ---
 
+## 📊 프로젝트 진행 상황 (2025-11-05 기준)
+
+### 전체 진행률: **60%** (Day 2/50일)
+
+#### Backend: 65% 완료 ✅
+**구현 완료:**
+- ✅ 인증 시스템 (회원가입, 로그인, JWT, 초대 코드 검증)
+- ✅ 사용자 관리 API (프로필 조회/수정, 친구 관리)
+- ✅ 매칭 시스템 (랜덤/선택 매칭, Socket.io)
+- ✅ Agora RTC 토큰 생성
+- ✅ Prisma Schema 전체 정의 (9개 모델)
+- ✅ Supabase Storage 연동
+
+**진행 필요:**
+- ❌ 통화 관리 API (시작/종료/기록/이벤트) ⭐⭐⭐⭐⭐
+- ❌ 푸시 알림 API (FCM 디바이스 토큰) ⭐⭐⭐⭐⭐
+- ❌ 프로필 사진 업로드 API ⭐⭐⭐⭐
+- ❌ 관리자 API (초대 코드 생성, 통계) ⭐⭐⭐⭐
+- ❌ 비밀번호 재설정 API ⭐⭐⭐
+- ❌ Rate Limiting ⭐⭐⭐
+
+#### Mobile: 55% 완료 ✅
+**구현 완료:**
+- ✅ 인증 화면 (Splash, Welcome, Login, Register)
+- ✅ 홈 화면 (HomeScreen)
+- ✅ 영상 통화 화면 (VideoCallScreen, CallEndScreen, IncomingCallModal)
+- ✅ 프로필 화면 (ProfileScreen)
+- ✅ 공통 컴포넌트 (Button, Input, Avatar, Picker)
+- ✅ Navigation 구조 (Auth, Main, Root)
+- ✅ Redux Store (auth, call)
+
+**진행 필요:**
+- ❌ 매칭 대기 화면 ⭐⭐⭐⭐⭐
+- ❌ 친구 목록 화면 ⭐⭐⭐⭐
+- ❌ 통화 기록 화면 ⭐⭐⭐⭐
+- ❌ 프로필 편집 화면 (사진 업로드 포함) ⭐⭐⭐⭐
+- ❌ 설정 화면 ⭐⭐⭐
+- ❌ 푸시 알림 수신 처리 (FCM) ⭐⭐⭐⭐⭐
+
+#### 인프라: 10% 완료 🔧
+**진행 필요:**
+- ❌ Render.com 배포 ⭐⭐⭐⭐⭐
+- ❌ Supabase DB 마이그레이션 실행 ⭐⭐⭐⭐⭐
+- ❌ Agora 프로젝트 설정 ⭐⭐⭐⭐⭐
+- ❌ Firebase FCM 설정 ⭐⭐⭐⭐⭐
+- ❌ Upstash Redis 설정 ⭐⭐⭐⭐
+- ❌ UptimeRobot 모니터링 ⭐⭐⭐
+
+### 📅 다음 우선순위 (권장 순서)
+
+#### Week 1 (11/06 ~ 11/10)
+1. **통화 관리 API** (Backend, 2일)
+   - `POST /api/call/start` - 통화 시작
+   - `POST /api/call/end` - 통화 종료
+   - `GET /api/call/history` - 통화 기록
+   - `POST /api/call/event` - 통화 이벤트
+
+2. **푸시 알림 시스템** (Backend + Mobile, 2일)
+   - FCM 설정 및 연동
+   - `POST /api/push/register` - 디바이스 토큰 등록
+   - Mobile FCM 수신 처리
+
+3. **매칭 대기 화면** (Mobile, 1일)
+   - MatchingScreen.tsx 구현
+   - Socket.io 연결 상태 UI
+
+#### Week 2 (11/11 ~ 11/17)
+4. **프로필 사진 업로드** (Backend + Mobile, 2일)
+   - Supabase Storage API
+   - 이미지 업로드 UI
+
+5. **친구 목록 + 통화 기록** (Mobile, 2일)
+   - FriendsListScreen.tsx
+   - CallHistoryScreen.tsx
+
+6. **관리자 API** (Backend, 1일)
+   - 초대 코드 생성
+   - 사용자 통계
+
+#### Week 3 (11/18 ~ 11/24)
+7. **인프라 배포** (3일)
+   - Render.com, Supabase, Agora, Firebase, Upstash 설정
+   - 환경 변수 설정
+   - 통합 테스트
+
+8. **설정 + 프로필 편집 화면** (Mobile, 1일)
+
+9. **최종 테스트** (1일)
+
+### 🎯 상태 요약
+- ✅ 계획 대비 **2-3주 앞서 진행 중**
+- ✅ 핵심 인증/매칭 로직 완성
+- ⚠️ 통화 관리, 푸시 알림, 인프라 배포 필요
+- 🎉 예상: **11/24까지 Beta 출시 준비 완료**
+
+---
+
 **작성일**: 2025-11-05
-**버전**: 1.0.0
-**최종 업데이트**: 2025-11-05
+**버전**: 1.1.0
+**최종 업데이트**: 2025-11-05 (진행 상황 추가)
