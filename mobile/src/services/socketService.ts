@@ -132,6 +132,60 @@ class SocketService {
   isConnected(): boolean {
     return this.socket?.connected ?? false;
   }
+
+  /**
+   * 랜덤 매칭 시작
+   */
+  startRandomMatch(filters?: {
+    gender?: string;
+    minAge?: number;
+    maxAge?: number;
+    countries?: string[];
+  }): void {
+    this.emit('match:start', { type: 'RANDOM', filters });
+  }
+
+  /**
+   * 매칭 취소
+   */
+  cancelMatch(): void {
+    this.emit('match:cancel');
+  }
+
+  /**
+   * 친구에게 통화 요청
+   */
+  requestCall(friendId: string): void {
+    this.emit('call:request', { receiverId: friendId });
+  }
+
+  /**
+   * 통화 요청 수락
+   */
+  acceptCall(sessionId: string): void {
+    this.emit('call:accept', { sessionId });
+  }
+
+  /**
+   * 통화 요청 거절
+   */
+  rejectCall(sessionId: string): void {
+    this.emit('call:reject', { sessionId });
+  }
+
+  /**
+   * 통화 종료
+   */
+  endCall(sessionId: string): void {
+    this.emit('call:end', { sessionId });
+  }
+
+  /**
+   * 온라인 상태 업데이트
+   */
+  updateStatus(status: 'ONLINE' | 'OFFLINE' | 'IN_CALL'): void {
+    this.emit('user:status', { status });
+  }
 }
 
 export const socketService = new SocketService();
