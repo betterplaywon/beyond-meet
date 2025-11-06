@@ -16,6 +16,9 @@ import MainNavigator from './MainNavigator';
 import MatchingScreen from '../screens/match/MatchingScreen';
 import VideoCallScreen from '../screens/call/VideoCallScreen';
 import CallEndScreen from '../screens/call/CallEndScreen';
+import CallHistoryScreen from '../screens/call/CallHistoryScreen';
+import ProfileEditScreen from '../screens/profile/ProfileEditScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -33,6 +36,9 @@ const RootNavigator: React.FC = () => {
             <Stack.Screen name="Matching" component={MatchingScreen} />
             <Stack.Screen name="VideoCall" component={VideoCallScreen} />
             <Stack.Screen name="CallEnd" component={CallEndScreen} />
+            <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
+            <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
           </>
         )}
       </Stack.Navigator>
