@@ -274,7 +274,7 @@
 ```
 - React Native CLI 최신 버전
 - TypeScript
-- Redux Toolkit (상태 관리)
+- Zustand (상태 관리)
 - React Navigation v6 (라우팅)
 - react-native-agora (영상 통화)
 - @react-native-firebase/messaging (푸시 알림)
@@ -1109,7 +1109,7 @@ Button: 16px, SemiBold
 - [ ] 로그인 화면
 - [ ] 회원가입 화면 (Step 1/2/3)
 - [ ] 권한 요청 화면
-- [ ] Redux 상태 관리 (Auth)
+- [ ]  상태 관리 (Auth)
 
 **Day 32-35: 프로필 관리 UI**
 - [ ] 프로필 화면 (내 프로필)

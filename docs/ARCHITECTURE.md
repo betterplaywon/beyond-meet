@@ -1,4 +1,5 @@
 # 기술 아키텍처 문서
+
 ## WebRTC 기반 영상 통화 데이팅 앱
 
 ---
@@ -24,7 +25,7 @@
 │  │   iOS 앱          │                    │   Android 앱      │       │
 │  │  (React Native)  │                    │  (React Native)  │       │
 │  │                  │                    │                  │       │
-│  │  - Redux Toolkit │                    │  - Redux Toolkit │       │
+│  │  - Zustand       │                    │  - Zustand       │       │
 │  │  - React Nav v6  │                    │  - React Nav v6  │       │
 │  │  - TypeScript    │                    │  - TypeScript    │       │
 │  └─────────┬────────┘                    └─────────┬────────┘       │
@@ -97,19 +98,16 @@
 ### 1.2 아키텍처 패턴
 
 **전체 패턴**: **3-Tier Architecture**
+
 - **Presentation Layer**: React Native (iOS/Android)
 - **Application Layer**: Node.js + Express (REST API + WebSocket)
 - **Data Layer**: PostgreSQL + Redis + Object Storage
 
 **백엔드 패턴**: **Service-Oriented Architecture (SOA)**
+
 - 각 도메인별 독립적인 서비스 모듈
 - 명확한 책임 분리 (SRP)
 - 재사용 가능한 공통 유틸리티
-
-**프론트엔드 패턴**: **Flux Architecture (Redux)**
-- 단방향 데이터 흐름
-- 중앙 집중식 상태 관리
-- 예측 가능한 상태 변화
 
 ---
 
@@ -257,16 +255,6 @@ react-native-dating-app/
 │   │   ├── pushService.ts      # FCM 관리
 │   │   └── storageService.ts   # AsyncStorage 관리
 │   │
-│   ├── store/                  # Redux 상태 관리
-│   │   ├── index.ts            # Store 설정
-│   │   ├── slices/
-│   │   │   ├── authSlice.ts
-│   │   │   ├── userSlice.ts
-│   │   │   ├── matchSlice.ts
-│   │   │   ├── callSlice.ts
-│   │   │   └── uiSlice.ts
-│   │   └── middleware/
-│   │       └── logger.ts
 │   │
 │   ├── styles/                 # 스타일 관련
 │   │   ├── theme.ts            # 테마 (색상, 폰트 등)
@@ -285,136 +273,6 @@ react-native-dating-app/
 ├── tsconfig.json
 ├── package.json
 └── README.md
-```
-
-### 2.3 상태 관리 (Redux Toolkit)
-
-#### 2.3.1 Store 구조
-
-```typescript
-// src/store/index.ts
-import { configureStore } from '@reduxjs/toolkit';
-import { persistStore, persistReducer } from 'redux-persist';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { combineReducers } from 'redux';
-
-import authReducer from './slices/authSlice';
-import userReducer from './slices/userSlice';
-import matchReducer from './slices/matchSlice';
-import callReducer from './slices/callSlice';
-import uiReducer from './slices/uiSlice';
-
-const rootReducer = combineReducers({
-  auth: authReducer,
-  user: userReducer,
-  match: matchReducer,
-  call: callReducer,
-  ui: uiReducer,
-});
-
-const persistConfig = {
-  key: 'root',
-  storage: AsyncStorage,
-  whitelist: ['auth', 'user'], // 지속할 reducer만 선택
-};
-
-const persistedReducer = persistReducer(persistConfig, rootReducer);
-
-export const store = configureStore({
-  reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
-      },
-    }),
-});
-
-export const persistor = persistStore(store);
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-```
-
-#### 2.3.2 Slice 예시 (authSlice)
-
-```typescript
-// src/store/slices/authSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authApi } from '../../api/auth.api';
-import { AuthState, LoginCredentials, RegisterData } from '../../@types/auth';
-
-const initialState: AuthState = {
-  isAuthenticated: false,
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  loading: false,
-  error: null,
-};
-
-// Async Thunks
-export const login = createAsyncThunk(
-  'auth/login',
-  async (credentials: LoginCredentials, { rejectWithValue }) => {
-    try {
-      const response = await authApi.login(credentials);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response.data);
-    }
-  }
-);
-
-export const register = createAsyncThunk(
-  'auth/register',
-  async (data: RegisterData, { rejectWithValue }) => {
-    try {
-      const response = await authApi.register(data);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response.data);
-    }
-  }
-);
-
-const authSlice = createSlice({
-  name: 'auth',
-  initialState,
-  reducers: {
-    logout: (state) => {
-      state.isAuthenticated = false;
-      state.user = null;
-      state.accessToken = null;
-      state.refreshToken = null;
-    },
-    setTokens: (state, action: PayloadAction<{ access: string; refresh: string }>) => {
-      state.accessToken = action.payload.access;
-      state.refreshToken = action.payload.refresh;
-    },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(login.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(login.fulfilled, (state, action) => {
-        state.loading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.accessToken;
-        state.refreshToken = action.payload.refreshToken;
-      })
-      .addCase(login.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      });
-  },
-});
-
-export const { logout, setTokens } = authSlice.actions;
-export default authSlice.reducer;
 ```
 
 ### 2.4 네비게이션 구조
@@ -447,14 +305,14 @@ export type MainTabParamList = {
 
 ```typescript
 // src/hooks/useAgora.ts
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from "react";
 import {
   createAgoraRtcEngine,
   IRtcEngine,
   ChannelProfileType,
   ClientRoleType,
-} from 'react-native-agora';
-import { AGORA_APP_ID } from '../config/env';
+} from "react-native-agora";
+import { AGORA_APP_ID } from "../config/env";
 
 export const useAgora = () => {
   const [isJoined, setIsJoined] = useState(false);
@@ -472,15 +330,15 @@ export const useAgora = () => {
 
       engine.registerEventHandler({
         onJoinChannelSuccess: () => {
-          console.log('Joined channel successfully');
+          console.log("Joined channel successfully");
           setIsJoined(true);
         },
         onUserJoined: (connection, uid) => {
-          console.log('Remote user joined:', uid);
+          console.log("Remote user joined:", uid);
           setRemoteUid(uid);
         },
         onUserOffline: (connection, uid) => {
-          console.log('Remote user left:', uid);
+          console.log("Remote user left:", uid);
           setRemoteUid(null);
         },
       });
@@ -497,7 +355,11 @@ export const useAgora = () => {
     };
   }, []);
 
-  const joinChannel = async (token: string, channelName: string, uid: number = 0) => {
+  const joinChannel = async (
+    token: string,
+    channelName: string,
+    uid: number = 0
+  ) => {
     await engineRef.current?.joinChannel(token, channelName, uid, {
       clientRoleType: ClientRoleType.ClientRoleBroadcaster,
       channelProfile: ChannelProfileType.ChannelProfileCommunication,
@@ -525,7 +387,9 @@ export const useAgora = () => {
     setIsFrontCamera(!isFrontCamera);
   };
 
-  const enableVirtualBackground = async (blurDegree: 'low' | 'medium' | 'high') => {
+  const enableVirtualBackground = async (
+    blurDegree: "low" | "medium" | "high"
+  ) => {
     // Agora Virtual Background API
     // 구현 세부사항은 Agora 문서 참조
   };
@@ -672,13 +536,13 @@ backend/
 
 ```typescript
 // src/app.ts
-import express, { Application } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import routes from './routes';
-import { errorMiddleware } from './middlewares/error.middleware';
-import { logger } from './utils/logger.util';
+import express, { Application } from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import routes from "./routes";
+import { errorMiddleware } from "./middlewares/error.middleware";
+import { logger } from "./utils/logger.util";
 
 const createApp = (): Application => {
   const app = express();
@@ -687,25 +551,27 @@ const createApp = (): Application => {
   app.use(helmet());
 
   // CORS
-  app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
+      credentials: true,
+    })
+  );
 
   // Body Parser
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
   // Logging
-  app.use(morgan('combined', { stream: logger.stream }));
+  app.use(morgan("combined", { stream: logger.stream }));
 
   // Health Check
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  app.get("/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
   // API Routes
-  app.use('/api', routes);
+  app.use("/api", routes);
 
   // Error Handling
   app.use(errorMiddleware);
@@ -718,10 +584,10 @@ export default createApp;
 
 ```typescript
 // src/server.ts
-import http from 'http';
-import createApp from './app';
-import { initializeSocket } from './sockets';
-import { logger } from './utils/logger.util';
+import http from "http";
+import createApp from "./app";
+import { initializeSocket } from "./sockets";
+import { logger } from "./utils/logger.util";
 
 const PORT = process.env.PORT || 3000;
 
@@ -736,10 +602,10 @@ server.listen(PORT, () => {
 });
 
 // Graceful Shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
+process.on("SIGTERM", () => {
+  logger.info("SIGTERM signal received: closing HTTP server");
   server.close(() => {
-    logger.info('HTTP server closed');
+    logger.info("HTTP server closed");
     process.exit(0);
   });
 });
@@ -749,10 +615,10 @@ process.on('SIGTERM', () => {
 
 ```typescript
 // src/services/match.service.ts
-import { prisma } from '../config/database';
-import { redis } from '../config/redis';
-import { MatchType, MatchStatus } from '@prisma/client';
-import { generateChannelName } from '../utils/agora.util';
+import { prisma } from "../config/database";
+import { redis } from "../config/redis";
+import { MatchType, MatchStatus } from "@prisma/client";
+import { generateChannelName } from "../utils/agora.util";
 
 export class MatchService {
   /**
@@ -760,29 +626,35 @@ export class MatchService {
    */
   async findRandomMatch(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new Error('User not found');
+    if (!user) throw new Error("User not found");
 
     // 필터 조건에 맞는 온라인 사용자 찾기
-    const matchingQueue = await redis.smembers('matching:queue');
+    const matchingQueue = await redis.smembers("matching:queue");
 
     for (const candidateId of matchingQueue) {
       if (candidateId === userId) continue;
 
-      const candidate = await prisma.user.findUnique({ where: { id: candidateId } });
+      const candidate = await prisma.user.findUnique({
+        where: { id: candidateId },
+      });
       if (!candidate) continue;
 
       // 필터링 로직
       if (this.isMatchCompatible(user, candidate)) {
         // 매칭 성공
-        await redis.srem('matching:queue', candidateId);
+        await redis.srem("matching:queue", candidateId);
 
-        const session = await this.createMatchSession(userId, candidateId, 'RANDOM');
+        const session = await this.createMatchSession(
+          userId,
+          candidateId,
+          "RANDOM"
+        );
         return { matched: true, session, partner: candidate };
       }
     }
 
     // 매칭 대기열에 추가
-    await redis.sadd('matching:queue', userId);
+    await redis.sadd("matching:queue", userId);
     return { matched: false };
   }
 
@@ -790,15 +662,21 @@ export class MatchService {
    * 선택 매칭 (친구에게 통화 요청)
    */
   async requestDirectMatch(callerId: string, receiverId: string) {
-    const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
-    if (!receiver) throw new Error('Receiver not found');
+    const receiver = await prisma.user.findUnique({
+      where: { id: receiverId },
+    });
+    if (!receiver) throw new Error("Receiver not found");
 
     // 온라인 상태 확인
     const isOnline = await redis.get(`user:${receiverId}:online`);
-    if (!isOnline) throw new Error('Receiver is offline');
+    if (!isOnline) throw new Error("Receiver is offline");
 
     // 매칭 세션 생성
-    const session = await this.createMatchSession(callerId, receiverId, 'DIRECT');
+    const session = await this.createMatchSession(
+      callerId,
+      receiverId,
+      "DIRECT"
+    );
 
     return session;
   }
@@ -806,7 +684,11 @@ export class MatchService {
   /**
    * 매칭 세션 생성
    */
-  private async createMatchSession(userId1: string, userId2: string, matchType: MatchType) {
+  private async createMatchSession(
+    userId1: string,
+    userId2: string,
+    matchType: MatchType
+  ) {
     const channelName = generateChannelName();
 
     const session = await prisma.matchSession.create({
@@ -815,7 +697,7 @@ export class MatchService {
         userId2,
         channelName,
         matchType,
-        status: 'PENDING',
+        status: "PENDING",
       },
       include: {
         user1: true,
@@ -851,7 +733,10 @@ export class MatchService {
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birth.getDate())
+    ) {
       age--;
     }
     return age;
@@ -865,16 +750,16 @@ export const matchService = new MatchService();
 
 ```typescript
 // src/sockets/index.ts
-import { Server as HttpServer } from 'http';
-import { Server as SocketServer, Socket } from 'socket.io';
-import { verifyToken } from '../utils/jwt.util';
-import { redis } from '../config/redis';
-import { logger } from '../utils/logger.util';
+import { Server as HttpServer } from "http";
+import { Server as SocketServer, Socket } from "socket.io";
+import { verifyToken } from "../utils/jwt.util";
+import { redis } from "../config/redis";
+import { logger } from "../utils/logger.util";
 
 export const initializeSocket = (httpServer: HttpServer) => {
   const io = new SocketServer(httpServer, {
     cors: {
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+      origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
       credentials: true,
     },
   });
@@ -882,33 +767,33 @@ export const initializeSocket = (httpServer: HttpServer) => {
   // 인증 미들웨어
   io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
-    if (!token) return next(new Error('Authentication error'));
+    if (!token) return next(new Error("Authentication error"));
 
     try {
       const decoded = verifyToken(token);
       socket.data.userId = decoded.userId;
       next();
     } catch (error) {
-      next(new Error('Authentication error'));
+      next(new Error("Authentication error"));
     }
   });
 
-  io.on('connection', async (socket: Socket) => {
+  io.on("connection", async (socket: Socket) => {
     const userId = socket.data.userId;
     logger.info(`User connected: ${userId}`);
 
     // 온라인 상태 업데이트
-    await redis.set(`user:${userId}:online`, '1', { ex: 3600 });
+    await redis.set(`user:${userId}:online`, "1", { ex: 3600 });
     await redis.set(`user:${userId}:socketId`, socket.id);
 
     // 매칭 요청
-    socket.on('match:request', async (data) => {
+    socket.on("match:request", async (data) => {
       // 매칭 로직 처리
       // ...
     });
 
     // 통화 수락
-    socket.on('call:accept', async (data) => {
+    socket.on("call:accept", async (data) => {
       const { sessionId } = data;
       // 통화 수락 처리
       // ...
@@ -916,19 +801,19 @@ export const initializeSocket = (httpServer: HttpServer) => {
       const callerSocketId = await redis.get(`user:${callerId}:socketId`);
 
       if (callerSocketId) {
-        io.to(callerSocketId).emit('call:accepted', { sessionId });
+        io.to(callerSocketId).emit("call:accepted", { sessionId });
       }
     });
 
     // 통화 거절
-    socket.on('call:reject', async (data) => {
+    socket.on("call:reject", async (data) => {
       const { sessionId } = data;
       // 거절 처리
       // ...
     });
 
     // 연결 해제
-    socket.on('disconnect', async () => {
+    socket.on("disconnect", async () => {
       logger.info(`User disconnected: ${userId}`);
       await redis.del(`user:${userId}:online`);
       await redis.del(`user:${userId}:socketId`);
@@ -943,8 +828,8 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
 ```typescript
 // src/services/agora.service.ts
-import { RtcTokenBuilder, RtcRole } from 'agora-token';
-import { AGORA_APP_ID, AGORA_APP_CERTIFICATE } from '../config/agora';
+import { RtcTokenBuilder, RtcRole } from "agora-token";
+import { AGORA_APP_ID, AGORA_APP_CERTIFICATE } from "../config/agora";
 
 export class AgoraService {
   /**
@@ -1018,6 +903,7 @@ model CallRecord {
 ### 4.3 Redis 사용 전략
 
 **키 네이밍 컨벤션:**
+
 ```
 user:{userId}:online              → 온라인 상태 (TTL: 1시간)
 user:{userId}:socketId            → Socket ID 매핑
@@ -1030,24 +916,26 @@ recent:call:{userId1}:{userId2}   → 최근 통화 기록 (TTL: 30분)
 **사용 사례:**
 
 1. **온라인 상태 관리**
+
    ```typescript
    // 온라인 설정
-   await redis.set(`user:${userId}:online`, '1', { ex: 3600 });
+   await redis.set(`user:${userId}:online`, "1", { ex: 3600 });
 
    // 온라인 체크
    const isOnline = await redis.get(`user:${userId}:online`);
    ```
 
 2. **매칭 대기열**
+
    ```typescript
    // 대기열 추가
-   await redis.sadd('matching:queue', userId);
+   await redis.sadd("matching:queue", userId);
 
    // 대기열 조회
-   const queue = await redis.smembers('matching:queue');
+   const queue = await redis.smembers("matching:queue");
 
    // 대기열 제거
-   await redis.srem('matching:queue', userId);
+   await redis.srem("matching:queue", userId);
    ```
 
 3. **세션 관리**
@@ -1103,26 +991,28 @@ recent:call:{userId1}:{userId2}   → 최근 통화 기록 (TTL: 30분)
 ### 5.2 JWT 토큰 전략
 
 **Access Token:**
+
 - 유효 기간: 1시간
 - Payload: `{ userId, email, iat, exp }`
 - 헤더에 포함: `Authorization: Bearer {token}`
 
 **Refresh Token:**
+
 - 유효 기간: 7일
 - DB에 해시값 저장
 - `/api/auth/refresh` 엔드포인트로 갱신
 
 ```typescript
 // src/utils/jwt.util.ts
-import jwt from 'jsonwebtoken';
-import { JWT_SECRET, JWT_REFRESH_SECRET } from '../config/env';
+import jwt from "jsonwebtoken";
+import { JWT_SECRET, JWT_REFRESH_SECRET } from "../config/env";
 
 export const generateAccessToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "1h" });
 };
 
 export const generateRefreshToken = (userId: string): string => {
-  return jwt.sign({ userId }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, JWT_REFRESH_SECRET, { expiresIn: "7d" });
 };
 
 export const verifyToken = (token: string): any => {
@@ -1138,18 +1028,18 @@ export const verifyRefreshToken = (token: string): any => {
 
 ```typescript
 // src/middlewares/rateLimit.middleware.ts
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15분
   max: 100, // 최대 100 요청
-  message: 'Too many requests, please try again later.',
+  message: "Too many requests, please try again later.",
 });
 
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5, // 로그인/회원가입은 15분에 5회까지
-  message: 'Too many authentication attempts, please try again later.',
+  message: "Too many authentication attempts, please try again later.",
 });
 ```
 
@@ -1196,21 +1086,25 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ### 6.1 Render.com 배포 설정
 
 **Build Command:**
+
 ```bash
 npm install && npx prisma generate && npm run build
 ```
 
 **Start Command:**
+
 ```bash
 npm run start
 ```
 
 **Health Check Path:**
+
 ```
 /health
 ```
 
 **환경 변수:**
+
 - Render.com 대시보드에서 설정
 - `.env` 파일 내용 복사
 
@@ -1231,15 +1125,18 @@ npx prisma migrate deploy
 **해결책: Health Check Cron (외부 서비스)**
 
 **옵션 1: UptimeRobot (무료)**
+
 - https://uptimerobot.com
 - 5분마다 `/health` 엔드포인트 핑
 - 50개 모니터 무료
 
 **옵션 2: cron-job.org (무료)**
+
 - https://cron-job.org
 - 커스텀 스케줄 설정 가능
 
 **설정 예시:**
+
 - URL: `https://your-app.onrender.com/health`
 - Interval: 5분
 - Method: GET
@@ -1266,7 +1163,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install dependencies
         run: npm install
@@ -1287,10 +1184,10 @@ jobs:
 
 ```typescript
 // src/utils/logger.util.ts
-import winston from 'winston';
+import winston from "winston";
 
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
@@ -1303,8 +1200,8 @@ const logger = winston.createLogger({
         winston.format.simple()
       ),
     }),
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
+    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
+    new winston.transports.File({ filename: "logs/combined.log" }),
   ],
 });
 
@@ -1315,7 +1212,7 @@ export { logger };
 
 ```typescript
 // src/config/sentry.ts
-import * as Sentry from '@sentry/node';
+import * as Sentry from "@sentry/node";
 
 export const initSentry = () => {
   Sentry.init({
@@ -1326,7 +1223,7 @@ export const initSentry = () => {
 };
 
 // Express error handler와 통합
-import { Handlers } from '@sentry/node';
+import { Handlers } from "@sentry/node";
 app.use(Handlers.requestHandler());
 app.use(Handlers.errorHandler());
 ```
@@ -1344,26 +1241,32 @@ app.use(Handlers.errorHandler());
 ### 8.1 프론트엔드 테스트
 
 **도구:**
+
 - Jest + React Native Testing Library
 - Detox (E2E)
 
 **예시:**
+
 ```typescript
 // src/components/__tests__/Button.test.tsx
-import { render, fireEvent } from '@testing-library/react-native';
-import Button from '../Button';
+import { render, fireEvent } from "@testing-library/react-native";
+import Button from "../Button";
 
-describe('Button Component', () => {
-  it('renders correctly', () => {
-    const { getByText } = render(<Button title="Click me" onPress={() => {}} />);
-    expect(getByText('Click me')).toBeTruthy();
+describe("Button Component", () => {
+  it("renders correctly", () => {
+    const { getByText } = render(
+      <Button title="Click me" onPress={() => {}} />
+    );
+    expect(getByText("Click me")).toBeTruthy();
   });
 
-  it('calls onPress when clicked', () => {
+  it("calls onPress when clicked", () => {
     const onPressMock = jest.fn();
-    const { getByText } = render(<Button title="Click me" onPress={onPressMock} />);
+    const { getByText } = render(
+      <Button title="Click me" onPress={onPressMock} />
+    );
 
-    fireEvent.press(getByText('Click me'));
+    fireEvent.press(getByText("Click me"));
     expect(onPressMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -1372,32 +1275,32 @@ describe('Button Component', () => {
 ### 8.2 백엔드 테스트
 
 **도구:**
+
 - Jest
 - Supertest (API 테스트)
 
 **예시:**
+
 ```typescript
 // src/__tests__/auth.test.ts
-import request from 'supertest';
-import createApp from '../app';
+import request from "supertest";
+import createApp from "../app";
 
 const app = createApp();
 
-describe('POST /api/auth/register', () => {
-  it('should register a new user', async () => {
-    const response = await request(app)
-      .post('/api/auth/register')
-      .send({
-        email: 'test@example.com',
-        password: 'Password123!',
-        nickname: 'testuser',
-        birthDate: '1990-01-01',
-        gender: 'MALE',
-        country: 'KR',
-      });
+describe("POST /api/auth/register", () => {
+  it("should register a new user", async () => {
+    const response = await request(app).post("/api/auth/register").send({
+      email: "test@example.com",
+      password: "Password123!",
+      nickname: "testuser",
+      birthDate: "1990-01-01",
+      gender: "MALE",
+      country: "KR",
+    });
 
     expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('accessToken');
+    expect(response.body).toHaveProperty("accessToken");
   });
 });
 ```

@@ -3,7 +3,7 @@
 **1:1 영상 통화 기반 데이팅 앱**
 
 [![Project Status](https://img.shields.io/badge/Status-In%20Development-yellow)](https://github.com)
-[![Progress](https://img.shields.io/badge/Progress-60%25-green)](https://github.com)
+[![Progress](https://img.shields.io/badge/Progress-70%25-green)](https://github.com)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 ---
@@ -14,7 +14,7 @@ Beyond Meet는 WebRTC 기반 1:1 영상 통화 데이팅 앱입니다.
 
 - **플랫폼**: iOS, Android (React Native)
 - **개발 기간**: 50일 (2025-11-04 ~ 2025-12-24)
-- **현재 진행**: Day 2 (진행률 60% - 계획 대비 2-3주 앞섬)
+- **현재 진행**: Day 3 (진행률 70% - 계획 대비 2-3주 앞섬)
 - **Beta 전략**: 20명 한정 초대 코드 시스템
 - **운영 비용**: $0/월 (Beta 단계)
 
@@ -29,7 +29,7 @@ beyond-meet/
 │   │   ├── screens/    # 화면 컴포넌트
 │   │   ├── components/ # 재사용 컴포넌트
 │   │   ├── api/        # API 클라이언트
-│   │   ├── store/      # Redux 상태 관리
+│   │   ├── store/      # Zustand 상태 관리
 │   │   ├── navigation/ # React Navigation
 │   │   └── hooks/      # Custom Hooks
 │   ├── ios/            # iOS 네이티브 코드
@@ -62,14 +62,18 @@ beyond-meet/
 ## 🚀 기술 스택
 
 ### Frontend (mobile/)
+
 - **Framework**: React Native 0.82.1
 - **Language**: TypeScript
 - **영상 통화**: Agora Video SDK (WebRTC)
-- **상태 관리**: Redux Toolkit
+- **상태 관리**: Zustand
+- **서버 상태 관리**: React Query (@tanstack/react-query)
+- **HTTP 클라이언트**: Axios
 - **라우팅**: React Navigation
 - **실시간 통신**: Socket.io Client
 
 ### Backend (backend/)
+
 - **Runtime**: Node.js + Express
 - **Language**: TypeScript
 - **ORM**: Prisma (PostgreSQL)
@@ -78,22 +82,25 @@ beyond-meet/
 - **보안**: bcryptjs, Helmet, CORS
 
 ### 무료 인프라
-| 서비스 | 용도 | 무료 한도 | 상태 |
-|--------|------|----------|------|
-| **Render.com** | 백엔드 호스팅 | 750시간/월 | ⚠️ 미설정 |
-| **Supabase** | PostgreSQL + Storage | 500MB DB + 1GB Storage | ✅ 연결됨 |
-| **Upstash** | Redis 캐시 | 10,000 명령/일 | ⚠️ 미설정 |
-| **Firebase** | FCM 푸시 알림 | 무제한 | ⚠️ 미설정 |
-| **Agora** | 영상 통화 | 10,000분/월 | ⚠️ 미설정 |
+
+| 서비스         | 용도                 | 무료 한도              | 상태      |
+| -------------- | -------------------- | ---------------------- | --------- |
+| **Render.com** | 백엔드 호스팅        | 750시간/월             | ⚠️ 미설정 |
+| **Supabase**   | PostgreSQL + Storage | 500MB DB + 1GB Storage | ✅ 연결됨 |
+| **Upstash**    | Redis 캐시           | 10,000 명령/일         | ⚠️ 미설정 |
+| **Firebase**   | FCM 푸시 알림        | 무제한                 | ⚠️ 미설정 |
+| **Agora**      | 영상 통화            | 10,000분/월            | ⚠️ 미설정 |
 
 ---
 
-## 📊 현재 진행 상황 (2025-11-05 기준)
+## 📊 현재 진행 상황 (2025-11-06 기준)
 
-### 전체 진행률: 60% (Day 2/50일)
+### 전체 진행률: 70% (Day 3/50일)
 
 #### ✅ Backend: 65% 완료
+
 **구현 완료:**
+
 - ✅ 인증 시스템 (회원가입, 로그인, JWT, 초대 코드)
 - ✅ 사용자 관리 API (프로필, 친구 관리)
 - ✅ 매칭 시스템 (랜덤/선택 매칭, Socket.io)
@@ -102,28 +109,33 @@ beyond-meet/
 - ✅ Supabase Storage 연동
 
 **진행 필요:**
+
 - ❌ 통화 관리 API ⭐⭐⭐⭐⭐
 - ❌ 푸시 알림 API ⭐⭐⭐⭐⭐
 - ❌ 프로필 사진 업로드 API ⭐⭐⭐⭐
 - ❌ 관리자 API ⭐⭐⭐⭐
 
-#### ✅ Mobile: 55% 완료
+#### ✅ Mobile: 70% 완료 (+15% 증가)
+
 **구현 완료:**
+
 - ✅ 인증 화면 (Splash, Welcome, Login, Register)
 - ✅ 홈 화면
 - ✅ 영상 통화 화면 (VideoCall, CallEnd)
-- ✅ 프로필 화면
+- ✅ 프로필 화면 (Profile, ProfileEdit, Settings) ⭐ NEW
+- ✅ 친구 목록 화면 ⭐ NEW
+- ✅ 통화 기록 화면 ⭐ NEW
 - ✅ 공통 컴포넌트 (Button, Input, Avatar, Picker)
-- ✅ Navigation & Redux Store
+- ✅ Navigation & Store
+- ✅ **React Query 통합 완료** ⭐⭐⭐ NEW
 
 **진행 필요:**
+
 - ❌ 매칭 대기 화면 ⭐⭐⭐⭐⭐
-- ❌ 친구 목록 화면 ⭐⭐⭐⭐
-- ❌ 통화 기록 화면 ⭐⭐⭐⭐
-- ❌ 프로필 편집 화면 ⭐⭐⭐⭐
 - ❌ 푸시 알림 수신 처리 ⭐⭐⭐⭐⭐
 
 #### ⚠️ Infrastructure: 10% 완료
+
 - ❌ Render.com 배포
 - ❌ Supabase DB 마이그레이션 실행
 - ❌ Agora 프로젝트 설정
@@ -135,18 +147,21 @@ beyond-meet/
 ## 🎯 핵심 기능
 
 ### MVP 기능 (Beta 출시)
+
 - [x] 사용자 인증 (회원가입/로그인)
 - [x] 초대 코드 시스템 (20명 한정)
-- [x] 프로필 관리 (기본 정보)
+- [x] 프로필 관리 (기본 정보, 편집, 설정)
 - [ ] 프로필 사진 업로드
 - [x] 랜덤 매칭
 - [x] 친구 선택 매칭
+- [x] 친구 목록 및 관리
 - [x] 1:1 영상 통화 (5분 제한)
 - [ ] 카메라 전환 (전면/후면)
-- [ ] 통화 기록
+- [x] 통화 기록 화면
 - [ ] 푸시 알림
 
 ### 추후 기능 (v1.1+)
+
 - 신고/차단 시스템
 - 배경 블러/변경
 - 부적절한 콘텐츠 AI 감지
@@ -224,6 +239,7 @@ npm start
 ```
 
 **새 터미널에서 앱 실행:**
+
 ```bash
 # iOS
 npm run ios
@@ -237,6 +253,7 @@ npm run android
 ## 📡 API 엔드포인트
 
 ### 인증 API
+
 ```
 POST   /api/auth/register       # 회원가입 (초대 코드 필수)
 POST   /api/auth/login          # 로그인
@@ -246,6 +263,7 @@ GET    /api/auth/me             # 내 정보 조회 (인증 필요)
 ```
 
 ### 사용자 API
+
 ```
 GET    /api/users/:id           # 사용자 조회
 PUT    /api/users/:id           # 프로필 수정
@@ -254,6 +272,7 @@ DELETE /api/users/friends/:id   # 친구 삭제
 ```
 
 ### 매칭 API
+
 ```
 POST   /api/match/random        # 랜덤 매칭 요청
 POST   /api/match/direct        # 선택 매칭 (친구에게)
@@ -261,11 +280,13 @@ DELETE /api/match/:sessionId    # 매칭 취소
 ```
 
 ### Agora API
+
 ```
 POST   /api/agora/token         # RTC 토큰 생성
 ```
 
 ### 관리자 API
+
 ```
 POST   /api/admin/invite-codes  # 초대 코드 생성
 GET    /api/admin/invite-codes  # 초대 코드 목록
@@ -275,6 +296,7 @@ GET    /api/admin/stats         # 사용자 통계
 ### Socket.io 이벤트
 
 **Client → Server:**
+
 - `match:request` - 매칭 요청
 - `match:cancel` - 매칭 취소
 - `call:accept` - 통화 수락
@@ -282,6 +304,7 @@ GET    /api/admin/stats         # 사용자 통계
 - `call:end` - 통화 종료
 
 **Server → Client:**
+
 - `match:found` - 매칭 성공
 - `call:incoming` - 통화 수신
 - `call:ended` - 통화 종료됨
@@ -295,6 +318,7 @@ GET    /api/admin/stats         # 사용자 통계
 **⚠️ 개발 시작 전 필독:** [CLAUDE.md](CLAUDE.md)
 
 이 파일에는 다음이 포함되어 있습니다:
+
 - TypeScript 네이밍 규칙
 - API 응답 형식 통일
 - Prisma 사용 규칙
@@ -359,25 +383,30 @@ npm test
 ### 필독 문서 (개발 시작 전)
 
 1. **[CLAUDE.md](CLAUDE.md)** ⭐⭐⭐⭐⭐
+
    - 코딩 컨벤션 및 프로젝트 규칙
    - 진행 상황 및 남은 업무
 
 2. **[docs/PRD.md](docs/PRD.md)** ⭐⭐⭐⭐⭐
+
    - 프로젝트 비전 및 요구사항
    - Beta 전략
    - 초대 코드 시스템
 
 3. **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** ⭐⭐⭐⭐⭐
+
    - 시스템 아키텍처
    - 기술 스택 상세
    - 무료 인프라 전략
 
 4. **[docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md)** ⭐⭐⭐⭐
+
    - 모든 API 엔드포인트 명세
    - 요청/응답 형식
    - 에러 코드
 
 5. **[docs/UI_FLOW.md](docs/UI_FLOW.md)** ⭐⭐⭐⭐
+
    - 화면 설계
    - 디자인 시스템
    - 사용자 플로우
@@ -405,12 +434,14 @@ npm test
 ### 모바일 앱 배포
 
 #### iOS (TestFlight)
+
 ```bash
 cd mobile/ios
 # Xcode에서 Archive → TestFlight 업로드
 ```
 
 #### Android (Google Play Beta)
+
 ```bash
 cd mobile/android
 ./gradlew assembleRelease
@@ -447,11 +478,13 @@ npm run db:seed
 ## 💰 비용 산정
 
 ### Beta 단계 (20명)
+
 - **예상 일일 통화**: 100분
 - **월간 통화**: 3,000분 (< Agora 10,000분 한도)
 - **월간 비용**: **$0** ✅
 
 ### 무료 한도 요약
+
 ```
 ✅ Agora: 10,000분/월 (현재 사용: ~3,000분)
 ✅ Render: 750시간/월 (상시 가동 가능)
@@ -465,21 +498,29 @@ npm run db:seed
 ## 📅 다음 단계 (권장 순서)
 
 ### Week 1 (11/06 ~ 11/10)
+
 1. 통화 관리 API 구현 (Backend, 2일)
 2. 푸시 알림 시스템 (Backend + Mobile, 2일)
 3. 매칭 대기 화면 (Mobile, 1일)
 
 ### Week 2 (11/11 ~ 11/17)
+
 4. 프로필 사진 업로드 (Backend + Mobile, 2일)
-5. 친구 목록 + 통화 기록 화면 (Mobile, 2일)
-6. 관리자 API (Backend, 1일)
+5. 관리자 API (Backend, 1일)
 
 ### Week 3 (11/18 ~ 11/24)
-7. 인프라 배포 (3일)
-8. 설정 + 프로필 편집 화면 (Mobile, 1일)
-9. 최종 테스트 (1일)
+
+6. 인프라 배포 (3일)
+7. 최종 테스트 (2일)
 
 **예상 Beta 출시일**: 2025-11-24 🎉
+
+### 📋 최근 완료 (2025-11-06)
+
+- ✅ React Query 통합 (@tanstack/react-query)
+- ✅ FriendsScreen, CallHistoryScreen 구현
+- ✅ ProfileEditScreen, SettingsScreen 구현
+- ✅ Axios 기반 API 서비스 레이어 구축
 
 ---
 
@@ -488,6 +529,7 @@ npm run db:seed
 ### 자주 발생하는 이슈
 
 #### 1. 데이터베이스 연결 실패
+
 ```bash
 # Supabase 프로젝트 상태 확인
 # Paused 상태라면 Resume 클릭
@@ -495,12 +537,14 @@ npm run db:seed
 ```
 
 #### 2. Prisma 에러
+
 ```bash
 cd backend
 npm run prisma:generate
 ```
 
 #### 3. iOS 빌드 실패
+
 ```bash
 cd mobile/ios
 pod install
@@ -509,6 +553,7 @@ npm run ios
 ```
 
 #### 4. Android 빌드 실패
+
 ```bash
 cd mobile/android
 ./gradlew clean
@@ -534,6 +579,6 @@ MIT License
 
 ---
 
-**버전**: 1.1.0
-**최종 업데이트**: 2025-11-05
-**상태**: 개발 진행 중 (60% 완료) 🚀
+**버전**: 1.2.0
+**최종 업데이트**: 2025-11-06
+**상태**: 개발 진행 중 (70% 완료) 🚀

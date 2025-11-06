@@ -56,19 +56,21 @@ cd ios && pod install && cd ..
 
 ```typescript
 export const ENV = {
-  API_BASE_URL: 'http://localhost:3000/api',  // 백엔드 URL
-  AGORA_APP_ID: '',  // Agora App ID (나중에 추가)
+  API_BASE_URL: 'http://localhost:3000/api', // 백엔드 URL
+  AGORA_APP_ID: '', // Agora App ID (나중에 추가)
 };
 ```
 
 ### 4. 앱 실행
 
 #### iOS
+
 ```bash
 npm run ios
 ```
 
 #### Android
+
 ```bash
 npm run android
 ```
@@ -81,13 +83,13 @@ npm run android
 
 ```typescript
 colors = {
-  primary: '#FF6B6B',      // 코랄 레드
-  secondary: '#4ECDC4',    // 민트 그린
-  accent: '#FFE66D',       // 옐로우
-  background: '#F7F7F7',   // 라이트 그레이
-  surface: '#FFFFFF',      // 화이트
+  primary: '#FF6B6B', // 코랄 레드
+  secondary: '#4ECDC4', // 민트 그린
+  accent: '#FFE66D', // 옐로우
+  background: '#F7F7F7', // 라이트 그레이
+  surface: '#FFFFFF', // 화이트
   // ...
-}
+};
 ```
 
 ### 타이포그래피
@@ -101,19 +103,23 @@ colors = {
 ## 📦 주요 패키지
 
 ### 상태 관리
-- **zustand**: 가벼운 상태 관리 (Redux 대체)
+
+- **zustand**: 가벼운 상태 관리
 - **@tanstack/react-query**: 서버 상태 관리 및 캐싱
 
 ### 네비게이션
+
 - **@react-navigation/native**: 네비게이션
 - **@react-navigation/stack**: 스택 네비게이션
 - **@react-navigation/bottom-tabs**: 탭 네비게이션
 
 ### UI/UX
+
 - **react-native-toast-message**: 토스트 메시지
 - **react-native-safe-area-context**: Safe Area 처리
 
 ### 네트워킹
+
 - **axios**: HTTP 클라이언트
 
 ## 🏗️ 주요 기능
@@ -121,6 +127,7 @@ colors = {
 ### ✅ 완료된 기능
 
 1. **인증 시스템**
+
    - 스플래시 화면
    - 웰컴 화면
    - 로그인/회원가입
@@ -128,11 +135,13 @@ colors = {
    - 자동 로그인
 
 2. **디자인 시스템**
+
    - 공통 컴포넌트 (Button, Input, Avatar)
    - 테마 시스템 (colors, typography, spacing)
    - 반응형 레이아웃
 
 3. **네비게이션**
+
    - 인증 스택
    - 메인 탭 (홈, 친구, 프로필)
 
@@ -144,11 +153,13 @@ colors = {
 ### 🚧 TODO
 
 1. **영상 통화**
+
    - Agora SDK 통합
    - 영상 통화 화면
    - 통화 컨트롤 (음소거, 카메라 전환 등)
 
 2. **매칭 시스템**
+
    - 랜덤 매칭 로직
    - 선택 매칭 (친구에게 통화 요청)
    - 매칭 대기 화면
@@ -209,7 +220,7 @@ const styles = StyleSheet.create({
 });
 
 // ❌ 인라인 스타일 지양
-<View style={{ flex: 1 }} />
+<View style={{ flex: 1 }} />;
 ```
 
 ## 🐛 문제 해결
