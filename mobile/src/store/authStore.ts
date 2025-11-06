@@ -1,23 +1,26 @@
 /**
  * 인증 관련 Zustand Store
+ *
+ * 책임: 클라이언트 인증 상태 관리 (토큰, 인증 여부)
+ * - accessToken, refreshToken 저장 (AsyncStorage)
+ * - 로그인/로그아웃 상태 관리
+ *
+ * 사용자 프로필 데이터는 react-query의 useMyProfile() 사용
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User } from '../@types';
 
 interface AuthState {
   // State
   isAuthenticated: boolean;
-  user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
 
   // Actions
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  setAuth: (accessToken: string, refreshToken: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
-  setUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -26,15 +29,13 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       // Initial State
       isAuthenticated: false,
-      user: null,
       accessToken: null,
       refreshToken: null,
 
       // Actions
-      setAuth: (user, accessToken, refreshToken) =>
+      setAuth: (accessToken, refreshToken) =>
         set({
           isAuthenticated: true,
-          user,
           accessToken,
           refreshToken,
         }),
@@ -45,15 +46,9 @@ export const useAuthStore = create<AuthState>()(
           refreshToken,
         }),
 
-      setUser: (user) =>
-        set({
-          user,
-        }),
-
       logout: () =>
         set({
           isAuthenticated: false,
-          user: null,
           accessToken: null,
           refreshToken: null,
         }),
