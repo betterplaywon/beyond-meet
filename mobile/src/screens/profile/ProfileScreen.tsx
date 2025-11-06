@@ -3,14 +3,22 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { Button } from '../../components/common/Button';
 import { useAuthStore } from '../../store/authStore';
 import { useLogout } from '../../hooks/useAuth';
 import { colors, typography, spacing, borderRadius } from '../../styles/theme';
 
-const ProfileScreen: React.FC = () => {
+type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
+
+interface Props {
+  navigation: ProfileScreenNavigationProp;
+}
+
+const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
 
@@ -24,7 +32,11 @@ const ProfileScreen: React.FC = () => {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>내 프로필</Text>
-          <Button title="편집" variant="text" onPress={() => {}} />
+          <Button
+            title="편집"
+            variant="text"
+            onPress={() => navigation.navigate('ProfileEdit')}
+          />
         </View>
 
         {/* Profile Info */}
@@ -55,27 +67,39 @@ const ProfileScreen: React.FC = () => {
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
-          <View style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('CallHistory')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.menuIcon}>📞</Text>
             <Text style={styles.menuLabel}>통화 기록</Text>
             <Text style={styles.menuArrow}>›</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.menuDivider} />
 
-          <View style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.7}
+          >
             <Text style={styles.menuIcon}>⚙️</Text>
             <Text style={styles.menuLabel}>설정</Text>
             <Text style={styles.menuArrow}>›</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.menuDivider} />
 
-          <View style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {}}
+            activeOpacity={0.7}
+          >
             <Text style={styles.menuIcon}>❓</Text>
             <Text style={styles.menuLabel}>도움말</Text>
             <Text style={styles.menuArrow}>›</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Logout Button */}

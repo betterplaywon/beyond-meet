@@ -2,14 +2,64 @@
  * 친구 목록 화면
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList } from 'react-native';
+import React, { useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList, Friendship } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
+import { useFriendsStore } from '../../store/friendsStore';
 import { colors, typography, spacing } from '../../styles/theme';
 
-const FriendsScreen: React.FC = () => {
-  // TODO: 실제 친구 목록 데이터 연동
-  const friends: any[] = [];
+type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
+
+interface Props {
+  navigation: FriendsScreenNavigationProp;
+}
+
+const FriendsScreen: React.FC<Props> = ({ navigation }) => {
+  const friends = useFriendsStore((state) => state.friends);
+  const isLoading = useFriendsStore((state) => state.isLoading);
+  const setFriends = useFriendsStore((state) => state.setFriends);
+  const setLoading = useFriendsStore((state) => state.setLoading);
+
+  // TODO: 실제 API 호출로 대체
+  const fetchFriends = async () => {
+    setLoading(true);
+    try {
+      // API 호출 예시
+      // const response = await friendsApi.getFriends();
+      // setFriends(response.data);
+
+      // 임시 데이터
+      setFriends([]);
+    } catch (error) {
+      console.error('Failed to fetch friends:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFriends();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchFriends();
+  };
+
+  const handleCallFriend = (friendship: Friendship) => {
+    // TODO: 친구에게 통화 요청
+    console.log('Call friend:', friendship.friend.nickname);
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -21,21 +71,30 @@ const FriendsScreen: React.FC = () => {
     </View>
   );
 
-  const renderFriend = ({ item }: { item: any }) => (
+  const renderFriend = ({ item }: { item: Friendship }) => (
     <View style={styles.friendCard}>
       <Avatar
-        source={item.profilePhotos?.[0]}
-        name={item.nickname}
+        source={item.friend.profilePhotos?.[0]}
+        name={item.friend.nickname}
         size="medium"
-        online={item.onlineStatus === 'ONLINE'}
+        online={item.friend.onlineStatus === 'ONLINE'}
       />
       <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.nickname}</Text>
+        <Text style={styles.friendName}>{item.friend.nickname}</Text>
         <Text style={styles.friendStatus}>
-          {item.onlineStatus === 'ONLINE' ? '🟢 온라인' : '⚪ 오프라인'}
+          {item.friend.onlineStatus === 'ONLINE' ? '🟢 온라인' : '⚪ 오프라인'}
         </Text>
       </View>
-      <Text style={styles.callButton}>📞</Text>
+      <TouchableOpacity
+        onPress={() => handleCallFriend(item)}
+        disabled={item.friend.onlineStatus !== 'ONLINE'}
+        style={[
+          styles.callButtonContainer,
+          item.friend.onlineStatus !== 'ONLINE' && styles.callButtonDisabled,
+        ]}
+      >
+        <Text style={styles.callButton}>📞</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -50,13 +109,27 @@ const FriendsScreen: React.FC = () => {
       </View>
 
       {/* List */}
-      <FlatList
-        data={friends}
-        keyExtractor={(item) => item.id}
-        renderItem={renderFriend}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={styles.listContent}
-      />
+      {isLoading && friends.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>친구 목록을 불러오는 중...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={friends}
+          keyExtractor={(item) => item.id}
+          renderItem={renderFriend}
+          ListEmptyComponent={renderEmpty}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -114,8 +187,25 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: colors.textSecondary,
   },
+  callButtonContainer: {
+    padding: spacing.sm,
+  },
   callButton: {
     fontSize: 24,
+  },
+  callButtonDisabled: {
+    opacity: 0.3,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    ...typography.body1,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   },
   emptyContainer: {
     flex: 1,
