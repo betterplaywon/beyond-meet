@@ -114,6 +114,9 @@ export type RootStackParamList = {
   IncomingCall: { sessionId: string; caller: User };
   VideoCall: { sessionId: string; channelName: string; token: string };
   CallEnd: { sessionId: string };
+  CallHistory: undefined;
+  ProfileEdit: undefined;
+  Settings: undefined;
 };
 
 export type AuthStackParamList = {
