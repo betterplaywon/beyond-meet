@@ -3,7 +3,7 @@
  * UI_FLOW.md 3.16 참고
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,13 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
+import { useMyProfile } from '../../hooks/useProfile';
+import { useCallHistory } from '../../hooks/useCallHistory';
 import { colors, typography, spacing } from '../../styles/theme';
 
 type CallHistoryScreenNavigationProp = StackNavigationProp<
@@ -40,15 +43,47 @@ interface CallHistory {
 }
 
 const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
-  const [refreshing, setRefreshing] = useState(false);
+  const { data: user } = useMyProfile();
 
-  // TODO: 실제 API 연동
-  const callHistory: CallHistory[] = [];
+  // React Query로 통화 기록 조회
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useCallHistory({
+    userId: user?.id,
+    page: 1,
+    limit: 50,
+  });
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // TODO: API 호출
-    setTimeout(() => setRefreshing(false), 1000);
+  // API 응답을 UI 형식으로 변환
+  const callHistory: CallHistory[] = React.useMemo(() => {
+    if (!data?.calls) return [];
+
+    return data.calls.map((call) => ({
+      id: call.id,
+      user: {
+        id: call.partner.id,
+        nickname: call.partner.nickname,
+        profilePhotos: call.partner.profilePhotos,
+      },
+      duration: call.duration ?? null,
+      createdAt: call.startTime ?? call.createdAt,
+      type: call.status === 'MISSED' ? 'MISSED' : 'COMPLETED',
+    }));
+  }, [data]);
+
+  // 에러 발생 시 Alert 표시
+  React.useEffect(() => {
+    if (error) {
+      Alert.alert('오류', '통화 기록을 불러오는데 실패했습니다.');
+    }
+  }, [error]);
+
+  const onRefresh = () => {
+    refetch();
   };
 
   const formatDuration = (seconds: number | null): string => {
@@ -172,7 +207,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
         ]}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={isFetching}
             onRefresh={onRefresh}
             tintColor={colors.primary}
           />

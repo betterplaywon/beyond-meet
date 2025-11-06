@@ -2,7 +2,7 @@
  * 친구 목록 화면
  */
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,13 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, Friendship } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
-import { useFriendsStore } from '../../store/friendsStore';
+import { useMyProfile } from '../../hooks/useProfile';
+import { useFriends } from '../../hooks/useFriends';
 import { colors, typography, spacing } from '../../styles/theme';
 
 type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
@@ -26,34 +28,26 @@ interface Props {
 }
 
 const FriendsScreen: React.FC<Props> = ({ navigation }) => {
-  const friends = useFriendsStore((state) => state.friends);
-  const isLoading = useFriendsStore((state) => state.isLoading);
-  const setFriends = useFriendsStore((state) => state.setFriends);
-  const setLoading = useFriendsStore((state) => state.setLoading);
+  const { data: user } = useMyProfile();
 
-  // TODO: 실제 API 호출로 대체
-  const fetchFriends = async () => {
-    setLoading(true);
-    try {
-      // API 호출 예시
-      // const response = await friendsApi.getFriends();
-      // setFriends(response.data);
+  // React Query로 친구 목록 조회
+  const {
+    data: friends = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useFriends(user?.id);
 
-      // 임시 데이터
-      setFriends([]);
-    } catch (error) {
-      console.error('Failed to fetch friends:', error);
-    } finally {
-      setLoading(false);
+  // 에러 발생 시 Alert 표시
+  React.useEffect(() => {
+    if (error) {
+      Alert.alert('오류', '친구 목록을 불러오는데 실패했습니다.');
     }
-  };
-
-  useEffect(() => {
-    fetchFriends();
-  }, []);
+  }, [error]);
 
   const handleRefresh = () => {
-    fetchFriends();
+    refetch();
   };
 
   const handleCallFriend = (friendship: Friendship) => {
@@ -123,7 +117,7 @@ const FriendsScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
-              refreshing={isLoading}
+              refreshing={isFetching}
               onRefresh={handleRefresh}
               tintColor={colors.primary}
             />

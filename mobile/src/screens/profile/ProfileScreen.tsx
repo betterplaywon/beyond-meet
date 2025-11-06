@@ -8,7 +8,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { Button } from '../../components/common/Button';
-import { useAuthStore } from '../../store/authStore';
+import { useMyProfile } from '../../hooks/useProfile';
 import { useLogout } from '../../hooks/useAuth';
 import { colors, typography, spacing, borderRadius } from '../../styles/theme';
 
@@ -19,7 +19,7 @@ interface Props {
 }
 
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
-  const user = useAuthStore((state) => state.user);
+  const { data: user } = useMyProfile();
   const logoutMutation = useLogout();
 
   const handleLogout = () => {

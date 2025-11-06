@@ -3,7 +3,7 @@
  * UI_FLOW.md 3.9 참고
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,9 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../@types';
-import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { useMyProfile, useUpdateProfile } from '../../hooks/useProfile';
+import { parseApiError } from '../../services/api';
 import { colors, typography, spacing } from '../../styles/theme';
 
 type ProfileEditScreenNavigationProp = StackNavigationProp<
@@ -33,12 +34,25 @@ interface Props {
 }
 
 const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
-  // TODO: 실제 유저 데이터 가져오기
-  const [nickname, setNickname] = useState('홍길동');
-  const [bio, setBio] = useState('안녕하세요! 새로운 사람들을 만나는 걸 좋아합니다.');
-  const [interests, setInterests] = useState(['여행', '음악', '운동']);
+  const { data: user } = useMyProfile();
+
+  // React Query mutation hooks
+  const { mutate: updateProfile, isPending: isUpdating } = useUpdateProfile();
+
+  const [nickname, setNickname] = useState('');
+  const [bio, setBio] = useState('');
+  const [interests, setInterests] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+
+  // 사용자 데이터 로드
+  useEffect(() => {
+    if (user) {
+      setNickname(user.nickname);
+      setBio(user.bio || '');
+      setInterests(user.interests || []);
+      setPhotos(user.profilePhotos || []);
+    }
+  }, [user]);
 
   const handleAddPhoto = () => {
     // TODO: 이미지 피커 구현 (react-native-image-picker)
@@ -59,7 +73,7 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
         { text: '취소', style: 'cancel' },
         {
           text: '추가',
-          onPress: (text) => {
+          onPress: (text?: string) => {
             if (text && text.trim()) {
               setInterests([...interests, text.trim()]);
             }
@@ -76,25 +90,39 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
     setInterests(newInterests);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
+    if (!user?.id) {
+      Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+      return;
+    }
+
     if (!nickname.trim()) {
       Alert.alert('오류', '닉네임을 입력해주세요.');
       return;
     }
 
-    setLoading(true);
-    try {
-      // TODO: API 호출
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      Alert.alert('성공', '프로필이 업데이트되었습니다.', [
-        { text: '확인', onPress: () => navigation.goBack() },
-      ]);
-    } catch (error) {
-      Alert.alert('오류', '프로필 업데이트에 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    updateProfile(
+      {
+        userId: user.id,
+        data: {
+          nickname: nickname.trim(),
+          bio: bio.trim(),
+          interests,
+        },
+      },
+      {
+        onSuccess: () => {
+          // react-query가 자동으로 캐시 업데이트
+          Alert.alert('성공', '프로필이 업데이트되었습니다.', [
+            { text: '확인', onPress: () => navigation.goBack() },
+          ]);
+        },
+        onError: (err) => {
+          console.error('Failed to update profile:', err);
+          Alert.alert('오류', parseApiError(err));
+        },
+      }
+    );
   };
 
   return (
@@ -111,13 +139,13 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity
           onPress={handleSave}
           style={styles.headerButton}
-          disabled={loading}
+          disabled={isUpdating}
         >
           <Text
             style={[
               styles.headerButtonText,
               styles.saveButton,
-              loading && styles.disabledButton,
+              isUpdating && styles.disabledButton,
             ]}
           >
             저장

@@ -9,9 +9,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Button } from '../../components/common/Button';
 import { IncomingCallModal } from '../../components/call/IncomingCallModal';
-import { useAuthStore } from '../../store/authStore';
 import { useCallStore } from '../../store/callStore';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
+import { useMyProfile } from '../../hooks/useProfile';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -19,7 +19,7 @@ type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const user = useAuthStore((state) => state.user);
+  const { data: user } = useMyProfile();
   const socket = useSocket();
 
   const incomingCall = useCallStore((state) => state.incomingCall);

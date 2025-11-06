@@ -3,7 +3,7 @@
  * UI_FLOW.md 3.10 참고
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,9 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
+import { useAuthStore } from '../../store/authStore';
+import { useMyProfile, useUpdateSettings } from '../../hooks/useProfile';
+import { parseApiError } from '../../services/api';
 import { colors, typography, spacing } from '../../styles/theme';
 
 type SettingsScreenNavigationProp = StackNavigationProp<
@@ -28,10 +31,23 @@ interface Props {
 }
 
 const SettingsScreen: React.FC<Props> = ({ navigation }) => {
-  // TODO: 실제 설정 데이터 가져오기
+  const { data: user } = useMyProfile();
+  const logout = useAuthStore((state) => state.logout);
+
+  // React Query mutation hook
+  const { mutate: updateSettings, isPending: isUpdating } = useUpdateSettings();
+
   const [pushEnabled, setPushEnabled] = useState(true);
-  const [genderFilter, setGenderFilter] = useState<'ALL' | 'MALE' | 'FEMALE'>('ALL');
+  const [genderFilter, setGenderFilter] = useState<'MALE' | 'FEMALE' | 'OTHER'>('MALE');
   const [ageRange, setAgeRange] = useState({ min: 20, max: 30 });
+
+  // 사용자 설정 로드
+  useEffect(() => {
+    if (user) {
+      setGenderFilter(user.gender);
+      // preferredGender와 ageRange는 User 타입에 없으므로 기본값 유지
+    }
+  }, [user]);
 
   const handleChangePassword = () => {
     // TODO: 비밀번호 변경 화면으로 이동
@@ -44,10 +60,33 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       '매칭하고 싶은 성별을 선택하세요',
       [
         { text: '취소', style: 'cancel' },
-        { text: '전체', onPress: () => setGenderFilter('ALL') },
-        { text: '남성', onPress: () => setGenderFilter('MALE') },
-        { text: '여성', onPress: () => setGenderFilter('FEMALE') },
+        { text: '남성', onPress: () => handleSaveGenderFilter('MALE') },
+        { text: '여성', onPress: () => handleSaveGenderFilter('FEMALE') },
+        { text: '기타', onPress: () => handleSaveGenderFilter('OTHER') },
       ]
+    );
+  };
+
+  const handleSaveGenderFilter = (gender: 'MALE' | 'FEMALE' | 'OTHER') => {
+    if (!user?.id) return;
+
+    updateSettings(
+      {
+        userId: user.id,
+        settings: {
+          preferredGender: gender,
+        },
+      },
+      {
+        onSuccess: () => {
+          setGenderFilter(gender);
+          Alert.alert('성공', '매칭 필터가 업데이트되었습니다.');
+        },
+        onError: (err) => {
+          console.error('Failed to update gender filter:', err);
+          Alert.alert('오류', parseApiError(err));
+        },
+      }
     );
   };
 
@@ -80,12 +119,21 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         {
           text: '로그아웃',
           style: 'destructive',
-          onPress: () => {
-            // TODO: 로그아웃 처리
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Auth' }],
-            });
+          onPress: async () => {
+            try {
+              await logout();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+              });
+            } catch (err) {
+              console.error('Failed to logout:', err);
+              // 에러가 발생해도 로그아웃 진행
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Auth' }],
+              });
+            }
           },
         },
       ]
@@ -116,6 +164,8 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         return '남성';
       case 'FEMALE':
         return '여성';
+      case 'OTHER':
+        return '기타';
       default:
         return '전체';
     }
