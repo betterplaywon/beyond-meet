@@ -7,6 +7,14 @@ import { ENV } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 import Toast from 'react-native-toast-message';
 
+// API 에러 응답 타입
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
+
 // Axios 인스턴스 생성
 export const apiClient = axios.create({
   baseURL: ENV.API_BASE_URL,
@@ -37,7 +45,7 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  async (error: AxiosError) => {
+  async (error: AxiosError<ApiErrorResponse>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
