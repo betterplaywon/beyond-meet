@@ -4,6 +4,8 @@
 
 import prisma from '../config/database';
 import { AppError } from '../middlewares/errorHandler';
+import { supabaseStorage } from '../config/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 interface UpdateProfileInput {
   nickname?: string;
@@ -148,7 +150,115 @@ export class UserService {
   }
 
   /**
-   * 프로필 사진 업데이트
+   * 프로필 사진 업로드 (Supabase Storage)
+   */
+  async uploadProfilePhoto(userId: string, file: Express.Multer.File) {
+    // 1. 현재 사용자 프로필 조회
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { profilePhotos: true },
+    });
+
+    if (!user) {
+      throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    }
+
+    // 2. 사진 개수 제한 확인 (최대 6장)
+    if (user.profilePhotos.length >= 6) {
+      throw new AppError(400, 'MAX_PHOTOS_EXCEEDED', '최대 6장까지 업로드할 수 있습니다');
+    }
+
+    // 3. 파일명 생성 (UUID + 확장자)
+    const fileExt = file.originalname.split('.').pop();
+    const fileName = `${userId}/${uuidv4()}.${fileExt}`;
+
+    // 4. Supabase Storage에 업로드
+    const { data, error } = await supabaseStorage
+      .from('profile-photos')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      throw new AppError(500, 'UPLOAD_FAILED', '사진 업로드에 실패했습니다');
+    }
+
+    // 5. Public URL 생성
+    const { data: urlData } = supabaseStorage
+      .from('profile-photos')
+      .getPublicUrl(data.path);
+
+    const photoUrl = urlData.publicUrl;
+
+    // 6. DB에 URL 추가
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        profilePhotos: [...user.profilePhotos, photoUrl],
+      },
+      select: {
+        id: true,
+        profilePhotos: true,
+      },
+    });
+
+    return {
+      photoUrl,
+      profilePhotos: updatedUser.profilePhotos,
+    };
+  }
+
+  /**
+   * 프로필 사진 삭제
+   */
+  async deleteProfilePhoto(userId: string, photoUrl: string) {
+    // 1. 현재 사용자 프로필 조회
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { profilePhotos: true },
+    });
+
+    if (!user) {
+      throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    }
+
+    // 2. 사진이 존재하는지 확인
+    if (!user.profilePhotos.includes(photoUrl)) {
+      throw new AppError(404, 'PHOTO_NOT_FOUND', '사진을 찾을 수 없습니다');
+    }
+
+    // 3. Supabase Storage에서 파일 경로 추출
+    const url = new URL(photoUrl);
+    const pathParts = url.pathname.split('/profile-photos/');
+    const filePath = pathParts[1];
+
+    // 4. Supabase Storage에서 삭제
+    if (filePath) {
+      const { error } = await supabaseStorage
+        .from('profile-photos')
+        .remove([filePath]);
+
+      if (error) {
+        console.error('Supabase delete error:', error);
+        // 삭제 실패해도 DB에서는 제거 (Storage와 DB 불일치 방지)
+      }
+    }
+
+    // 5. DB에서 URL 제거
+    const updatedPhotos = user.profilePhotos.filter((url) => url !== photoUrl);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        profilePhotos: updatedPhotos,
+      },
+    });
+  }
+
+  /**
+   * 프로필 사진 업데이트 (URL 배열로 직접 설정)
    */
   async updateProfilePhotos(userId: string, photoUrls: string[]) {
     if (photoUrls.length > 6) {

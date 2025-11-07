@@ -102,7 +102,65 @@ export class UserController {
   };
 
   /**
-   * 프로필 사진 업데이트
+   * 프로필 사진 업로드
+   * POST /api/users/me/photos
+   */
+  uploadProfilePhoto = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+      }
+
+      if (!req.file) {
+        throw new AppError(400, 'NO_FILE_UPLOADED', '업로드할 파일이 없습니다');
+      }
+
+      const result = await this.userService.uploadProfilePhoto(userId, req.file);
+
+      res.status(201).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 프로필 사진 삭제
+   * DELETE /api/users/me/photos/:photoUrl
+   */
+  deleteProfilePhoto = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.id;
+      const { photoUrl } = req.params;
+
+      if (!userId) {
+        throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+      }
+
+      if (!photoUrl) {
+        throw new AppError(400, 'MISSING_PHOTO_URL', '사진 URL이 필요합니다');
+      }
+
+      // URL 디코딩 (쿼리 파라미터로 전달된 경우)
+      const decodedPhotoUrl = decodeURIComponent(photoUrl);
+
+      await this.userService.deleteProfilePhoto(userId, decodedPhotoUrl);
+
+      res.status(200).json({
+        success: true,
+        message: '프로필 사진이 삭제되었습니다.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 프로필 사진 업데이트 (기존 메서드 유지 - 호환성)
    * POST /api/users/me/photos
    */
   updatePhotos = async (req: Request, res: Response, next: NextFunction) => {
