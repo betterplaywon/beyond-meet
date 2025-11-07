@@ -257,3 +257,52 @@ export const logout = async (userId: string): Promise<void> => {
     },
   });
 };
+
+/**
+ * 비밀번호 재설정 토큰 생성 (Beta: 간단 구현)
+ */
+export const createPasswordResetToken = async (email: string): Promise<string> => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    // 보안상 사용자 존재 여부를 노출하지 않음
+    throw new AppError(404, 'USER_NOT_FOUND', '해당 이메일로 등록된 사용자가 없습니다');
+  }
+
+  // Beta: 간단한 토큰 생성 (실제로는 JWT나 random token 사용 권장)
+  const resetToken = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+
+  // TODO: 실제 배포 시 Redis에 토큰 저장 및 만료 시간 설정
+  // await redis.set(`reset:${resetToken}`, email, 'EX', 3600); // 1시간
+
+  return resetToken;
+};
+
+/**
+ * 비밀번호 재설정
+ */
+export const resetPassword = async (email: string, newPassword: string): Promise<void> => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+  }
+
+  // 새 비밀번호 해싱
+  const hashedPassword = await hashPassword(newPassword);
+
+  // 비밀번호 업데이트
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: hashedPassword,
+    },
+  });
+
+  // TODO: 실제 배포 시 Redis에서 토큰 삭제
+  // await redis.del(`reset:${resetToken}`);
+};

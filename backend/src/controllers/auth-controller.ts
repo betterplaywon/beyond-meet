@@ -193,3 +193,57 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
     next(error);
   }
 };
+
+/**
+ * 비밀번호 재설정 요청 (Beta: 간단 구현)
+ * POST /api/auth/forgot-password
+ */
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new AppError(400, 'MISSING_EMAIL', '이메일을 입력해주세요');
+    }
+
+    // Beta 단계: 실제 이메일 전송 없이 임시 토큰만 생성
+    const resetToken = await authService.createPasswordResetToken(email);
+
+    // TODO: 실제 배포 시 이메일 전송 기능 추가
+    res.status(200).json({
+      success: true,
+      message: '비밀번호 재설정 요청이 처리되었습니다.',
+      // Beta only: 실제 배포 시 제거
+      resetToken,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 비밀번호 재설정
+ * POST /api/auth/reset-password
+ */
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      throw new AppError(400, 'MISSING_FIELDS', '이메일과 새 비밀번호를 입력해주세요');
+    }
+
+    if (newPassword.length < 8) {
+      throw new AppError(400, 'WEAK_PASSWORD', '비밀번호는 최소 8자 이상이어야 합니다');
+    }
+
+    await authService.resetPassword(email, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: '비밀번호가 성공적으로 변경되었습니다.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};

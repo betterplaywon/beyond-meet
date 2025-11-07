@@ -43,4 +43,18 @@ router.post('/logout', authenticate, authController.logout);
  */
 router.get('/me', authenticate, authController.me);
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    비밀번호 재설정 요청
+ * @access  Public
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    비밀번호 재설정
+ * @access  Public
+ */
+router.post('/reset-password', authController.resetPassword);
+
 export default router;
