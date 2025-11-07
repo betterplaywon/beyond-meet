@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "309068371543",
+    "project_id": "beyond-meet-a43c3",
+    "storage_bucket": "beyond-meet-a43c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:309068371543:android:bb268fb72d4eff858f7512",
+        "android_client_info": {
+          "package_name": "com.beyondmeet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9p6dnA5yuAIRuzqM790ni9CkPWtCYvio"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

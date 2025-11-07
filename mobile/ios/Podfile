@@ -8,6 +8,9 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Firebase requires modular headers
+use_modular_headers!
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -30,5 +33,18 @@ target 'BeyondMeet' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Fix for react_runtime module redefinition error
+    # https://github.com/facebook/react-native/issues/42176
+    react_runtime_core_modulemap = "#{installer.sandbox.root}/Target Support Files/React-RuntimeCore/React-RuntimeCore.modulemap"
+    react_jsitooling_modulemap = "#{installer.sandbox.root}/Target Support Files/React-jsitooling/React-jsitooling.modulemap"
+
+    if File.exist?(react_runtime_core_modulemap)
+      File.write(react_runtime_core_modulemap, File.read(react_runtime_core_modulemap).sub(/module react_runtime/, 'module React_RuntimeCore'))
+    end
+
+    if File.exist?(react_jsitooling_modulemap)
+      File.write(react_jsitooling_modulemap, File.read(react_jsitooling_modulemap).sub(/module react_runtime/, 'module React_jsitooling'))
+    end
   end
 end
