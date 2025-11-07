@@ -2,7 +2,7 @@
  * 매칭 대기 화면
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import { RootStackParamList } from '../../@types';
 import { Button } from '../../components/common/Button';
 import { useCancelMatch } from '../../hooks/useMatch';
-import { useSocketEvent } from '../../hooks/useSocket';
+import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import { useCallStore } from '../../store/callStore';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -34,8 +35,35 @@ interface Props {
 const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   const cancelMutation = useCancelMatch();
   const setCurrentSession = useCallStore((state) => state.setCurrentSession);
+  const socket = useSocket();
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  // Socket 연결 상태 확인
+  useEffect(() => {
+    const checkConnection = setInterval(() => {
+      setIsSocketConnected(socket.isConnected());
+    }, 1000);
+
+    return () => clearInterval(checkConnection);
+  }, [socket]);
+
+  // Socket 연결 안 됨 경고
+  useEffect(() => {
+    if (!isSocketConnected) {
+      const timer = setTimeout(() => {
+        Toast.show({
+          type: 'error',
+          text1: '연결 실패',
+          text2: '서버와 연결할 수 없습니다. 네트워크를 확인해주세요.',
+        });
+        navigation.goBack();
+      }, 10000); // 10초 후에도 연결 안 되면 에러
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSocketConnected, navigation]);
 
   // 맥박 애니메이션
   useEffect(() => {
@@ -63,6 +91,12 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     console.log('Match found:', data);
     setCurrentSession(data.session);
 
+    Toast.show({
+      type: 'success',
+      text1: '매칭 성공!',
+      text2: `${data.partner?.nickname || '상대방'}님과 연결되었습니다`,
+    });
+
     // VideoCallScreen으로 이동
     navigation.replace('VideoCall', {
       sessionId: data.session.id,
@@ -74,8 +108,27 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   // 매칭 실패 이벤트
   useSocketEvent('match:failed', (data: any) => {
     console.log('Match failed:', data);
+    Toast.show({
+      type: 'error',
+      text1: '매칭 실패',
+      text2: data.message || '매칭에 실패했습니다. 다시 시도해주세요.',
+    });
     navigation.goBack();
   });
+
+  // 매칭 타임아웃 (2분)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      Toast.show({
+        type: 'info',
+        text1: '매칭 시간 초과',
+        text2: '현재 매칭 가능한 사용자가 없습니다. 나중에 다시 시도해주세요.',
+      });
+      navigation.goBack();
+    }, 120000); // 2분
+
+    return () => clearTimeout(timeout);
+  }, [navigation]);
 
   const handleCancel = () => {
     cancelMutation.mutate();
@@ -85,6 +138,19 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* Socket 연결 상태 */}
+        <View style={styles.connectionStatus}>
+          <View
+            style={[
+              styles.connectionDot,
+              { backgroundColor: isSocketConnected ? colors.success : colors.error },
+            ]}
+          />
+          <Text style={styles.connectionText}>
+            {isSocketConnected ? '서버 연결됨' : '연결 중...'}
+          </Text>
+        </View>
+
         {/* 애니메이션 아이콘 */}
         <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
           <Text style={styles.icon}>💕</Text>
@@ -130,6 +196,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+  },
+  connectionStatus: {
+    position: 'absolute',
+    top: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: spacing.xs,
+  },
+  connectionText: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   iconContainer: {
     marginBottom: spacing.xl,
