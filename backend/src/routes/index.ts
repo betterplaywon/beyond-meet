@@ -4,6 +4,7 @@ import userRoutes from './user-routes';
 import matchRoutes from './match-routes';
 import agoraRoutes from './agora-routes';
 import friendsRoutes from './friends-routes';
+import callRoutes from './call-routes';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.get('/', (req, res) => {
       match: '/api/match',
       agora: '/api/agora',
       friends: '/api/friends',
+      call: '/api/call',
     },
   });
 });
@@ -27,5 +29,6 @@ router.use('/users', userRoutes);
 router.use('/match', matchRoutes);
 router.use('/agora', agoraRoutes);
 router.use('/friends', friendsRoutes);
+router.use('/call', callRoutes);
 
 export default router;
