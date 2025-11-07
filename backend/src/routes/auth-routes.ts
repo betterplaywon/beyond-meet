@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth-controller';
 import { authenticate } from '../middlewares/auth';
+import { authLimiter, passwordResetLimiter } from '../middlewares/rateLimiter';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.post('/register', authController.register);
  * @desc    로그인
  * @access  Public
  */
-router.post('/login', authController.login);
+router.post('/login', authLimiter, authController.login);
 
 /**
  * @route   POST /api/auth/refresh
@@ -48,13 +49,13 @@ router.get('/me', authenticate, authController.me);
  * @desc    비밀번호 재설정 요청
  * @access  Public
  */
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/forgot-password', passwordResetLimiter, authController.forgotPassword);
 
 /**
  * @route   POST /api/auth/reset-password
  * @desc    비밀번호 재설정
  * @access  Public
  */
-router.post('/reset-password', authController.resetPassword);
+router.post('/reset-password', passwordResetLimiter, authController.resetPassword);
 
 export default router;

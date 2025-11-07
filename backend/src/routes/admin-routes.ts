@@ -6,12 +6,14 @@ import { Router } from 'express';
 import * as adminController from '../controllers/admin-controller';
 import { authenticate } from '../middlewares/auth';
 import { requireAdmin } from '../middlewares/admin';
+import { adminLimiter } from '../middlewares/rateLimiter';
 
 const router = Router();
 
-// 모든 라우트에 인증 + 관리자 권한 필요
+// 모든 라우트에 인증 + 관리자 권한 + Rate Limiting 필요
 router.use(authenticate);
 router.use(requireAdmin);
+router.use(adminLimiter);
 
 /**
  * @route   POST /api/admin/invite-codes

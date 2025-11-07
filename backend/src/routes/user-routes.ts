@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { UserController } from '../controllers/user-controller';
 import { authenticate } from '../middlewares/auth';
 import { upload } from '../middlewares/upload';
+import { uploadLimiter } from '../middlewares/rateLimiter';
 
 const router = Router();
 const userController = new UserController();
@@ -29,7 +30,7 @@ router.patch('/me', userController.updateProfile);
  * POST /api/users/me/photos
  * 프로필 사진 업로드
  */
-router.post('/me/photos', upload.single('photo'), userController.uploadProfilePhoto);
+router.post('/me/photos', uploadLimiter, upload.single('photo'), userController.uploadProfilePhoto);
 
 /**
  * DELETE /api/users/me/photos/:photoUrl
