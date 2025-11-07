@@ -6,6 +6,7 @@ import agoraRoutes from './agora-routes';
 import friendsRoutes from './friends-routes';
 import callRoutes from './call-routes';
 import pushRoutes from './push-routes';
+import adminRoutes from './admin-routes';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ router.get('/', (req, res) => {
       friends: '/api/friends',
       call: '/api/call',
       push: '/api/push',
+      admin: '/api/admin',
     },
   });
 });
@@ -33,5 +35,6 @@ router.use('/agora', agoraRoutes);
 router.use('/friends', friendsRoutes);
 router.use('/call', callRoutes);
 router.use('/push', pushRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;

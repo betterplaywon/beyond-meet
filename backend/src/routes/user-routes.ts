@@ -27,9 +27,15 @@ router.patch('/me', userController.updateProfile);
 
 /**
  * POST /api/users/me/photos
- * 프로필 사진 업데이트
+ * 프로필 사진 업로드
  */
-router.post('/me/photos', userController.updatePhotos);
+router.post('/me/photos', upload.single('photo'), userController.uploadProfilePhoto);
+
+/**
+ * DELETE /api/users/me/photos/:photoUrl
+ * 프로필 사진 삭제
+ */
+router.delete('/me/photos/:photoUrl', userController.deleteProfilePhoto);
 
 /**
  * GET /api/users/me/stats
