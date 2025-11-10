@@ -18,8 +18,8 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials: LoginCredentials) => authApi.login(credentials),
     onSuccess: (data) => {
-      // authStore는 토큰만 저장, 사용자 프로필은 react-query가 관리
-      setAuth(data.accessToken, data.refreshToken);
+      // authStore에 토큰과 userId 저장, 사용자 프로필은 react-query가 관리
+      setAuth(data.accessToken, data.refreshToken, data.user.id);
       queryClient.invalidateQueries({ queryKey: ['user'] });
       Toast.show({
         type: 'success',
@@ -47,8 +47,8 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (data: RegisterData) => authApi.register(data),
     onSuccess: (data) => {
-      // authStore는 토큰만 저장, 사용자 프로필은 react-query가 관리
-      setAuth(data.accessToken, data.refreshToken);
+      // authStore에 토큰과 userId 저장, 사용자 프로필은 react-query가 관리
+      setAuth(data.accessToken, data.refreshToken, data.user.id);
       queryClient.invalidateQueries({ queryKey: ['user'] });
       Toast.show({
         type: 'success',
