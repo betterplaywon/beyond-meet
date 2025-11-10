@@ -2,11 +2,12 @@
  * 루트 네비게이터
  */
 
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useRef, useEffect } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationSetup } from '../hooks/useNotificationSetup';
+import { pushService } from '../services/pushService';
 import { RootStackParamList } from '../@types';
 
 // Navigators
@@ -53,8 +54,19 @@ const AppContent: React.FC = () => {
 };
 
 const RootNavigator: React.FC = () => {
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+  useEffect(() => {
+    // pushService에 navigation ref 설정 (Deep Link 처리용)
+    pushService.setNavigationRef(navigationRef.current);
+
+    return () => {
+      pushService.setNavigationRef(null);
+    };
+  }, []);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <AppContent />
     </NavigationContainer>
   );
