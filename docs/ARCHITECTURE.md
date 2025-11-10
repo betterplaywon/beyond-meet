@@ -7,9 +7,11 @@
 ## 📋 문서 정보
 
 - **작성일**: 2025-11-04
-- **버전**: 1.0.0
+- **버전**: 1.1.0
+- **최종 업데이트**: 2025-11-10
 - **대상**: 개발팀, 기술 리더
 - **목적**: 시스템 아키텍처 설계 및 기술 스택 상세 가이드
+- **구현 상태**: 백엔드 100% 완료, 프론트엔드 100% 완료
 
 ---
 
@@ -123,9 +125,8 @@
     "typescript": "^5.3.3"
   },
   "state-management": {
-    "@reduxjs/toolkit": "^2.0.1",
-    "react-redux": "^9.0.4",
-    "redux-persist": "^6.0.0"
+    "zustand": "^4.4.7",
+    "@tanstack/react-query": "^5.17.0"
   },
   "navigation": {
     "@react-navigation/native": "^6.1.9",
@@ -250,11 +251,17 @@ react-native-dating-app/
 │   │       └── CallEndScreen.tsx
 │   │
 │   ├── services/               # 비즈니스 로직 서비스
+│   │   ├── api.ts              # Axios 클라이언트
 │   │   ├── agoraService.ts     # Agora SDK 래퍼
 │   │   ├── socketService.ts    # Socket.io 관리
 │   │   ├── pushService.ts      # FCM 관리
 │   │   └── storageService.ts   # AsyncStorage 관리
 │   │
+│   ├── store/                  # Zustand 상태 관리
+│   │   ├── authStore.ts        # 인증 상태
+│   │   ├── userStore.ts        # 사용자 정보
+│   │   ├── callStore.ts        # 통화 세션 상태
+│   │   └── matchStore.ts       # 매칭 상태
 │   │
 │   ├── styles/                 # 스타일 관련
 │   │   ├── theme.ts            # 테마 (색상, 폰트 등)
@@ -275,7 +282,81 @@ react-native-dating-app/
 └── README.md
 ```
 
-### 2.4 네비게이션 구조
+### 2.4 상태 관리 (Zustand + React Query)
+
+**Zustand** - 클라이언트 상태 관리 (UI 상태, 세션)
+**React Query** - 서버 상태 관리 (API 데이터, 캐싱)
+
+```typescript
+// src/store/authStore.ts
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface AuthState {
+  accessToken: string | null;
+  refreshToken: string | null;
+  isAuthenticated: boolean;
+  setTokens: (access: string, refresh: string) => void;
+  clearTokens: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      setTokens: (access, refresh) =>
+        set({ accessToken: access, refreshToken: refresh, isAuthenticated: true }),
+      clearTokens: () =>
+        set({ accessToken: null, refreshToken: null, isAuthenticated: false }),
+    }),
+    {
+      name: 'auth-storage',
+    }
+  )
+);
+
+// src/store/callStore.ts
+import { create } from 'zustand';
+
+interface CallState {
+  currentSession: CallSession | null;
+  incomingCall: CallData | null;
+  setCurrentSession: (session: CallSession | null) => void;
+  setIncomingCall: (call: CallData | null) => void;
+}
+
+export const useCallStore = create<CallState>((set) => ({
+  currentSession: null,
+  incomingCall: null,
+  setCurrentSession: (session) => set({ currentSession: session }),
+  setIncomingCall: (call) => set({ incomingCall: call }),
+}));
+
+// React Query 사용 예시
+// src/hooks/useUser.ts
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { userApi } from '../services/api';
+
+export const useMyProfile = () => {
+  return useQuery({
+    queryKey: ['user', 'me'],
+    queryFn: userApi.getMyProfile,
+  });
+};
+
+export const useUpdateProfile = () => {
+  return useMutation({
+    mutationFn: userApi.updateProfile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'me'] });
+    },
+  });
+};
+```
+
+### 2.5 네비게이션 구조
 
 ```typescript
 // src/navigation/types.ts
@@ -301,7 +382,7 @@ export type MainTabParamList = {
 };
 ```
 
-### 2.5 Agora 통합 (Custom Hook)
+### 2.6 Agora 통합 (Custom Hook)
 
 ```typescript
 // src/hooks/useAgora.ts
