@@ -8,7 +8,9 @@
  * - 권한 요청
  */
 
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import messaging, {
+  FirebaseMessagingTypes,
+} from '@react-native-firebase/messaging';
 import { Platform, Alert } from 'react-native';
 import { NavigationContainerRef } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -39,12 +41,15 @@ interface NotificationData {
 }
 
 class PushService {
-  private navigationRef: NavigationContainerRef<RootStackParamList> | null = null;
+  private navigationRef: NavigationContainerRef<RootStackParamList> | null =
+    null;
 
   /**
    * Navigation 참조 설정
    */
-  setNavigationRef(ref: NavigationContainerRef<RootStackParamList> | null): void {
+  setNavigationRef(
+    ref: NavigationContainerRef<RootStackParamList> | null,
+  ): void {
     this.navigationRef = ref;
   }
 
@@ -123,7 +128,7 @@ class PushService {
    * 포그라운드 메시지 리스너 설정
    */
   private setupForegroundListener(): void {
-    messaging().onMessage(async (remoteMessage) => {
+    messaging().onMessage(async remoteMessage => {
       console.log('[PushService] Foreground message received:', remoteMessage);
       this.handleForegroundMessage(remoteMessage);
     });
@@ -133,8 +138,11 @@ class PushService {
    * 백그라운드 메시지 리스너 설정
    */
   private setupBackgroundListener(): void {
-    messaging().onNotificationOpenedApp((remoteMessage) => {
-      console.log('[PushService] Notification opened app from background:', remoteMessage);
+    messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log(
+        '[PushService] Notification opened app from background:',
+        remoteMessage,
+      );
       this.handleNotificationNavigation(remoteMessage);
     });
   }
@@ -146,7 +154,10 @@ class PushService {
     try {
       const remoteMessage = await messaging().getInitialNotification();
       if (remoteMessage) {
-        console.log('[PushService] App opened from notification:', remoteMessage);
+        console.log(
+          '[PushService] App opened from notification:',
+          remoteMessage,
+        );
         // 약간의 딜레이를 주어 Navigation이 준비될 때까지 대기
         setTimeout(() => {
           this.handleNotificationNavigation(remoteMessage);
@@ -161,8 +172,10 @@ class PushService {
    * 포그라운드 메시지 처리
    * 앱이 활성 상태일 때 알림 표시
    */
-  private handleForegroundMessage(remoteMessage: FirebaseMessagingTypes.RemoteMessage): void {
-    const { notification, data } = remoteMessage;
+  private handleForegroundMessage(
+    remoteMessage: FirebaseMessagingTypes.RemoteMessage,
+  ): void {
+    const { notification } = remoteMessage;
 
     if (!notification) {
       return;
@@ -183,24 +196,22 @@ class PushService {
 
     // iOS에서는 Alert도 함께 표시 (선택사항)
     if (Platform.OS === 'ios') {
-      Alert.alert(
-        notification.title || '새 알림',
-        notification.body || '',
-        [
-          { text: '닫기', style: 'cancel' },
-          {
-            text: '확인',
-            onPress: () => this.handleNotificationNavigation(remoteMessage),
-          },
-        ]
-      );
+      Alert.alert(notification.title || '새 알림', notification.body || '', [
+        { text: '닫기', style: 'cancel' },
+        {
+          text: '확인',
+          onPress: () => this.handleNotificationNavigation(remoteMessage),
+        },
+      ]);
     }
   }
 
   /**
    * 알림 타입에 따라 화면 이동 (Deep Link 처리)
    */
-  private handleNotificationNavigation(remoteMessage: FirebaseMessagingTypes.RemoteMessage): void {
+  private handleNotificationNavigation(
+    remoteMessage: FirebaseMessagingTypes.RemoteMessage,
+  ): void {
     if (!this.navigationRef) {
       console.warn('[PushService] Navigation ref not set');
       return;
@@ -215,12 +226,19 @@ class PushService {
 
     const notificationData = data as unknown as NotificationData;
 
-    console.log('[PushService] Handling notification navigation:', notificationData);
+    console.log(
+      '[PushService] Handling notification navigation:',
+      notificationData,
+    );
 
     switch (notificationData.type) {
       case NotificationType.CALL_INCOMING:
         // 통화 요청 알림 -> VideoCallScreen
-        if (notificationData.sessionId && notificationData.channelName && notificationData.token) {
+        if (
+          notificationData.sessionId &&
+          notificationData.channelName &&
+          notificationData.token
+        ) {
           this.navigationRef.navigate('VideoCall', {
             sessionId: notificationData.sessionId,
             channelName: notificationData.channelName,
@@ -231,7 +249,11 @@ class PushService {
 
       case NotificationType.MATCH_FOUND:
         // 매칭 성공 알림 -> VideoCallScreen
-        if (notificationData.sessionId && notificationData.channelName && notificationData.token) {
+        if (
+          notificationData.sessionId &&
+          notificationData.channelName &&
+          notificationData.token
+        ) {
           this.navigationRef.navigate('VideoCall', {
             sessionId: notificationData.sessionId,
             channelName: notificationData.channelName,
@@ -253,7 +275,10 @@ class PushService {
         break;
 
       default:
-        console.warn('[PushService] Unknown notification type:', notificationData.type);
+        console.warn(
+          '[PushService] Unknown notification type:',
+          notificationData.type,
+        );
     }
   }
 
@@ -261,7 +286,7 @@ class PushService {
    * 토큰 갱신 리스너 등록
    */
   onTokenRefresh(callback: (token: string) => void): () => void {
-    const unsubscribe = messaging().onTokenRefresh((token) => {
+    const unsubscribe = messaging().onTokenRefresh(token => {
       console.log('[PushService] FCM Token refreshed:', token);
       callback(token);
     });
@@ -283,15 +308,15 @@ class PushService {
   /**
    * 앱 배지 숫자 설정 (iOS만 지원)
    */
-  async setBadgeCount(count: number): Promise<void> {
-    if (Platform.OS === 'ios') {
-      try {
-        await messaging().setAPNSBadgeCount(count);
-      } catch (error) {
-        console.error('[PushService] Failed to set badge count:', error);
-      }
-    }
-  }
+  // async setBadgeCount(count: number): Promise<void> {
+  //   if (Platform.OS === 'ios') {
+  //     try {
+  //       await messaging().setAPNSBadgeCount(count);
+  //     } catch (error) {
+  //       console.error('[PushService] Failed to set badge count:', error);
+  //     }
+  //   }
+  // }
 
   /**
    * 특정 토픽 구독
@@ -301,7 +326,10 @@ class PushService {
       await messaging().subscribeToTopic(topic);
       console.log(`[PushService] Subscribed to topic: ${topic}`);
     } catch (error) {
-      console.error(`[PushService] Failed to subscribe to topic ${topic}:`, error);
+      console.error(
+        `[PushService] Failed to subscribe to topic ${topic}:`,
+        error,
+      );
     }
   }
 
@@ -313,7 +341,10 @@ class PushService {
       await messaging().unsubscribeFromTopic(topic);
       console.log(`[PushService] Unsubscribed from topic: ${topic}`);
     } catch (error) {
-      console.error(`[PushService] Failed to unsubscribe from topic ${topic}:`, error);
+      console.error(
+        `[PushService] Failed to unsubscribe from topic ${topic}:`,
+        error,
+      );
     }
   }
 }

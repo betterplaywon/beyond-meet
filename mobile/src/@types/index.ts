@@ -49,7 +49,12 @@ export interface AuthResponse {
 
 // Match Types
 export type MatchType = 'RANDOM' | 'DIRECT';
-export type MatchStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
+export type MatchStatus =
+  | 'PENDING'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'CANCELLED';
 
 export interface MatchSession {
   id: string;
@@ -107,9 +112,12 @@ export interface ApiResponse<T = any> {
 }
 
 // Navigation Types
+import { NavigatorScreenParams } from '@react-navigation/native';
+
+// Navigation Types
 export type RootStackParamList = {
   Auth: undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Matching: undefined;
   IncomingCall: { sessionId: string; caller: User };
   VideoCall: { sessionId: string; channelName: string; token: string };
