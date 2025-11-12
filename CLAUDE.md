@@ -23,7 +23,8 @@ beyond-meet/
 ├── backend/             # Node.js + Express + Prisma 백엔드
 ├── docs/               # 프로젝트 문서 (PRD, API 명세서 등)
 ├── README.md           # 프로젝트 메인 문서
-└── CLAUDE.md           # 이 파일
+├── CLAUDE.md           # 개발 가이드 (이 파일)
+└── DEPLOYMENT.md       # 배포 및 인프라 가이드
 ```
 
 ---
@@ -59,9 +60,17 @@ beyond-meet/
    - 위험 요소 및 대응
 
 5. **[docs/UI_FLOW.md](docs/UI_FLOW.md)** ⭐⭐⭐⭐
+
    - 화면 설계
    - 디자인 시스템
    - 사용자 플로우
+
+6. **[DEPLOYMENT.md](DEPLOYMENT.md)** ⭐⭐⭐⭐⭐
+   - 프로덕션 배포 가이드
+   - 환경 변수 설정
+   - 외부 서비스 통합 (Agora, Firebase, Upstash, Supabase)
+   - GitHub Actions 자동화
+   - 트러블슈팅
 
 ---
 
@@ -407,6 +416,18 @@ if (!JWT_SECRET) {
 jwt.sign(payload, process.env.JWT_SECRET);
 ```
 
+#### 7. 환경 변수 파일 관리
+
+**⚠️ 환경 변수 설정 상세 정보는 [DEPLOYMENT.md](DEPLOYMENT.md)를 참조하세요.**
+
+**중요사항**:
+
+- ✅ `.env` 파일은 Git에 커밋하지 않음 (`.gitignore`에 포함)
+- ✅ `.env.example` 파일은 커밋하여 템플릿 제공
+- ✅ 백엔드: `dotenv`로 환경 변수 로드
+- ✅ 프론트엔드: `react-native-config`로 .env 파일 읽음
+- ❌ **절대 실제 비밀 키를 코드나 문서에 포함하지 말 것**
+
 ---
 
 ### 프론트엔드 (React Native)
@@ -429,6 +450,8 @@ mobile/src/
 │   ├── api.ts          # Axios 설정
 │   └── endpoints/      # API 엔드포인트
 ├── hooks/              # Custom Hooks
+├── config/             # 환경 설정 ⭐ NEW
+│   └── env.ts          # 환경 변수 중앙화
 ├── utils/              # 유틸리티 함수
 ├── types/              # TypeScript 타입
 ├── constants/          # 상수
@@ -512,7 +535,59 @@ api.interceptors.response.use(
 export default api;
 ```
 
-#### 5. 스타일링 (UI_FLOW.md 참고)
+#### 5. 환경 변수 사용 (React Native)
+
+**환경 변수 설정 파일** (`mobile/src/config/env.ts`):
+
+```typescript
+import Config from "react-native-config";
+import { Platform } from "react-native";
+
+// 개발 환경 감지
+const isDev = __DEV__;
+
+// 플랫폼별 localhost 주소
+const getLocalhost = () => {
+  if (Platform.OS === "android") {
+    return "10.0.2.2"; // Android 에뮬레이터 localhost
+  }
+  return "localhost"; // iOS 시뮬레이터
+};
+
+// 환경 변수 Export
+export const ENV = {
+  API_BASE_URL: isDev
+    ? `http://${getLocalhost()}:5000`
+    : Config.API_BASE_URL || "https://beyond-meet.onrender.com",
+  AGORA_APP_ID: Config.AGORA_APP_ID || "your-agora-app-id",
+};
+```
+
+**사용 예시:**
+
+```typescript
+// ✅ config/env.ts 사용
+import { ENV } from "@/config/env";
+
+const api = axios.create({
+  baseURL: ENV.API_BASE_URL,
+});
+
+// ❌ 직접 사용하지 말 것
+import Config from "react-native-config";
+const api = axios.create({
+  baseURL: Config.API_BASE_URL,
+});
+```
+
+**환경별 동작:**
+
+- **개발 환경** (`__DEV__ === true`): localhost 자동 사용
+  - iOS: `http://localhost:5000`
+  - Android: `http://10.0.2.2:5000`
+- **프로덕션 환경**: `.env` 파일의 `API_BASE_URL` 사용
+
+#### 6. 스타일링 (UI_FLOW.md 참고)
 
 ```typescript
 // ✅ StyleSheet 사용
@@ -761,6 +836,33 @@ cd mobile/ios && pod install && cd ..
 cd mobile/android && ./gradlew clean && cd ..
 ```
 
+#### 5. 환경 변수 설정 (React Native)
+
+```bash
+# mobile/.env 파일 생성
+cp mobile/.env.example mobile/.env
+
+# 프로덕션 배포 시 수정
+API_BASE_URL=https://your-backend-url.com
+AGORA_APP_ID=your-agora-app-id
+```
+
+**개발 환경**에서는 `.env` 파일이 없어도 자동으로 localhost 사용 (config/env.ts의 fallback)
+
+---
+
+## 🚀 배포 및 인프라
+
+**⚠️ 배포, 환경 변수, 외부 서비스 설정, 자동화 워크플로우 등에 대한 상세 정보는 [DEPLOYMENT.md](DEPLOYMENT.md)를 참조하세요.**
+
+**주요 내용:**
+
+- Render.com 프로덕션 배포 가이드
+- Supabase DB 마이그레이션 절차
+- Agora, Firebase, Upstash 설정 방법
+- GitHub Actions Keep-Alive 워크플로우
+- 트러블슈팅 가이드
+
 ---
 
 ## 📞 도움이 필요할 때
@@ -772,139 +874,29 @@ cd mobile/android && ./gradlew clean && cd ..
 
 ---
 
-## 📊 프로젝트 진행 상황 (2025-11-10 기준)
+## 📊 프로젝트 진행 상황 (2025-11-12 기준)
 
-### 전체 진행률: **90%** (Day 7/50일) ⭐ +5% 증가
+### 전체 진행률: **98%** (Day 12/50일)
 
-#### Backend: 100% 완료 ✅ (변동 없음)
+#### 남은 작업
 
-**구현 완료:**
+**통합 테스트** (2-3일):
 
-- ✅ 인증 시스템 (회원가입, 로그인, JWT, 초대 코드 검증)
-- ✅ 사용자 관리 API (프로필 조회/수정, 친구 관리)
-- ✅ 매칭 시스템 (랜덤/선택 매칭, Socket.io)
-- ✅ Agora RTC 토큰 생성
-- ✅ Prisma Schema 전체 정의 (9개 모델)
-- ✅ Supabase Storage 연동
-- ✅ 통화 관리 API (시작/종료/기록/이벤트)
-- ✅ 푸시 알림 API (FCM 디바이스 토큰 등록/제거)
-- ✅ 프로필 사진 업로드 API (Supabase Storage, Multer)
-- ✅ 관리자 API (초대 코드 생성, 통계, 비활성화)
-- ✅ 비밀번호 재설정 API (forgot-password, reset-password)
-- ✅ Rate Limiting (인증, 업로드, 관리자별 제한)
+- API 엔드포인트 전체 테스트
+- 영상 통화 품질 테스트 (iOS ↔ Android)
+- 푸시 알림 테스트 (포그라운드/백그라운드)
+- Socket.io 매칭 시스템 안정성 테스트
 
-#### Mobile: 100% 완료 ✅ ⭐ +15% 증가 (개발 완료!)
+**Beta 출시** (11/15 예상):
 
-**구현 완료:**
+- 초대 코드 20개 활용
+- Beta 테스터 모집
+- 피드백 수집 및 버그 대응
 
-- ✅ 인증 화면 (Splash, Welcome, Login, Register)
-- ✅ 홈 화면 (HomeScreen)
-- ✅ 영상 통화 화면 (VideoCallScreen, CallEndScreen, IncomingCallModal)
-- ✅ 프로필 화면 (ProfileScreen, ProfileEditScreen, SettingsScreen)
-- ✅ 친구 목록 화면 (FriendsScreen)
-- ✅ 통화 기록 화면 (CallHistoryScreen)
-- ✅ 매칭 대기 화면 (MatchingScreen)
-- ✅ 공통 컴포넌트 (Button, Input, Avatar, Picker, **NotificationPermissionModal** ⭐ NEW)
-- ✅ Navigation 구조 (Auth, Main, Root)
-- ✅ Zustand Store (클라이언트 상태 관리 + **userId 추가** ⭐ NEW)
-- ✅ React Query 통합 완료 (서버 상태 관리)
-  - ✅ API 서비스 레이어 (axios 인터셉터, 토큰 관리)
-  - ✅ 친구 API Hooks (useFriends, useAddFriend, useRemoveFriend, useBlockUser)
-  - ✅ 사용자 API Hooks (useMyProfile, useUpdateProfile, useUploadProfilePhoto, useUpdateSettings)
-  - ✅ 통화 API Hooks (useCallHistory, useStartCall, useEndCall)
-  - ✅ 매칭 API Hooks (useStartMatch, useCancelMatch)
-  - ✅ Socket.io 통합 (useSocket, useSocketEvent)
-- ✅ Firebase FCM 연동 (iOS + Android)
-- ✅ **푸시 알림 완전 통합** ⭐ NEW
-  - ✅ **pushService.ts 통합 서비스** (포그라운드/백그라운드/Deep Link)
-  - ✅ **NotificationPermissionModal** (권한 요청 UI)
-  - ✅ **알림 타입별 화면 이동** (call_incoming, match_found, friend_request, call_ended)
-  - ✅ **토큰 자동 갱신 및 서버 등록**
-  - ✅ **authStore에 userId 저장** (푸시 알림 연동)
-
-**진행 필요:**
-
-- ✅ 모든 모바일 개발 완료!
-
-#### 인프라: 10% 완료 🔧 (변동 없음)
-
-**진행 필요:**
-
-- ❌ Render.com 배포 ⭐⭐⭐⭐⭐
-- ❌ Supabase DB 마이그레이션 실행 ⭐⭐⭐⭐⭐
-- ❌ Agora 프로젝트 설정 ⭐⭐⭐⭐⭐
-- ❌ Firebase FCM 설정 ⭐⭐⭐⭐⭐
-- ❌ Upstash Redis 설정 ⭐⭐⭐⭐
-- ❌ UptimeRobot 모니터링 ⭐⭐⭐
-
-### 📅 다음 우선순위 (남은 작업)
-
-#### Week 1 (11/07 ~ 11/10) - 인프라 배포
-
-1. **데이터베이스 마이그레이션** (1일)
-   - Supabase에서 Prisma 스키마 실행
-   - 초기 데이터 세팅 (초대 코드 20개 생성)
-
-2. **백엔드 배포** (1일)
-   - Render.com에 배포
-   - 환경 변수 설정
-   - 도메인 연결
-
-3. **외부 서비스 설정** (1일)
-   - Agora 프로젝트 설정 (App ID, Certificate)
-   - Firebase FCM 서버 키 설정
-   - Upstash Redis 설정
-
-#### Week 2 (11/11 ~ 11/17) - 테스트 및 최적화
-
-4. **통합 테스트** (3일)
-   - API 엔드포인트 테스트
-   - 영상 통화 품질 테스트
-   - 푸시 알림 테스트
-   - Socket.io 연결 안정성 테스트
-
-5. **성능 최적화** (2일)
-   - React Query 캐싱 전략 최적화
-   - 이미지 로딩 최적화
-   - 번들 사이즈 최적화
-
-### 🎯 상태 요약
-
-- ✅ 계획 대비 **4-5주 앞서 진행 중** 🎉🎉
-- ✅ **백엔드 API 100% 완료** (모든 엔드포인트 구현)
-- ✅ **프론트엔드 100% 완료** ⭐ (모든 화면 + 푸시 알림 완전 통합!)
-- ✅ 핵심 기능 구현 완료: 인증, 매칭, 통화, 푸시, 프로필, 관리자
-- ⚠️ 남은 작업: **인프라 배포 및 테스트만**
-- 🚀 예상: **11/13까지 Beta 출시 가능** (당초 계획보다 11일 빠름!)
-
-### 📋 최근 완료 작업 (2025-11-10) ⭐ NEW
-
-**프론트엔드:**
-- ✅ **pushService.ts 통합 서비스 구현** (포그라운드/백그라운드/Deep Link 완전 통합)
-- ✅ **NotificationPermissionModal 컴포넌트** (알림 권한 요청 UI)
-- ✅ **알림 타입별 Deep Link 처리** (call_incoming, match_found, friend_request, call_ended)
-- ✅ **authStore에 userId 추가** (푸시 알림 백엔드 연동)
-- ✅ **useNotificationSetup Hook 업데이트** (pushService 사용)
-- ✅ **RootNavigator에 Navigation ref 설정** (Deep Link용)
-- ✅ **로그인/회원가입 시 userId 저장 로직** 추가
-
-**이전 완료 작업 (2025-11-07):**
-
-**백엔드:**
-- ✅ 통화 관리 API 구현 (call-routes, call-service, call-controller)
-- ✅ 푸시 알림 API 구현 (push-routes, push-service, push-controller)
-- ✅ 프로필 사진 업로드 API (Supabase Storage + Multer)
-- ✅ 관리자 API 구현 (초대 코드 생성, 통계, 비활성화)
-- ✅ 비밀번호 재설정 API (forgot-password, reset-password)
-- ✅ Rate Limiting 미들웨어 (express-rate-limit)
-
-**프론트엔드:**
-- ✅ 매칭 대기 화면 (MatchingScreen.tsx)
-- ✅ Firebase FCM 연동 (iOS + Android)
-- ✅ 푸시 알림 기본 수신 처리
+**⚠️ 상세 배포 내역 및 완료 작업 히스토리는 [DEPLOYMENT.md](DEPLOYMENT.md)를 참조하세요.**
 
 ---
 
 **작성일**: 2025-11-05
-**버전**: 1.4.0
-**최종 업데이트**: 2025-11-10 (프론트엔드 100% 완료, 진행률 90%)
+**버전**: 1.7.0
+**최종 업데이트**: 2025-11-12 (문서 재구성 완료 - DEPLOYMENT.md 분리, 진행률 98%)

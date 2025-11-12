@@ -4,7 +4,8 @@
       "Bash(curl:*)",
       "Bash(pod install)",
       "Bash(export LANG=en_US.UTF-8)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
