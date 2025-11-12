@@ -21,10 +21,10 @@ router.use(authenticate);
 router.get('/me', userController.getMyProfile);
 
 /**
- * PATCH /api/users/me
- * 내 프로필 업데이트
+ * PUT /api/users/:userId
+ * 프로필 업데이트
  */
-router.patch('/me', userController.updateProfile);
+router.put('/:userId', userController.updateProfile);
 
 /**
  * POST /api/users/me/photos

@@ -62,14 +62,20 @@ export class UserController {
 
   /**
    * 프로필 업데이트
-   * PATCH /api/users/me
+   * PUT /api/users/:userId
    */
   updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?.id;
+      const authenticatedUserId = req.user?.id;
+      const { userId } = req.params;
 
-      if (!userId) {
+      if (!authenticatedUserId) {
         throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+      }
+
+      // 보안 검증: 본인의 프로필만 수정 가능
+      if (authenticatedUserId !== userId) {
+        throw new AppError(403, 'FORBIDDEN', '자신의 프로필만 수정할 수 있습니다');
       }
 
       const {
