@@ -7,7 +7,7 @@ import { NavigationContainer, NavigationContainerRef } from '@react-navigation/n
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationSetup } from '../hooks/useNotificationSetup';
-import { pushService } from '../services/pushService';
+import * as pushService from '../services/pushService';
 import { RootStackParamList } from '../@types';
 
 // Navigators

@@ -3,13 +3,12 @@
  */
 
 import { Router } from 'express';
-import { UserController } from '../controllers/user-controller';
+import * as userController from '../controllers/user-controller';
 import { authenticate } from '../middlewares/auth';
 import { upload } from '../middlewares/upload';
 import { uploadLimiter } from '../middlewares/rateLimiter';
 
 const router = Router();
-const userController = new UserController();
 
 // 모든 라우트에 인증 필요
 router.use(authenticate);

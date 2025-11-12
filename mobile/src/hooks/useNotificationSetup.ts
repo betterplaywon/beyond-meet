@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { pushService } from '../services/pushService';
+import * as pushService from '../services/pushService';
 import { useRegisterDevice } from './usePushNotifications';
 import { useAuthStore } from '../store/authStore';
 

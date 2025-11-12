@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { socketService } from '../services/socketService';
+import * as socketService from '../services/socketService';
 import { useAuthStore } from '../store/authStore';
 
 /**
@@ -28,10 +28,10 @@ export const useSocket = () => {
   }, [isAuthenticated]);
 
   return {
-    emit: socketService.emit.bind(socketService),
-    on: socketService.on.bind(socketService),
-    off: socketService.off.bind(socketService),
-    isConnected: socketService.isConnected.bind(socketService),
+    emit: socketService.emit,
+    on: socketService.on,
+    off: socketService.off,
+    isConnected: socketService.isConnected,
   };
 };
 
