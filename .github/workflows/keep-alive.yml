@@ -1,0 +1,33 @@
+name: Keep Render.com Server Alive
+
+on:
+  schedule:
+    # 5분마다 실행 (cron 표현식: */5 * * * *)
+    # GitHub Actions는 최소 5분 간격 지원
+    - cron: '*/5 * * * *'
+
+  # 수동 실행 가능
+  workflow_dispatch:
+
+jobs:
+  ping-server:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          echo "🏓 Pinging Render.com server..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://beyond-meet-api.onrender.com/health)
+
+          if [ $response -eq 200 ]; then
+            echo "✅ Server is alive! (HTTP $response)"
+          else
+            echo "⚠️ Server response: HTTP $response"
+            exit 1
+          fi
+
+      - name: Show Server Status
+        if: success()
+        run: |
+          echo "📊 Server Status:"
+          curl -s https://beyond-meet-api.onrender.com/health | jq .
