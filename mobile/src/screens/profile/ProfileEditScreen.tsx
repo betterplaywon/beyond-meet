@@ -80,7 +80,7 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
           },
         },
       ],
-      'plain-text'
+      'plain-text',
     );
   };
 
@@ -117,11 +117,10 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
             { text: '확인', onPress: () => navigation.goBack() },
           ]);
         },
-        onError: (err) => {
-          console.error('Failed to update profile:', err);
+        onError: err => {
           Alert.alert('오류', parseApiError(err));
         },
-      }
+      },
     );
   };
 
@@ -249,9 +248,7 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.infoLabel}>국가</Text>
             <Text style={styles.infoValue}>🇰🇷 대한민국</Text>
           </View>
-          <Text style={styles.infoHint}>
-            기본 정보는 수정할 수 없습니다
-          </Text>
+          <Text style={styles.infoHint}>기본 정보는 수정할 수 없습니다</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
