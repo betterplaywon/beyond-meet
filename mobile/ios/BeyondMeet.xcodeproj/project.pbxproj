@@ -21,6 +21,7 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BeyondMeet/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BeyondMeet/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = BeyondMeet/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		13B07FB91A68108700A75B9A /* BeyondMeet.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = BeyondMeet.entitlements; path = BeyondMeet/BeyondMeet.entitlements; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-BeyondMeet.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BeyondMeet.debug.xcconfig"; path = "Target Support Files/Pods-BeyondMeet/Pods-BeyondMeet.debug.xcconfig"; sourceTree = "<group>"; };
 		3D2ADC2A2EBDBD600033B01C /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		3D59C67C2EBDD4FD0019CF57 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -51,6 +52,7 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				13B07FB91A68108700A75B9A /* BeyondMeet.entitlements */,
 			);
 			name = BeyondMeet;
 			sourceTree = "<group>";
@@ -281,6 +283,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = BeyondMeet/BeyondMeet.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = BeyondMeet/Info.plist;
@@ -295,7 +298,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyondmeet.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyondmeet;
 				PRODUCT_NAME = BeyondMeet;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -309,6 +312,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = BeyondMeet/BeyondMeet.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = BeyondMeet/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -322,7 +326,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.beyondmeet.dev;
+				PRODUCT_BUNDLE_IDENTIFIER = com.beyondmeet;
 				PRODUCT_NAME = BeyondMeet;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
