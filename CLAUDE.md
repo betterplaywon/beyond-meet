@@ -224,39 +224,53 @@ backend/
 ```typescript
 // src/controllers/auth-controller.ts
 import { Request, Response, NextFunction } from "express";
-import { AuthService } from "../services/auth-service";
+import { registerUser } from "../services/auth-service";
 import { AppError } from "../middlewares/errorHandler";
 
-export class AuthController {
-  private authService: AuthService;
+/**
+ * 회원가입
+ * POST /api/auth/register
+ */
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { inviteCode, email, password } = req.body;
 
-  constructor() {
-    this.authService = new AuthService();
+    const result = await registerUser({
+      inviteCode,
+      email,
+      password,
+    });
+
+    res.status(201).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  /**
-   * 회원가입
-   * POST /api/auth/register
-   */
-  register = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { inviteCode, email, password } = req.body;
-
-      const result = await this.authService.register({
-        inviteCode,
-        email,
-        password,
-      });
-
-      res.status(201).json({
-        success: true,
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-}
+/**
+ * 로그인
+ * POST /api/auth/login
+ */
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email, password } = req.body;
+    // 서비스 함수 호출
+    // ...
+  } catch (error) {
+    next(error);
+  }
+};
 ```
 
 **Service 예시:**
@@ -268,47 +282,76 @@ import { hashPassword } from "../utils/password";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
 import { AppError } from "../middlewares/errorHandler";
 
-export class AuthService {
-  /**
-   * 사용자 회원가입
-   */
-  async register(data: RegisterInput): Promise<RegisterOutput> {
-    // 1. 초대 코드 검증
-    const inviteCode = await this.validateInviteCode(data.inviteCode);
+/**
+ * 초대 코드 검증
+ */
+const validateInviteCode = async (code: string) => {
+  const inviteCode = await prisma.inviteCode.findUnique({
+    where: { code },
+  });
 
-    // 2. 이메일 중복 확인
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
-
-    if (existingUser) {
-      throw new AppError(400, "EMAIL_EXISTS", "Email already registered");
-    }
-
-    // 3. 사용자 생성
-    const hashedPassword = await hashPassword(data.password);
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash: hashedPassword,
-        // ...
-      },
-    });
-
-    // 4. 토큰 생성
-    const accessToken = generateAccessToken({ id: user.id, email: user.email });
-    const refreshToken = generateRefreshToken({
-      id: user.id,
-      email: user.email,
-    });
-
-    return {
-      user,
-      accessToken,
-      refreshToken,
-    };
+  if (!inviteCode) {
+    throw new AppError(400, "INVALID_INVITE_CODE", "Invalid invite code");
   }
-}
+
+  if (inviteCode.usedCount >= inviteCode.maxUses) {
+    throw new AppError(400, "INVITE_CODE_EXHAUSTED", "Invite code has been fully used");
+  }
+
+  return inviteCode;
+};
+
+/**
+ * 사용자 회원가입
+ */
+export const registerUser = async (
+  data: RegisterInput
+): Promise<RegisterOutput> => {
+  // 1. 초대 코드 검증
+  const inviteCode = await validateInviteCode(data.inviteCode);
+
+  // 2. 이메일 중복 확인
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (existingUser) {
+    throw new AppError(400, "EMAIL_EXISTS", "Email already registered");
+  }
+
+  // 3. 사용자 생성
+  const hashedPassword = await hashPassword(data.password);
+  const user = await prisma.user.create({
+    data: {
+      email: data.email,
+      passwordHash: hashedPassword,
+      // ...
+    },
+  });
+
+  // 4. 토큰 생성
+  const accessToken = generateAccessToken({ id: user.id, email: user.email });
+  const refreshToken = generateRefreshToken({
+    id: user.id,
+    email: user.email,
+  });
+
+  return {
+    user,
+    accessToken,
+    refreshToken,
+  };
+};
+
+/**
+ * 사용자 로그인
+ */
+export const loginUser = async (
+  data: LoginInput
+): Promise<LoginOutput> => {
+  // 로그인 로직
+  // ...
+};
 ```
 
 #### 4. 데이터베이스 마이그레이션 규칙 (중요!)
