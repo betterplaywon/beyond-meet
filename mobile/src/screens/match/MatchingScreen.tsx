@@ -34,9 +34,10 @@ interface Props {
 
 const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   const cancelMutation = useCancelMatch();
-  const setCurrentSession = useCallStore((state) => state.setCurrentSession);
+  const setCurrentSession = useCallStore(state => state.setCurrentSession);
   const socket = useSocket();
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
@@ -79,12 +80,17 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     pulse.start();
 
     return () => pulse.stop();
   }, [scaleAnim]);
+
+  // 매칭 대기 이벤트 리스너
+  useSocketEvent('match:waiting', (data: any) => {
+    console.log('Match waiting:', data);
+  });
 
   // 매칭 성공 이벤트 리스너
   useSocketEvent('match:found', (data: any) => {
@@ -116,6 +122,19 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     navigation.goBack();
   });
 
+  // 매칭 재시도 로직 (15초마다)
+  useEffect(() => {
+    const retryInterval = setInterval(() => {
+      if (isSocketConnected && retryCount < 8) {
+        // 최대 8번 (2분)
+        socket.emit('match:request', { type: 'RANDOM' });
+        setRetryCount(prev => prev + 1);
+      }
+    }, 10000); // 10초마다
+
+    return () => clearInterval(retryInterval);
+  }, [isSocketConnected, retryCount, socket]);
+
   // 매칭 타임아웃 (2분)
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -143,7 +162,11 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
           <View
             style={[
               styles.connectionDot,
-              { backgroundColor: isSocketConnected ? colors.success : colors.error },
+              {
+                backgroundColor: isSocketConnected
+                  ? colors.success
+                  : colors.error,
+              },
             ]}
           />
           <Text style={styles.connectionText}>
@@ -152,12 +175,17 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {/* 애니메이션 아이콘 */}
-        <Animated.View style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View
+          style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}
+        >
           <Text style={styles.icon}>💕</Text>
         </Animated.View>
 
         <Text style={styles.title}>매칭 중입니다...</Text>
         <Text style={styles.subtitle}>새로운 사람을 찾고 있어요</Text>
+        {retryCount > 0 && (
+          <Text style={styles.retryText}>재시도 횟수: {retryCount}/8</Text>
+        )}
 
         <ActivityIndicator
           size="large"
@@ -237,6 +265,12 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.textSecondary,
     marginBottom: spacing.xl,
+  },
+  retryText: {
+    ...typography.caption,
+    color: colors.primary,
+    marginBottom: spacing.md,
+    fontWeight: '600',
   },
   loader: {
     marginVertical: spacing.xl,
