@@ -7,13 +7,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, Friendship } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
@@ -93,7 +93,7 @@ const FriendsScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>친구 목록</Text>

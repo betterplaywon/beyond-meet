@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
@@ -27,7 +28,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
