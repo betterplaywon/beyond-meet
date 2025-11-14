@@ -7,12 +7,12 @@ import Config from 'react-native-config';
 
 export const ENV = {
   // API Base URL
-  // 개발 환경: localhost (iOS는 localhost, Android는 10.0.2.2)
+  // 개발 환경: iOS는 localhost, Android는 Mac의 LAN IP
   // 프로덕션: .env 파일의 API_BASE_URL 사용
   API_BASE_URL: __DEV__
     ? Platform.select({
         ios: 'http://localhost:3000/api',
-        android: 'http://10.0.2.2:3000/api',
+        android: 'http://192.168.219.101:3000/api', // Mac의 LAN IP
       })!
     : Config.API_BASE_URL
     ? `${Config.API_BASE_URL}/api`
