@@ -11,7 +11,7 @@ interface UpdateProfileInput {
   nickname?: string;
   bio?: string;
   interests?: string[];
-  preferredGender?: 'MALE' | 'FEMALE' | 'OTHER';
+  preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
   minAge?: number;
   maxAge?: number;
   preferredCountries?: string[];

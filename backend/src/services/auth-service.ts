@@ -17,9 +17,9 @@ export interface RegisterInput {
   country: string;
   bio?: string;
   interests?: string[];
-  preferredGender: 'MALE' | 'FEMALE' | 'OTHER';
-  minAge: number;
-  maxAge: number;
+  preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
+  minAge?: number;
+  maxAge?: number;
   preferredCountries?: string[];
 }
 
@@ -105,10 +105,11 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
         bio: data.bio || null,
         interests: data.interests || [],
         profilePhotos: [],
-        preferredGender: data.preferredGender,
-        minAge: data.minAge,
-        maxAge: data.maxAge,
-        preferredCountries: data.preferredCountries || [],
+        // 매칭 필터 기본값 설정 (더 많은 매칭 기회 제공)
+        preferredGender: data.preferredGender || 'ANYONE', // 기본: 모든 성별 매칭 가능
+        minAge: data.minAge || 18,
+        maxAge: data.maxAge || 99,
+        preferredCountries: data.preferredCountries || [], // 빈 배열 = 모든 국가 매칭 가능
         onlineStatus: 'OFFLINE',
       },
       select: {
