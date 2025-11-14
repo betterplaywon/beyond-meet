@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, typography, spacing } from '../../styles/theme';
 
 export interface PickerOption {
@@ -53,28 +53,34 @@ export const Picker: React.FC<PickerProps> = ({
 
       {showOptions && (
         <View style={styles.optionsContainer}>
-          {options.map((option) => (
-            <TouchableOpacity
-              key={option.value}
-              style={[
-                styles.option,
-                option.value === value && styles.optionSelected,
-              ]}
-              onPress={() => {
-                onChange(option.value);
-                setShowOptions(false);
-              }}
-            >
-              <Text
+          <ScrollView
+            style={styles.optionsScrollView}
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+          >
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option.value}
                 style={[
-                  styles.optionText,
-                  option.value === value && styles.optionTextSelected,
+                  styles.option,
+                  option.value === value && styles.optionSelected,
                 ]}
+                onPress={() => {
+                  onChange(option.value);
+                  setShowOptions(false);
+                }}
               >
-                {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.optionText,
+                    option.value === value && styles.optionTextSelected,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -125,6 +131,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.textSecondary + '40',
+    maxHeight: 200,
+    overflow: 'hidden',
+  },
+  optionsScrollView: {
     maxHeight: 200,
   },
   option: {
