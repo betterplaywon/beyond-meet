@@ -101,6 +101,8 @@ export const createMatchSession = async (
  * 랜덤 매칭 - 매칭 대기열에 추가
  */
 export const addToMatchQueue = async (userId: string) => {
+  console.log(`[MATCHING] addToMatchQueue called for user: ${userId}`);
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -116,8 +118,20 @@ export const addToMatchQueue = async (userId: string) => {
   });
 
   if (!user) {
+    console.error(`[MATCHING] User not found: ${userId}`);
     throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
   }
+
+  console.log(`[MATCHING] User data:`, {
+    id: user.id,
+    gender: user.gender,
+    birthDate: user.birthDate,
+    country: user.country,
+    preferredGender: user.preferredGender,
+    minAge: user.minAge,
+    maxAge: user.maxAge,
+    preferredCountries: user.preferredCountries,
+  });
 
   // 대기열에 추가
   matchQueue.set(userId, {
@@ -134,6 +148,9 @@ export const addToMatchQueue = async (userId: string) => {
     timestamp: new Date(),
   });
 
+  console.log(`[MATCHING] User added to queue. Queue size: ${matchQueue.size}`);
+  console.log(`[MATCHING] Current queue:`, Array.from(matchQueue.keys()));
+
   return { inQueue: true, queueSize: matchQueue.size };
 };
 
@@ -146,7 +163,7 @@ export const removeFromMatchQueue = (userId: string) => {
 };
 
 /**
- * 매칭 상대 찾기
+ * 매칭 상대 찾기 (티어별 fallback 로직)
  */
 export const findMatch = async (userId: string): Promise<string | null> => {
   const currentUser = matchQueue.get(userId);
@@ -169,41 +186,135 @@ export const findMatch = async (userId: string): Promise<string | null> => {
 
   const currentUserAge = calculateAge(currentUser.filters.birthDate);
 
-  // 매칭 상대 찾기
+  console.log(`[MATCHING] Finding match for user ${userId}:`);
+  console.log(`  - Gender: ${currentUser.filters.gender}, Preferred: ${currentUser.filters.preferredGender}`);
+  console.log(`  - Age: ${currentUserAge}, Range: ${currentUser.filters.minAge}-${currentUser.filters.maxAge}`);
+  console.log(`  - Country: ${currentUser.filters.country}, Preferred: [${currentUser.filters.preferredCountries.join(', ')}]`);
+
+  // Tier 1: 엄격한 매칭 (모든 필터 적용)
+  console.log('[MATCHING] Tier 1: Trying strict matching...');
+  const strictMatch = await tryMatchWithFilters(userId, currentUser, currentUserAge, {
+    checkGender: true,
+    checkAge: true,
+    checkCountry: true,
+  });
+  if (strictMatch) {
+    console.log(`[MATCHING] ✅ Tier 1 match found: ${strictMatch}`);
+    return strictMatch;
+  }
+
+  // Tier 2: 국가 필터 제외
+  console.log('[MATCHING] Tier 2: Trying without country filter...');
+  const countryRelaxedMatch = await tryMatchWithFilters(userId, currentUser, currentUserAge, {
+    checkGender: true,
+    checkAge: true,
+    checkCountry: false,
+  });
+  if (countryRelaxedMatch) {
+    console.log(`[MATCHING] ✅ Tier 2 match found: ${countryRelaxedMatch}`);
+    return countryRelaxedMatch;
+  }
+
+  // Tier 3: 나이 범위 ±5년 확대
+  console.log('[MATCHING] Tier 3: Trying with relaxed age range (±5 years)...');
+  const ageRelaxedMatch = await tryMatchWithFilters(userId, currentUser, currentUserAge, {
+    checkGender: true,
+    checkAge: true,
+    checkCountry: false,
+    ageBuffer: 5,
+  });
+  if (ageRelaxedMatch) {
+    console.log(`[MATCHING] ✅ Tier 3 match found: ${ageRelaxedMatch}`);
+    return ageRelaxedMatch;
+  }
+
+  console.log('[MATCHING] ❌ No match found in any tier');
+  return null;
+};
+
+/**
+ * 필터 조건으로 매칭 시도
+ */
+async function tryMatchWithFilters(
+  userId: string,
+  currentUser: { userId: string; filters: any; timestamp: Date },
+  currentUserAge: number,
+  options: {
+    checkGender: boolean;
+    checkAge: boolean;
+    checkCountry: boolean;
+    ageBuffer?: number;
+  }
+): Promise<string | null> {
+  const calculateAge = (birthDate: Date): number => {
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      return age - 1;
+    }
+    return age;
+  };
+
+  const ageBuffer = options.ageBuffer || 0;
+
   for (const [candidateId, candidate] of matchQueue) {
     if (candidateId === userId) continue;
 
     const candidateAge = calculateAge(candidate.filters.birthDate);
+    const reasons: string[] = [];
 
     // 성별 필터
-    if (currentUser.filters.preferredGender !== 'OTHER' &&
-        candidate.filters.gender !== currentUser.filters.preferredGender) {
-      continue;
-    }
+    if (options.checkGender) {
+      // ANYONE 체크: 한쪽이라도 ANYONE이면 성별 무시
+      const currentUserAcceptsAny = currentUser.filters.preferredGender === 'ANYONE';
+      const candidateAcceptsAny = candidate.filters.preferredGender === 'ANYONE';
 
-    if (candidate.filters.preferredGender !== 'OTHER' &&
-        currentUser.filters.gender !== candidate.filters.preferredGender) {
-      continue;
+      // 양방향 성별 체크
+      if (!currentUserAcceptsAny &&
+          candidate.filters.gender !== currentUser.filters.preferredGender) {
+        reasons.push(`gender mismatch (wants ${currentUser.filters.preferredGender}, got ${candidate.filters.gender})`);
+        continue;
+      }
+
+      if (!candidateAcceptsAny &&
+          currentUser.filters.gender !== candidate.filters.preferredGender) {
+        reasons.push(`reverse gender mismatch (candidate wants ${candidate.filters.preferredGender}, got ${currentUser.filters.gender})`);
+        continue;
+      }
     }
 
     // 나이 필터
-    if (candidateAge < currentUser.filters.minAge || candidateAge > currentUser.filters.maxAge) {
-      continue;
+    if (options.checkAge) {
+      const minAge = currentUser.filters.minAge - ageBuffer;
+      const maxAge = currentUser.filters.maxAge + ageBuffer;
+      const candidateMinAge = candidate.filters.minAge - ageBuffer;
+      const candidateMaxAge = candidate.filters.maxAge + ageBuffer;
+
+      if (candidateAge < minAge || candidateAge > maxAge) {
+        reasons.push(`age out of range (${candidateAge} not in ${minAge}-${maxAge})`);
+        continue;
+      }
+
+      if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) {
+        reasons.push(`reverse age out of range (${currentUserAge} not in ${candidateMinAge}-${candidateMaxAge})`);
+        continue;
+      }
     }
 
-    if (currentUserAge < candidate.filters.minAge || currentUserAge > candidate.filters.maxAge) {
-      continue;
-    }
+    // 국가 필터
+    if (options.checkCountry) {
+      if (currentUser.filters.preferredCountries.length > 0 &&
+          !currentUser.filters.preferredCountries.includes(candidate.filters.country)) {
+        reasons.push(`country not in preferred list`);
+        continue;
+      }
 
-    // 국가 필터 (선택사항)
-    if (currentUser.filters.preferredCountries.length > 0 &&
-        !currentUser.filters.preferredCountries.includes(candidate.filters.country)) {
-      continue;
-    }
-
-    if (candidate.filters.preferredCountries.length > 0 &&
-        !candidate.filters.preferredCountries.includes(currentUser.filters.country)) {
-      continue;
+      if (candidate.filters.preferredCountries.length > 0 &&
+          !candidate.filters.preferredCountries.includes(currentUser.filters.country)) {
+        reasons.push(`reverse country not in preferred list`);
+        continue;
+      }
     }
 
     // 차단 여부 확인
@@ -217,6 +328,7 @@ export const findMatch = async (userId: string): Promise<string | null> => {
     });
 
     if (isBlocked) {
+      reasons.push('blocked');
       continue;
     }
 
@@ -225,7 +337,7 @@ export const findMatch = async (userId: string): Promise<string | null> => {
   }
 
   return null;
-};
+}
 
 /**
  * 선택 매칭 (친구에게 통화 요청)
@@ -343,6 +455,54 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
   });
 
   return { rejected: true };
+};
+
+/**
+ * 큐 전체 재매칭 (주기적 실행용)
+ * 대기열의 모든 사용자를 순회하며 매칭 시도
+ */
+export const matchAllUsersInQueue = async (): Promise<Array<{ user1: string; user2: string }>> => {
+  const matches: Array<{ user1: string; user2: string }> = [];
+  const processedUsers = new Set<string>();
+
+  console.log(`[PERIODIC_MATCHING] Starting periodic match check. Queue size: ${matchQueue.size}`);
+
+  // 큐의 모든 사용자를 순회
+  for (const [userId] of matchQueue) {
+    // 이미 매칭된 사용자는 건너뛰기
+    if (processedUsers.has(userId)) {
+      continue;
+    }
+
+    // 매칭 상대 찾기
+    const matchedUserId = await findMatch(userId);
+
+    if (matchedUserId && !processedUsers.has(matchedUserId)) {
+      console.log(`[PERIODIC_MATCHING] ✅ Match found: ${userId} <-> ${matchedUserId}`);
+
+      // 양쪽 사용자를 처리 완료로 표시
+      processedUsers.add(userId);
+      processedUsers.add(matchedUserId);
+
+      matches.push({
+        user1: userId,
+        user2: matchedUserId,
+      });
+    }
+  }
+
+  console.log(`[PERIODIC_MATCHING] Completed. Found ${matches.length} matches`);
+  return matches;
+};
+
+/**
+ * 큐 상태 조회
+ */
+export const getQueueStatus = () => {
+  return {
+    size: matchQueue.size,
+    users: Array.from(matchQueue.keys()),
+  };
 };
 
 /**
