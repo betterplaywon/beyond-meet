@@ -18,15 +18,19 @@ const setupEventHandlers = (): void => {
   if (!socket) return;
 
   socket.on('connect', () => {
-    console.log('Socket connected:', socket?.id);
+    console.log('[SOCKET] ✅ Connected! Socket ID:', socket?.id);
   });
 
-  socket.on('disconnect', (reason) => {
-    console.log('Socket disconnected:', reason);
+  socket.on('disconnect', reason => {
+    console.log('[SOCKET] ❌ Disconnected. Reason:', reason);
   });
 
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
+  socket.on('error', error => {
+    console.error('[SOCKET] ⚠️ Error:', error);
+  });
+
+  socket.on('connect_error', error => {
+    console.error('[SOCKET] ⚠️ Connection Error:', error.message);
   });
 };
 
@@ -35,17 +39,19 @@ const setupEventHandlers = (): void => {
  */
 export const connect = (): void => {
   if (socket?.connected) {
-    console.log('Socket already connected');
     return;
   }
 
   const token = useAuthStore.getState().accessToken;
   if (!token) {
-    console.error('No access token found');
     return;
   }
 
-  socket = io(ENV.API_BASE_URL.replace('/api', ''), {
+  const socketUrl = ENV.API_BASE_URL.endsWith('/api')
+    ? ENV.API_BASE_URL.slice(0, -4)
+    : ENV.API_BASE_URL;
+
+  socket = io(socketUrl, {
     auth: {
       token,
     },
@@ -73,8 +79,11 @@ export const disconnect = (): void => {
  * 이벤트 emit
  */
 export const emit = (event: string, data?: any): void => {
-  if (!socket?.connected) {
-    console.error('Socket not connected');
+  if (!socket) {
+    return;
+  }
+
+  if (!socket.connected) {
     return;
   }
 
@@ -90,13 +99,13 @@ export const on = (event: string, callback: Function): void => {
     return;
   }
 
-  // 중복 등록 방지
-  if (!listeners.has(event)) {
-    listeners.set(event, []);
+  // 기존 리스너가 있으면 제거 후 재등록
+  if (listeners.has(event)) {
+    socket.off(event);
+    listeners.delete(event);
   }
 
-  const eventListeners = listeners.get(event)!;
-  eventListeners.push(callback);
+  listeners.set(event, [callback]);
 
   socket.on(event, (...args: any[]) => {
     callback(...args);
@@ -142,7 +151,7 @@ export const startRandomMatch = (filters?: {
   maxAge?: number;
   countries?: string[];
 }): void => {
-  emit('match:start', { type: 'RANDOM', filters });
+  emit('match:request', { type: 'RANDOM', filters });
 };
 
 /**
@@ -183,6 +192,8 @@ export const endCall = (sessionId: string): void => {
 /**
  * 온라인 상태 업데이트
  */
-export const updateStatus = (status: 'ONLINE' | 'OFFLINE' | 'IN_CALL'): void => {
+export const updateStatus = (
+  status: 'ONLINE' | 'OFFLINE' | 'IN_CALL',
+): void => {
   emit('user:status', { status });
 };
