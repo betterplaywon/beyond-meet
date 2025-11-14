@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  Platform,
+  ActionSheetIOS,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
@@ -32,20 +34,25 @@ interface Props {
 
 const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { data: user } = useMyProfile();
-  const logout = useAuthStore((state) => state.logout);
+  const logout = useAuthStore(state => state.logout);
 
   // React Query mutation hook
-  const { mutate: updateSettings, isPending: isUpdating } = useUpdateSettings();
+  const { mutate: updateSettings } = useUpdateSettings();
 
   const [pushEnabled, setPushEnabled] = useState(true);
-  const [genderFilter, setGenderFilter] = useState<'MALE' | 'FEMALE' | 'OTHER'>('MALE');
+  const [genderFilter, setGenderFilter] = useState<
+    'MALE' | 'FEMALE' | 'ANYONE'
+  >('ANYONE');
   const [ageRange, setAgeRange] = useState({ min: 20, max: 30 });
 
   // 사용자 설정 로드
   useEffect(() => {
-    if (user) {
-      setGenderFilter(user.gender);
-      // preferredGender와 ageRange는 User 타입에 없으므로 기본값 유지
+    if (user?.preferredGender) {
+      setGenderFilter(user.preferredGender);
+    }
+
+    if (user?.minAge !== undefined && user?.maxAge !== undefined) {
+      setAgeRange({ min: user.minAge, max: user.maxAge });
     }
   }, [user]);
 
@@ -55,19 +62,40 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleEditGenderFilter = () => {
-    Alert.alert(
-      '원하는 성별',
-      '매칭하고 싶은 성별을 선택하세요',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '남성', onPress: () => handleSaveGenderFilter('MALE') },
-        { text: '여성', onPress: () => handleSaveGenderFilter('FEMALE') },
-        { text: '기타', onPress: () => handleSaveGenderFilter('OTHER') },
-      ]
-    );
+    if (Platform.OS === 'ios') {
+      // iOS: ActionSheet 사용
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['취소', '남성', '여성', '누구나'],
+          cancelButtonIndex: 0,
+          title: '매칭하고 싶은 성별을 선택하세요',
+        },
+        buttonIndex => {
+          if (buttonIndex === 1) {
+            handleSaveGenderFilter('MALE');
+          } else if (buttonIndex === 2) {
+            handleSaveGenderFilter('FEMALE');
+          } else if (buttonIndex === 3) {
+            handleSaveGenderFilter('ANYONE');
+          }
+        },
+      );
+    } else {
+      // Android: Alert 사용 (취소는 외부 탭으로 처리)
+      Alert.alert(
+        '원하는 성별',
+        '매칭하고 싶은 성별을 선택하세요',
+        [
+          { text: '남성', onPress: () => handleSaveGenderFilter('MALE') },
+          { text: '여성', onPress: () => handleSaveGenderFilter('FEMALE') },
+          { text: '누구나', onPress: () => handleSaveGenderFilter('ANYONE') },
+        ],
+        { cancelable: true }, // 외부 탭으로 취소 가능
+      );
+    }
   };
 
-  const handleSaveGenderFilter = (gender: 'MALE' | 'FEMALE' | 'OTHER') => {
+  const handleSaveGenderFilter = (gender: 'MALE' | 'FEMALE' | 'ANYONE') => {
     if (!user?.id) return;
 
     updateSettings(
@@ -82,11 +110,11 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           setGenderFilter(gender);
           Alert.alert('성공', '매칭 필터가 업데이트되었습니다.');
         },
-        onError: (err) => {
+        onError: err => {
           console.error('Failed to update gender filter:', err);
           Alert.alert('오류', parseApiError(err));
         },
-      }
+      },
     );
   };
 
@@ -111,33 +139,29 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Auth' }],
-              });
-            } catch (err) {
-              console.error('Failed to logout:', err);
-              // 에러가 발생해도 로그아웃 진행
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Auth' }],
-              });
-            }
-          },
+    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Auth' }],
+            });
+          } catch (err) {
+            console.error('Failed to logout:', err);
+            // 에러가 발생해도 로그아웃 진행
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Auth' }],
+            });
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleDeleteAccount = () => {
@@ -154,7 +178,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             Alert.alert('준비 중', '회원 탈퇴 기능은 추후 구현 예정입니다.');
           },
         },
-      ]
+      ],
     );
   };
 
@@ -164,8 +188,8 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         return '남성';
       case 'FEMALE':
         return '여성';
-      case 'OTHER':
-        return '기타';
+      case 'ANYONE':
+        return '누구나';
       default:
         return '전체';
     }
@@ -247,7 +271,10 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             <Switch
               value={pushEnabled}
               onValueChange={setPushEnabled}
-              trackColor={{ false: colors.textSecondary + '40', true: colors.primary + '60' }}
+              trackColor={{
+                false: colors.textSecondary + '40',
+                true: colors.primary + '60',
+              }}
               thumbColor={pushEnabled ? colors.primary : colors.white}
             />
           </View>
