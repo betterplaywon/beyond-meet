@@ -35,7 +35,7 @@ export const updateProfile = async (
     interests: string[];
     minAge: number;
     maxAge: number;
-    preferredGender: 'MALE' | 'FEMALE' | 'OTHER';
+    preferredGender: 'MALE' | 'FEMALE' | 'ANYONE';
     preferredCountries: string[];
   }>
 ): Promise<User> => {
@@ -100,7 +100,7 @@ export const updateSettings = async (
   settings: {
     minAge?: number;
     maxAge?: number;
-    preferredGender?: 'MALE' | 'FEMALE' | 'OTHER';
+    preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
     preferredCountries?: string[];
   }
 ): Promise<User> => {

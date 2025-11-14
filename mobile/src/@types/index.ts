@@ -14,6 +14,12 @@ export interface User {
   profilePhotos: string[];
   interests: string[];
   onlineStatus: 'ONLINE' | 'OFFLINE' | 'IN_CALL';
+  // 매칭 필터
+  preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
+  minAge?: number;
+  maxAge?: number;
+  preferredCountries?: string[];
+  lastActive?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,7 +41,7 @@ export interface RegisterData {
   bio?: string;
   interests?: string[];
   // 매칭 필터
-  preferredGender: 'MALE' | 'FEMALE' | 'OTHER';
+  preferredGender: 'MALE' | 'FEMALE' | 'ANYONE';
   minAge: number;
   maxAge: number;
   preferredCountries?: string[];

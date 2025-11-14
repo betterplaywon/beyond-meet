@@ -126,7 +126,7 @@ export const useUpdateSettings = () => {
       settings: {
         minAge?: number;
         maxAge?: number;
-        preferredGender?: 'MALE' | 'FEMALE' | 'OTHER';
+        preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
         preferredCountries?: string[];
       };
     }) => userApi.updateSettings(userId, settings),

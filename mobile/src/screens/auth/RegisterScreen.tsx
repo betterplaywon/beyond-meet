@@ -37,6 +37,13 @@ const GENDER_OPTIONS: PickerOption[] = [
   { label: '기타', value: 'OTHER' },
 ];
 
+// 선호 성별 옵션
+const PREFERRED_GENDER_OPTIONS: PickerOption[] = [
+  { label: '남성', value: 'MALE' },
+  { label: '여성', value: 'FEMALE' },
+  { label: '누구나', value: 'ANYONE' },
+];
+
 // 국가 옵션 (주요 국가만)
 const COUNTRY_OPTIONS: PickerOption[] = [
   { label: '대한민국', value: 'KR' },
@@ -84,7 +91,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     gender: '' as 'MALE' | 'FEMALE' | 'OTHER' | '',
     country: 'KR',
     // Step 3: 매칭 필터
-    preferredGender: '' as 'MALE' | 'FEMALE' | 'OTHER' | '',
+    preferredGender: '' as 'MALE' | 'FEMALE' | 'ANYONE' | '',
     minAge: 18,
     maxAge: 40,
   });
@@ -151,7 +158,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       birthDate,
       gender: formData.gender as 'MALE' | 'FEMALE' | 'OTHER',
       country: formData.country,
-      preferredGender: formData.preferredGender as 'MALE' | 'FEMALE' | 'OTHER',
+      preferredGender: formData.preferredGender as 'MALE' | 'FEMALE' | 'ANYONE',
       minAge: formData.minAge,
       maxAge: formData.maxAge,
       preferredCountries: [formData.country], // 기본값: 본인 국가
@@ -325,9 +332,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   <Picker
                     label="선호 성별"
                     value={formData.preferredGender}
-                    options={GENDER_OPTIONS}
+                    options={PREFERRED_GENDER_OPTIONS}
                     onChange={(value) =>
-                      setFormData({ ...formData, preferredGender: value as 'MALE' | 'FEMALE' | 'OTHER' })
+                      setFormData({ ...formData, preferredGender: value as 'MALE' | 'FEMALE' | 'ANYONE' })
                     }
                     placeholder="선호 성별을 선택하세요"
                   />
