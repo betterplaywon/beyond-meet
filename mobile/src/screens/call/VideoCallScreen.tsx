@@ -1,11 +1,10 @@
 /**
  * 영상 통화 화면
  *
- * 주의: Agora SDK의 실제 구현은 네이티브 설정이 필요합니다.
- * 현재는 UI 구조만 구현되어 있으며, 실제 Agora 연동은 추가 작업이 필요합니다.
+ * Agora SDK를 사용하여 실시간 영상 통화를 제공합니다.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,11 +15,19 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import {
+  createAgoraRtcEngine,
+  IRtcEngine,
+  ChannelProfileType,
+  ClientRoleType,
+  RtcSurfaceView,
+} from 'react-native-agora';
 import { RootStackParamList } from '../../@types';
 import { CallControls } from '../../components/call/CallControls';
 import { CallTimer } from '../../components/call/CallTimer';
 import { useCallStore } from '../../store/callStore';
 import { colors, typography, spacing } from '../../styles/theme';
+import { ENV } from '../../config/env';
 
 type VideoCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -37,38 +44,90 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId, channelName, token } = route.params;
   const clearCallState = useCallStore((state) => state.clearCallState);
 
+  const agoraEngineRef = useRef<IRtcEngine>();
+  const [remoteUid, setRemoteUid] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [isJoined, setIsJoined] = useState(false);
 
-  // TODO: Agora SDK 초기화
+  // Agora SDK 초기화
   useEffect(() => {
-    // Agora 초기화 로직
-    console.log('Initializing Agora with:', {
-      sessionId,
-      channelName,
-      token,
-    });
+    const setupVideoSDK = async () => {
+      try {
+        console.log('🎥 Initializing Agora SDK...');
+        console.log('Channel:', channelName);
+        console.log('AGORA_APP_ID:', ENV.AGORA_APP_ID);
 
-    return () => {
-      // Agora 정리
-      console.log('Cleaning up Agora');
+        // Agora Engine 생성
+        agoraEngineRef.current = createAgoraRtcEngine();
+        const agoraEngine = agoraEngineRef.current;
+
+        // Agora 초기화
+        agoraEngine.initialize({
+          appId: ENV.AGORA_APP_ID,
+          channelProfile: ChannelProfileType.ChannelProfileCommunication,
+        });
+
+        // 이벤트 핸들러 등록
+        agoraEngine.registerEventHandler({
+          onJoinChannelSuccess: () => {
+            console.log('✅ Successfully joined channel');
+            setIsJoined(true);
+          },
+          onUserJoined: (_connection, uid) => {
+            console.log('👤 Remote user joined:', uid);
+            setRemoteUid(uid);
+          },
+          onUserOffline: (_connection, uid) => {
+            console.log('👋 Remote user left:', uid);
+            setRemoteUid(0);
+          },
+          onError: (err, msg) => {
+            console.error('❌ Agora error:', err, msg);
+          },
+        });
+
+        // 비디오 활성화 및 미리보기 시작
+        agoraEngine.enableVideo();
+        agoraEngine.startPreview();
+
+        // 채널 참가
+        console.log('🚀 Joining channel...');
+        agoraEngine.joinChannel(token, channelName, 0, {
+          clientRoleType: ClientRoleType.ClientRoleBroadcaster,
+        });
+      } catch (error) {
+        console.error('❌ Agora setup error:', error);
+        Alert.alert('오류', '영상 통화를 시작할 수 없습니다.');
+      }
     };
-  }, [sessionId, channelName, token]);
+
+    setupVideoSDK();
+
+    // Cleanup
+    return () => {
+      console.log('🧹 Cleaning up Agora SDK...');
+      agoraEngineRef.current?.leaveChannel();
+      agoraEngineRef.current?.release();
+    };
+  }, [channelName, token]);
 
   const handleToggleMute = () => {
+    agoraEngineRef.current?.muteLocalAudioStream(!isMuted);
     setIsMuted(!isMuted);
-    // TODO: Agora muteLocalAudioStream
+    console.log(isMuted ? '🔊 Unmuted' : '🔇 Muted');
   };
 
   const handleToggleVideo = () => {
+    agoraEngineRef.current?.muteLocalVideoStream(!isVideoOff);
     setIsVideoOff(!isVideoOff);
-    // TODO: Agora muteLocalVideoStream
+    console.log(isVideoOff ? '📹 Video On' : '📵 Video Off');
   };
 
   const handleSwitchCamera = () => {
-    // TODO: Agora switchCamera
-    console.log('Switching camera');
+    agoraEngineRef.current?.switchCamera();
+    console.log('🔄 Switching camera');
   };
 
   const handleEndCall = () => {
@@ -103,17 +162,25 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         onPress={() => setShowControls(!showControls)}
       >
         {/* 상대방 영상 (전체 화면) */}
-        <View style={styles.remoteVideo}>
-          <Text style={styles.placeholder}>상대방 영상 영역</Text>
-          <Text style={styles.placeholderNote}>
-            (Agora SDK 연동 후 표시됩니다)
-          </Text>
-        </View>
+        {remoteUid !== 0 ? (
+          <RtcSurfaceView
+            style={styles.remoteVideo}
+            canvas={{ uid: remoteUid }}
+          />
+        ) : (
+          <View style={styles.remoteVideo}>
+            <Text style={styles.placeholder}>
+              {isJoined ? '상대방 연결 대기 중...' : '연결 중...'}
+            </Text>
+          </View>
+        )}
 
         {/* 내 영상 (PIP) */}
-        <View style={styles.localVideo}>
-          <Text style={styles.localPlaceholder}>내 영상</Text>
-        </View>
+        <RtcSurfaceView
+          style={styles.localVideo}
+          canvas={{ uid: 0 }}
+          zOrderMediaOverlay={true}
+        />
 
         {/* 타이머 */}
         {showControls && (
