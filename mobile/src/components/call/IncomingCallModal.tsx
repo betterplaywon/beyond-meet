@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { Avatar } from '../common/Avatar';
 import { useCallStore } from '../../store/callStore';
-import { useAcceptMatch, useRejectMatch } from '../../hooks/useMatch';
 import { colors, typography, spacing } from '../../styles/theme';
 
 interface Props {
@@ -28,8 +27,6 @@ export const IncomingCallModal: React.FC<Props> = ({
   onReject,
 }) => {
   const incomingCall = useCallStore((state) => state.incomingCall);
-  const acceptMutation = useAcceptMatch();
-  const rejectMutation = useRejectMatch();
 
   const [pulseAnim] = useState(new Animated.Value(1));
 
@@ -57,22 +54,6 @@ export const IncomingCallModal: React.FC<Props> = ({
   }, [visible, pulseAnim]);
 
   if (!incomingCall) return null;
-
-  const handleAccept = () => {
-    acceptMutation.mutate(incomingCall.session.id, {
-      onSuccess: () => {
-        onAccept();
-      },
-    });
-  };
-
-  const handleReject = () => {
-    rejectMutation.mutate(incomingCall.session.id, {
-      onSuccess: () => {
-        onReject();
-      },
-    });
-  };
 
   return (
     <Modal
@@ -106,8 +87,7 @@ export const IncomingCallModal: React.FC<Props> = ({
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={[styles.actionButton, styles.rejectButton]}
-              onPress={handleReject}
-              disabled={rejectMutation.isPending}
+              onPress={onReject}
             >
               <Text style={styles.actionIcon}>❌</Text>
               <Text style={styles.actionLabel}>거절</Text>
@@ -115,8 +95,7 @@ export const IncomingCallModal: React.FC<Props> = ({
 
             <TouchableOpacity
               style={[styles.actionButton, styles.acceptButton]}
-              onPress={handleAccept}
-              disabled={acceptMutation.isPending}
+              onPress={onAccept}
             >
               <Text style={styles.actionIcon}>✅</Text>
               <Text style={styles.actionLabel}>수락</Text>
