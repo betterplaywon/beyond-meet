@@ -16,9 +16,9 @@ import { RouteProp } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { RootStackParamList } from '../../@types';
 import { Button } from '../../components/common/Button';
-import { useCancelMatch } from '../../hooks/useMatch';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import { useCallStore } from '../../store/callStore';
+import * as socketService from '../../services/socketService';
 import { colors, typography, spacing } from '../../styles/theme';
 
 type MatchingScreenNavigationProp = StackNavigationProp<
@@ -33,38 +33,30 @@ interface Props {
 }
 
 const MatchingScreen: React.FC<Props> = ({ navigation }) => {
-  const cancelMutation = useCancelMatch();
   const setCurrentSession = useCallStore(state => state.setCurrentSession);
   const socket = useSocket();
-  const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [isSocketConnected, setIsSocketConnected] = useState(socket.isConnected());
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
-  // Socket 연결 상태 확인
+  // Socket 연결 상태 모니터링
   useEffect(() => {
     const checkConnection = setInterval(() => {
-      setIsSocketConnected(socket.isConnected());
-    }, 1000);
+      const connected = socket.isConnected();
+      setIsSocketConnected(connected);
 
-    return () => clearInterval(checkConnection);
-  }, [socket]);
-
-  // Socket 연결 안 됨 경고
-  useEffect(() => {
-    if (!isSocketConnected) {
-      const timer = setTimeout(() => {
+      if (!connected) {
         Toast.show({
           type: 'error',
-          text1: '연결 실패',
-          text2: '서버와 연결할 수 없습니다. 네트워크를 확인해주세요.',
+          text1: '연결 끊김',
+          text2: '서버와 연결이 끊어졌습니다.',
         });
         navigation.goBack();
-      }, 10000); // 10초 후에도 연결 안 되면 에러
+      }
+    }, 5000); // 5초마다 체크
 
-      return () => clearTimeout(timer);
-    }
-  }, [isSocketConnected, navigation]);
+    return () => clearInterval(checkConnection);
+  }, [socket, navigation]);
 
   // 맥박 애니메이션
   useEffect(() => {
@@ -122,20 +114,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     navigation.goBack();
   });
 
-  // 매칭 재시도 로직 (15초마다)
-  useEffect(() => {
-    const retryInterval = setInterval(() => {
-      if (isSocketConnected && retryCount < 8) {
-        // 최대 8번 (2분)
-        socket.emit('match:request', { type: 'RANDOM' });
-        setRetryCount(prev => prev + 1);
-      }
-    }, 10000); // 10초마다
-
-    return () => clearInterval(retryInterval);
-  }, [isSocketConnected, retryCount, socket]);
-
-  // 매칭 타임아웃 (2분)
+  // 매칭 타임아웃 (2분) - 서버의 10초 주기 매칭에 의존
   useEffect(() => {
     const timeout = setTimeout(() => {
       Toast.show({
@@ -143,6 +122,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
         text1: '매칭 시간 초과',
         text2: '현재 매칭 가능한 사용자가 없습니다. 나중에 다시 시도해주세요.',
       });
+      socketService.cancelMatch();
       navigation.goBack();
     }, 120000); // 2분
 
@@ -150,7 +130,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   }, [navigation]);
 
   const handleCancel = () => {
-    cancelMutation.mutate();
+    socketService.cancelMatch();
     navigation.goBack();
   };
 
@@ -183,9 +163,6 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
 
         <Text style={styles.title}>매칭 중입니다...</Text>
         <Text style={styles.subtitle}>새로운 사람을 찾고 있어요</Text>
-        {retryCount > 0 && (
-          <Text style={styles.retryText}>재시도 횟수: {retryCount}/8</Text>
-        )}
 
         <ActivityIndicator
           size="large"
@@ -207,7 +184,6 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
           variant="outline"
           fullWidth
           onPress={handleCancel}
-          loading={cancelMutation.isPending}
         />
       </View>
     </SafeAreaView>
