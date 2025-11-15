@@ -6,6 +6,7 @@
 export const colors = {
   // Primary Colors
   primary: '#FF6B6B',
+  primaryLight: '#FF9999',
   secondary: '#4ECDC4',
   accent: '#FFE66D',
 
@@ -16,6 +17,7 @@ export const colors = {
   // Text
   textPrimary: '#2D3436',
   textSecondary: '#636E72',
+  textTertiary: '#95A5A6',
 
   // Status
   success: '#00B894',
