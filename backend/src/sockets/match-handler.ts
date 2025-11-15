@@ -56,15 +56,8 @@ export const authenticateSocket = async (
 export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
   const userId = socket.userId!;
 
-  console.log(`User connected: ${userId}`);
-
   // Socket을 사용자 ID room에 join
   socket.join(userId);
-
-  // 모든 이벤트 로깅 (디버깅용)
-  socket.onAny((eventName, ...args) => {
-    console.log(`[SOCKET] User ${userId} sent event: ${eventName}`, args);
-  });
 
   /**
    * 랜덤 매칭 요청
@@ -96,26 +89,8 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
 
             // 사용자 정보 가져오기
             const [user1, user2] = await Promise.all([
-              prisma.user.findUnique({
-                where: { id: userId },
-                select: {
-                  id: true,
-                  nickname: true,
-                  profilePhotos: true,
-                  gender: true,
-                  country: true,
-                },
-              }),
-              prisma.user.findUnique({
-                where: { id: matchedUserId },
-                select: {
-                  id: true,
-                  nickname: true,
-                  profilePhotos: true,
-                  gender: true,
-                  country: true,
-                },
-              }),
+              matchService.getUserMatchInfo(userId),
+              matchService.getUserMatchInfo(matchedUserId),
             ]);
 
             // 두 사용자에게 매칭 성공 알림
@@ -134,10 +109,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
                 channelName: session.channelName,
               },
               partner: user1,
-              token: matchService.generateAgoraToken(
-                session.channelName,
-                matchedUserId
-              ),
+              token: session.token,
             });
           } else {
             // 매칭 대기 중
@@ -153,16 +125,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           );
 
           // 발신자 정보
-          const caller = await prisma.user.findUnique({
-            where: { id: userId },
-            select: {
-              id: true,
-              nickname: true,
-              profilePhotos: true,
-              gender: true,
-              country: true,
-            },
-          });
+          const caller = await matchService.getUserMatchInfo(userId);
 
           // 수신자에게 통화 요청 알림
           io.to(data.targetUserId).emit("call:incoming", {
@@ -193,7 +156,6 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
    */
   socket.on("match:cancel", () => {
     matchService.removeFromMatchQueue(userId);
-    console.log(`User ${userId} cancelled match request`);
 
     socket.emit("match:cancelled", {
       message: "매칭 요청이 취소되었습니다",
@@ -226,10 +188,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
       io.to(session.userId1).emit("call:accepted", {
         sessionId: session.id,
       });
-
-      console.log(`Call accepted: session ${session.id}`);
     } catch (error: any) {
-      console.error("Call accept error:", error);
       socket.emit("call:failed", {
         reason: error.message || "통화 수락 실패",
       });
@@ -253,10 +212,8 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           sessionId: session.id,
         });
       }
-
-      console.log(`Call rejected: session ${data.sessionId}`);
     } catch (error: any) {
-      console.error("Call reject error:", error);
+      // Error handled silently
     }
   });
 
@@ -283,12 +240,8 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           duration: result.duration,
         });
       }
-
-      console.log(
-        `Call ended: session ${data.sessionId}, duration: ${result.duration}s`
-      );
     } catch (error: any) {
-      console.error("Call end error:", error);
+      // Error handled silently
     }
   });
 
@@ -296,8 +249,6 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
    * 연결 해제
    */
   socket.on("disconnect", async () => {
-    console.log(`User disconnected: ${userId}`);
-
     // 대기열에서 제거
     matchService.removeFromMatchQueue(userId);
 
@@ -311,7 +262,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
         },
       });
     } catch (error) {
-      console.error("Disconnect update error:", error);
+      // Error handled silently
     }
   });
 };
@@ -349,26 +300,8 @@ export const startPeriodicMatching = (io: Server) => {
 
         // 사용자 정보 가져오기
         const [userData1, userData2] = await Promise.all([
-          prisma.user.findUnique({
-            where: { id: user1 },
-            select: {
-              id: true,
-              nickname: true,
-              profilePhotos: true,
-              gender: true,
-              country: true,
-            },
-          }),
-          prisma.user.findUnique({
-            where: { id: user2 },
-            select: {
-              id: true,
-              nickname: true,
-              profilePhotos: true,
-              gender: true,
-              country: true,
-            },
-          }),
+          matchService.getUserMatchInfo(user1),
+          matchService.getUserMatchInfo(user2),
         ]);
 
         // 두 사용자에게 매칭 성공 알림
@@ -387,7 +320,7 @@ export const startPeriodicMatching = (io: Server) => {
             channelName: session.channelName,
           },
           partner: userData1,
-          token: matchService.generateAgoraToken(session.channelName, user2),
+          token: session.token,
         });
       }
     } catch (error) {
