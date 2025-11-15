@@ -66,15 +66,23 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
     "match:request",
     async (data: { type: "RANDOM" | "DIRECT"; targetUserId?: string }) => {
       try {
+        console.log("[MATCH] Match request received:", {
+          userId,
+          type: data.type,
+        });
+
         if (data.type === "RANDOM") {
           // 대기열에 추가
           const queueResult = await matchService.addToMatchQueue(userId);
+          console.log("[MATCH] User added to queue:", { userId, queueResult });
 
           // 매칭 상대 찾기
           const matchedUserId = await matchService.findMatch(userId);
+          console.log("[MATCH] Find match result:", { userId, matchedUserId });
 
           if (matchedUserId) {
             // 매칭 성공!
+            console.log("[MATCH] Match found!", { userId, matchedUserId });
 
             // 세션 생성
             const session = await matchService.createMatchSession(
@@ -82,10 +90,15 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
               matchedUserId,
               "RANDOM"
             );
+            console.log("[MATCH] Session created:", {
+              sessionId: session.id,
+              channelName: session.channelName,
+            });
 
             // 대기열에서 제거
             matchService.removeFromMatchQueue(userId);
             matchService.removeFromMatchQueue(matchedUserId);
+            console.log("[MATCH] Users removed from queue");
 
             // 사용자 정보 가져오기
             const [user1, user2] = await Promise.all([
@@ -94,6 +107,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
             ]);
 
             // 두 사용자에게 매칭 성공 알림
+            console.log("[MATCH] Emitting match:found to userId:", userId);
             io.to(userId).emit("match:found", {
               session: {
                 id: session.id,
@@ -103,6 +117,10 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
               token: session.token,
             });
 
+            console.log(
+              "[MATCH] Emitting match:found to matchedUserId:",
+              matchedUserId
+            );
             io.to(matchedUserId).emit("match:found", {
               session: {
                 id: session.id,
@@ -113,12 +131,18 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
             });
           } else {
             // 매칭 대기 중
+            console.log("[MATCH] No match found, waiting...", { userId });
             socket.emit("match:waiting", {
               message: "매칭 상대를 찾고 있습니다...",
             });
           }
         } else if (data.type === "DIRECT" && data.targetUserId) {
           // 선택 매칭
+          console.log("[MATCH] Direct match request:", {
+            userId,
+            targetUserId: data.targetUserId,
+          });
+
           const session = await matchService.requestDirectMatch(
             userId,
             data.targetUserId
@@ -143,7 +167,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           });
         }
       } catch (error: any) {
-        console.error("Match request error:", error);
+        console.error("[MATCH] Match request error:", error);
         socket.emit("match:failed", {
           reason: error.message || "매칭 요청 실패",
         });
@@ -281,11 +305,17 @@ export const startPeriodicMatching = (io: Server) => {
 
   periodicMatchingInterval = setInterval(async () => {
     try {
+      console.log("[PERIODIC_MATCHING] Starting periodic matching...");
       const matches = await matchService.matchAllUsersInQueue();
+      console.log("[PERIODIC_MATCHING] Matches found:", matches.length);
 
       // 매칭된 사용자들에게 알림 전송
       for (const match of matches) {
         const { user1, user2 } = match;
+        console.log("[PERIODIC_MATCHING] Processing match:", {
+          user1,
+          user2,
+        });
 
         // 세션 생성
         const session = await matchService.createMatchSession(
@@ -293,6 +323,7 @@ export const startPeriodicMatching = (io: Server) => {
           user2,
           "RANDOM"
         );
+        console.log("[PERIODIC_MATCHING] Session created:", session.id);
 
         // 대기열에서 제거
         matchService.removeFromMatchQueue(user1);
@@ -305,6 +336,7 @@ export const startPeriodicMatching = (io: Server) => {
         ]);
 
         // 두 사용자에게 매칭 성공 알림
+        console.log("[PERIODIC_MATCHING] Emitting match:found to user1:", user1);
         io.to(user1).emit("match:found", {
           session: {
             id: session.id,
@@ -314,6 +346,7 @@ export const startPeriodicMatching = (io: Server) => {
           token: session.token,
         });
 
+        console.log("[PERIODIC_MATCHING] Emitting match:found to user2:", user2);
         io.to(user2).emit("match:found", {
           session: {
             id: session.id,
