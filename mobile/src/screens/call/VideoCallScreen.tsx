@@ -26,6 +26,8 @@ import { RootStackParamList } from '../../@types';
 import { CallControls } from '../../components/call/CallControls';
 import { CallTimer } from '../../components/call/CallTimer';
 import { useCallStore } from '../../store/callStore';
+import { useSocketEvent } from '../../hooks/useSocket';
+import * as socketService from '../../services/socketService';
 import { colors, typography, spacing } from '../../styles/theme';
 import { ENV } from '../../config/env';
 
@@ -44,12 +46,26 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId, channelName, token } = route.params;
   const clearCallState = useCallStore((state) => state.clearCallState);
 
-  const agoraEngineRef = useRef<IRtcEngine>();
+  const agoraEngineRef = useRef<IRtcEngine | undefined>(undefined);
   const [remoteUid, setRemoteUid] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isJoined, setIsJoined] = useState(false);
+
+  // 상대방이 통화를 종료한 경우
+  useSocketEvent('call:ended', (data: any) => {
+    console.log('Call ended by other party:', data);
+    Alert.alert('통화 종료', '상대방이 통화를 종료했습니다.', [
+      {
+        text: '확인',
+        onPress: () => {
+          clearCallState();
+          navigation.replace('CallEnd', { sessionId: data.sessionId });
+        },
+      },
+    ]);
+  });
 
   // Agora SDK 초기화
   useEffect(() => {
@@ -140,6 +156,8 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           text: '종료',
           style: 'destructive',
           onPress: () => {
+            // Socket으로 종료 이벤트 전송
+            socketService.endCall(sessionId);
             clearCallState();
             navigation.replace('CallEnd', { sessionId });
           },
@@ -150,6 +168,8 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleTimeUp = () => {
     Alert.alert('시간 종료', '5분이 경과하여 통화가 종료됩니다.');
+    // Socket으로 종료 이벤트 전송
+    socketService.endCall(sessionId);
     clearCallState();
     navigation.replace('CallEnd', { sessionId });
   };
