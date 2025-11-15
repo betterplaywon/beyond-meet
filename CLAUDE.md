@@ -653,6 +653,95 @@ const styles = StyleSheet.create({
 
 ---
 
+## 🔌 실시간 통신 가이드라인 (Socket.io vs HTTP REST)
+
+### Socket.io vs HTTP REST 사용 구분
+
+**Socket.io 사용 (실시간 양방향 통신 필요)**:
+- ✅ 랜덤 매칭 요청 및 응답
+- ✅ 매칭 취소/수락/거절
+- ✅ 통화 신호 (시작, 종료)
+- ✅ 실시간 상태 업데이트
+- ✅ 즉각적인 양방향 통신이 필요한 모든 작업
+
+**HTTP REST 사용 (요청-응답 패턴)**:
+- ✅ 선택 매칭 요청 (DB 세션 생성, 필요 시 Socket 연결 끊어져도 fallback)
+- ✅ 사용자 데이터 CRUD
+- ✅ 파일 업로드
+- ✅ 실시간 응답이 필요하지 않은 작업
+
+### Socket.io 구현 패턴
+
+**프론트엔드**:
+
+```typescript
+// ✅ 좋은 예 - socketService 사용
+import * as socketService from '@/services/socketService';
+
+// 매칭 취소
+socketService.cancelMatch();
+
+// 통화 수락
+socketService.acceptCall(sessionId);
+
+// 통화 거절
+socketService.rejectCall(sessionId);
+
+// ❌ 나쁜 예 - HTTP mutations 사용 금지 (deprecated)
+const cancelMutation = useCancelMatch();
+cancelMutation.mutate();
+```
+
+**백엔드**:
+
+```typescript
+// ✅ 좋은 예 - Socket handler
+socket.on('call:accept', async (data) => {
+  const session = await matchService.acceptMatch(data.sessionId, userId);
+  io.to(session.userId1).emit('call:accepted', { sessionId });
+  io.to(session.userId2).emit('call:accepted', { sessionId });
+});
+
+// ❌ 나쁜 예 - 실시간 작업에 HTTP 컨트롤러 사용
+export const acceptMatch = async (req, res) => {
+  // Deprecated - Socket.io로 이전됨
+};
+```
+
+### Deprecation 전략
+
+HTTP 엔드포인트를 Socket.io로 마이그레이션할 때:
+
+1. Socket.io 핸들러 구현 및 테스트
+2. HTTP 함수에 `@deprecated` 주석 추가
+3. Service 레이어는 유지 (공유 로직)
+4. HTTP 컨트롤러 및 라우트 제거
+5. React Query hooks 제거 (프론트엔드)
+6. 컴포넌트를 socketService로 전환
+7. 문서 업데이트
+8. 중요 작업은 HTTP fallback 보존 (예: Direct Match)
+
+### 현재 Socket.io 이벤트 목록
+
+**클라이언트 → 서버**:
+- `match:request` - 랜덤 매칭 요청
+- `match:cancel` - 매칭 취소
+- `call:accept` - 통화 수락
+- `call:reject` - 통화 거절
+- `call:end` - 통화 종료
+
+**서버 → 클라이언트**:
+- `match:waiting` - 매칭 대기 중
+- `match:found` - 매칭 성공
+- `match:failed` - 매칭 실패
+- `match:cancelled` - 매칭 취소됨
+- `call:incoming` - 통화 요청 수신
+- `call:accepted` - 통화 수락됨
+- `call:rejected` - 통화 거절됨
+- `call:ended` - 통화 종료됨
+
+---
+
 ## 🔐 보안 규칙
 
 ### 1. 환경 변수
