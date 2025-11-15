@@ -80,34 +80,43 @@ export const disconnect = (): void => {
  */
 export const emit = (event: string, data?: any): void => {
   if (!socket) {
+    console.error('[SOCKET] Cannot emit - Socket not initialized:', event);
     return;
   }
 
   if (!socket.connected) {
+    console.error('[SOCKET] Cannot emit - Socket not connected:', event);
     return;
   }
 
+  console.log('[DEBUG] Emitting event:', event, data);
   socket.emit(event, data);
 };
 
 /**
  * 이벤트 리스너 등록
+ * 여러 콜백을 지원하도록 개선 (중복 제거 로직 수정)
  */
 export const on = (event: string, callback: Function): void => {
   if (!socket) {
-    console.error('Socket not initialized');
+    console.error('[SOCKET] Socket not initialized');
     return;
   }
 
-  // 기존 리스너가 있으면 제거 후 재등록
-  if (listeners.has(event)) {
-    socket.off(event);
-    listeners.delete(event);
+  // 이미 등록된 콜백인지 확인
+  const existingListeners = listeners.get(event) || [];
+  if (existingListeners.includes(callback)) {
+    console.log('[DEBUG] Listener already registered:', event);
+    return;
   }
 
-  listeners.set(event, [callback]);
+  // 콜백 추가
+  existingListeners.push(callback);
+  listeners.set(event, existingListeners);
 
+  // Socket.io 리스너 등록
   socket.on(event, (...args: any[]) => {
+    console.log('[DEBUG] Event received:', event, args);
     callback(...args);
   });
 };
