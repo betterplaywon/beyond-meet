@@ -7,6 +7,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Toast from 'react-native-toast-message';
 import { Button } from '../../components/common/Button';
 import { IncomingCallModal } from '../../components/call/IncomingCallModal';
 import { useCallStore } from '../../store/callStore';
@@ -58,6 +59,16 @@ const HomeScreen: React.FC = () => {
   });
 
   const handleRandomMatch = () => {
+    // Socket 연결 상태 확인
+    if (!socket.isConnected()) {
+      Toast.show({
+        type: 'error',
+        text1: '연결 오류',
+        text2: '서버와 연결되지 않았습니다. 다시 시도해주세요.',
+      });
+      return;
+    }
+
     // Socket으로 매칭 요청
     socket.emit('match:request', { type: 'RANDOM' });
 
