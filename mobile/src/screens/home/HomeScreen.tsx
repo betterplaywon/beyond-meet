@@ -12,6 +12,7 @@ import { IncomingCallModal } from '../../components/call/IncomingCallModal';
 import { useCallStore } from '../../store/callStore';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import { useMyProfile } from '../../hooks/useProfile';
+import * as socketService from '../../services/socketService';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -43,6 +44,19 @@ const HomeScreen: React.FC = () => {
     setShowIncomingCall(true);
   });
 
+  // 통화 수락 완료 이벤트 (토큰 받기)
+  useSocketEvent('call:accepted', (data: any) => {
+    if (data.token && incomingCall) {
+      // 토큰을 받았으니 VideoCall 화면으로 이동
+      navigation.navigate('VideoCall', {
+        sessionId: incomingCall.session.id,
+        channelName: incomingCall.session.channelName,
+        token: data.token,
+      });
+      setIncomingCall(null);
+    }
+  });
+
   const handleRandomMatch = () => {
     // Socket으로 매칭 요청
     socket.emit('match:request', { type: 'RANDOM' });
@@ -55,15 +69,15 @@ const HomeScreen: React.FC = () => {
     if (!incomingCall) return;
 
     setShowIncomingCall(false);
-    navigation.navigate('VideoCall', {
-      sessionId: incomingCall.session.id,
-      channelName: incomingCall.session.channelName,
-      token: '', // TODO: 서버에서 토큰 받기
-    });
+    // Socket으로 수락 이벤트 전송 (call:accepted 이벤트로 토큰 받음)
+    socketService.acceptCall(incomingCall.session.id);
   };
 
   const handleRejectCall = () => {
+    if (!incomingCall) return;
+
     setShowIncomingCall(false);
+    socketService.rejectCall(incomingCall.session.id);
     setIncomingCall(null);
   };
 
