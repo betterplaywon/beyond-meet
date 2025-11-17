@@ -87,6 +87,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   // 매칭 성공 이벤트 리스너
   useSocketEvent('match:found', (data: any) => {
     console.log('Match found:', data);
+    console.log('Agora UID:', data.uid);
     setCurrentSession(data.session);
 
     Toast.show({
@@ -95,11 +96,12 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
       text2: `${data.partner?.nickname || '상대방'}님과 연결되었습니다`,
     });
 
-    // VideoCallScreen으로 이동
+    // VideoCallScreen으로 이동 (UID 포함)
     navigation.replace('VideoCall', {
       sessionId: data.session.id,
       channelName: data.session.channelName,
       token: data.token,
+      uid: data.uid,
     });
   });
 

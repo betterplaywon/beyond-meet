@@ -43,10 +43,11 @@ interface Props {
 }
 
 const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { sessionId, channelName, token } = route.params;
+  const { sessionId, channelName, token, uid } = route.params;
   const clearCallState = useCallStore((state) => state.clearCallState);
 
   const agoraEngineRef = useRef<IRtcEngine | undefined>(undefined);
+  const [localUid, setLocalUid] = useState<number>(uid || 0);
   const [remoteUid, setRemoteUid] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -87,16 +88,19 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
 
         // 이벤트 핸들러 등록
         agoraEngine.registerEventHandler({
-          onJoinChannelSuccess: () => {
-            console.log('✅ Successfully joined channel');
+          onJoinChannelSuccess: (_connection, joinedUid) => {
+            console.log('✅ Successfully joined channel with UID:', joinedUid);
+            // 서버로부터 받은 UID와 Agora가 할당한 UID가 일치하는지 확인
+            console.log('Server UID:', uid, 'Agora UID:', joinedUid);
+            setLocalUid(joinedUid);
             setIsJoined(true);
           },
-          onUserJoined: (_connection, uid) => {
-            console.log('👤 Remote user joined:', uid);
-            setRemoteUid(uid);
+          onUserJoined: (_connection, remoteUserUid) => {
+            console.log('👤 Remote user joined:', remoteUserUid);
+            setRemoteUid(remoteUserUid);
           },
-          onUserOffline: (_connection, uid) => {
-            console.log('👋 Remote user left:', uid);
+          onUserOffline: (_connection, remoteUserUid) => {
+            console.log('👋 Remote user left:', remoteUserUid);
             setRemoteUid(0);
           },
           onError: (err, msg) => {
@@ -108,9 +112,9 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         agoraEngine.enableVideo();
         agoraEngine.startPreview();
 
-        // 채널 참가
-        console.log('🚀 Joining channel...');
-        agoraEngine.joinChannel(token, channelName, 0, {
+        // 채널 참가 (서버로부터 받은 UID 사용)
+        console.log('🚀 Joining channel with UID:', uid);
+        agoraEngine.joinChannel(token, channelName, uid, {
           clientRoleType: ClientRoleType.ClientRoleBroadcaster,
         });
       } catch (error) {
@@ -127,7 +131,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       agoraEngineRef.current?.leaveChannel();
       agoraEngineRef.current?.release();
     };
-  }, [channelName, token]);
+  }, [channelName, token, uid]);
 
   const handleToggleMute = () => {
     agoraEngineRef.current?.muteLocalAudioStream(!isMuted);
@@ -196,11 +200,17 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
 
         {/* 내 영상 (PIP) */}
-        <RtcSurfaceView
-          style={styles.localVideo}
-          canvas={{ uid: 0 }}
-          zOrderMediaOverlay={true}
-        />
+        {localUid !== 0 ? (
+          <RtcSurfaceView
+            style={styles.localVideo}
+            canvas={{ uid: localUid }}
+            zOrderMediaOverlay={true}
+          />
+        ) : (
+          <View style={styles.localVideo}>
+            <Text style={styles.localPlaceholder}>연결 중...</Text>
+          </View>
+        )}
 
         {/* 타이머 */}
         {showControls && (

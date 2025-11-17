@@ -45,14 +45,16 @@ const HomeScreen: React.FC = () => {
     setShowIncomingCall(true);
   });
 
-  // 통화 수락 완료 이벤트 (토큰 받기)
+  // 통화 수락 완료 이벤트 (토큰 및 UID 받기)
   useSocketEvent('call:accepted', (data: any) => {
-    if (data.token && incomingCall) {
-      // 토큰을 받았으니 VideoCall 화면으로 이동
+    if (data.token && data.uid) {
+      console.log('Call accepted, received token and UID:', data.uid);
+      // 토큰과 UID를 받았으니 VideoCall 화면으로 이동
       navigation.navigate('VideoCall', {
-        sessionId: incomingCall.session.id,
-        channelName: incomingCall.session.channelName,
+        sessionId: data.session.id,
+        channelName: data.session.channelName,
         token: data.token,
+        uid: data.uid,
       });
       setIncomingCall(null);
     }
