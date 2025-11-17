@@ -74,30 +74,6 @@ beyond-meet/
 
 ---
 
-## 🎯 핵심 제약사항
-
-### 1. Beta 테스트 제약
-
-- **사용자 수**: 20명 한정
-- **초대 코드**: 회원가입 시 필수
-- **비용**: $0/월 운영 필수
-
-### 2. 기능 제약
-
-- **통화 시간**: 5분 제한
-- **매칭 방식**: 랜덤 + 선택 매칭만
-- **신고/차단**: MVP에서 제외 (추후 추가)
-
-### 3. 무료 서비스 한도
-
-- **Agora**: 10,000분/월
-- **Render**: 750시간/월
-- **Supabase**: 500MB DB + 1GB Storage
-- **Upstash**: 10,000 명령/일
-- **Firebase**: FCM 무제한
-
----
-
 ## 💻 코딩 컨벤션
 
 ### 공통 규칙
@@ -112,24 +88,20 @@ beyond-meet/
 
 ```typescript
 // 파일명: kebab-case
-user-service.ts
-auth-controller.ts
+user - service.ts;
+auth - controller.ts;
 
 // 변수/함수: camelCase
-const userId = '123';
+const userId = "123";
 function getUserById() {}
 
-// 클래스/인터페이스/타입: PascalCase
-class UserService {}
+// 인터페이스/타입: PascalCase
 interface User {}
 type AuthToken = string;
 
 // 상수: UPPER_SNAKE_CASE
 const MAX_RETRY_COUNT = 3;
-const API_BASE_URL = 'https://api.example.com';
-
-// Private 변수/메서드: _prefix
-private _internalState = {};
+const API_BASE_URL = "https://api.example.com";
 ```
 
 #### 3. 주석
@@ -295,7 +267,11 @@ const validateInviteCode = async (code: string) => {
   }
 
   if (inviteCode.usedCount >= inviteCode.maxUses) {
-    throw new AppError(400, "INVITE_CODE_EXHAUSTED", "Invite code has been fully used");
+    throw new AppError(
+      400,
+      "INVITE_CODE_EXHAUSTED",
+      "Invite code has been fully used"
+    );
   }
 
   return inviteCode;
@@ -346,9 +322,7 @@ export const registerUser = async (
 /**
  * 사용자 로그인
  */
-export const loginUser = async (
-  data: LoginInput
-): Promise<LoginOutput> => {
+export const loginUser = async (data: LoginInput): Promise<LoginOutput> => {
   // 로그인 로직
   // ...
 };
@@ -658,6 +632,7 @@ const styles = StyleSheet.create({
 ### Socket.io vs HTTP REST 사용 구분
 
 **Socket.io 사용 (실시간 양방향 통신 필요)**:
+
 - ✅ 랜덤 매칭 요청 및 응답
 - ✅ 매칭 취소/수락/거절
 - ✅ 통화 신호 (시작, 종료)
@@ -665,6 +640,7 @@ const styles = StyleSheet.create({
 - ✅ 즉각적인 양방향 통신이 필요한 모든 작업
 
 **HTTP REST 사용 (요청-응답 패턴)**:
+
 - ✅ 선택 매칭 요청 (DB 세션 생성, 필요 시 Socket 연결 끊어져도 fallback)
 - ✅ 사용자 데이터 CRUD
 - ✅ 파일 업로드
@@ -676,7 +652,7 @@ const styles = StyleSheet.create({
 
 ```typescript
 // ✅ 좋은 예 - socketService 사용
-import * as socketService from '@/services/socketService';
+import * as socketService from "@/services/socketService";
 
 // 매칭 취소
 socketService.cancelMatch();
@@ -696,10 +672,10 @@ cancelMutation.mutate();
 
 ```typescript
 // ✅ 좋은 예 - Socket handler
-socket.on('call:accept', async (data) => {
+socket.on("call:accept", async (data) => {
   const session = await matchService.acceptMatch(data.sessionId, userId);
-  io.to(session.userId1).emit('call:accepted', { sessionId });
-  io.to(session.userId2).emit('call:accepted', { sessionId });
+  io.to(session.userId1).emit("call:accepted", { sessionId });
+  io.to(session.userId2).emit("call:accepted", { sessionId });
 });
 
 // ❌ 나쁜 예 - 실시간 작업에 HTTP 컨트롤러 사용
@@ -724,6 +700,7 @@ HTTP 엔드포인트를 Socket.io로 마이그레이션할 때:
 ### 현재 Socket.io 이벤트 목록
 
 **클라이언트 → 서버**:
+
 - `match:request` - 랜덤 매칭 요청
 - `match:cancel` - 매칭 취소
 - `call:accept` - 통화 수락
@@ -731,6 +708,7 @@ HTTP 엔드포인트를 Socket.io로 마이그레이션할 때:
 - `call:end` - 통화 종료
 
 **서버 → 클라이언트**:
+
 - `match:waiting` - 매칭 대기 중
 - `match:found` - 매칭 성공
 - `match:failed` - 매칭 실패
@@ -833,42 +811,6 @@ describe("POST /api/auth/register", () => {
 
 ---
 
-## 📝 Git 커밋 규칙
-
-### 1. 커밋 메시지 형식
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-### 2. Type 종류
-
-- `feat`: 새로운 기능 추가
-- `fix`: 버그 수정
-- `docs`: 문서 수정
-- `style`: 코드 포맷팅 (기능 변경 없음)
-- `refactor`: 코드 리팩토링
-- `test`: 테스트 코드 추가
-- `chore`: 빌드 설정 변경
-
-### 3. 예시
-
-```bash
-feat(auth): 초대 코드 검증 API 구현
-
-- InviteCode 모델 활용
-- 사용 횟수 제한 체크
-- 만료 시간 검증
-
-Closes #123
-```
-
----
-
 ## 🚨 절대 금지 사항
 
 ### 1. 코드 작성
@@ -897,29 +839,6 @@ Closes #123
 - ❌ 민감한 정보 AsyncStorage에 평문 저장
 - ❌ 무한 루프 발생 가능한 useEffect
 - ❌ Key prop 없는 리스트 렌더링
-
----
-
-## ✅ 개발 전 체크리스트
-
-### 백엔드 API 개발 시
-
-- [ ] docs/API_SPECIFICATION.md 확인
-- [ ] 응답 형식 통일 (`success`, `data`, `error`)
-- [ ] 에러 처리 (`try-catch`, `AppError`)
-- [ ] JWT 인증 미들웨어 적용
-- [ ] Prisma 트랜잭션 필요 여부 확인
-- [ ] 환경 변수 사용 확인
-- [ ] 테스트 코드 작성
-
-### 프론트엔드 화면 개발 시
-
-- [ ] docs/UI_FLOW.md 확인
-- [ ] 디자인 시스템 컬러 팔레트 사용
-- [ ] Zustand로 클라이언트 상태 관리
-- [ ] API 호출 시 에러 처리
-- [ ] 로딩 상태 표시
-- [ ] TypeScript 타입 정의
 
 ---
 
@@ -980,52 +899,6 @@ AGORA_APP_ID=your-agora-app-id
 ```
 
 **개발 환경**에서는 `.env` 파일이 없어도 자동으로 localhost 사용 (config/env.ts의 fallback)
-
----
-
-## 🚀 배포 및 인프라
-
-**⚠️ 배포, 환경 변수, 외부 서비스 설정, 자동화 워크플로우 등에 대한 상세 정보는 [DEPLOYMENT.md](DEPLOYMENT.md)를 참조하세요.**
-
-**주요 내용:**
-
-- Render.com 프로덕션 배포 가이드
-- Supabase DB 마이그레이션 절차
-- Agora, Firebase, Upstash 설정 방법
-- GitHub Actions Keep-Alive 워크플로우
-- 트러블슈팅 가이드
-
----
-
-## 📞 도움이 필요할 때
-
-1. **PRD 확인**: [docs/PRD.md](docs/PRD.md)
-2. **아키텍처 확인**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-3. **API 명세 확인**: [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md)
-4. **일정 확인**: [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md)
-
----
-
-## 📊 프로젝트 진행 상황 (2025-11-12 기준)
-
-### 전체 진행률: **98%** (Day 12/50일)
-
-#### 남은 작업
-
-**통합 테스트** (2-3일):
-
-- API 엔드포인트 전체 테스트
-- 영상 통화 품질 테스트 (iOS ↔ Android)
-- 푸시 알림 테스트 (포그라운드/백그라운드)
-- Socket.io 매칭 시스템 안정성 테스트
-
-**Beta 출시** (11/15 예상):
-
-- 초대 코드 20개 활용
-- Beta 테스터 모집
-- 피드백 수집 및 버그 대응
-
-**⚠️ 상세 배포 내역 및 완료 작업 히스토리는 [DEPLOYMENT.md](DEPLOYMENT.md)를 참조하세요.**
 
 ---
 
