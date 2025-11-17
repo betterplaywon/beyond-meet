@@ -2,7 +2,7 @@
  * 매칭 대기 화면
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -35,31 +35,12 @@ interface Props {
 const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   const setCurrentSession = useCallStore(state => state.setCurrentSession);
   const socket = useSocket();
-  const [isSocketConnected, setIsSocketConnected] = useState(socket.isConnected());
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
-  // Socket 연결 상태 모니터링
+  // 맥박 애니메이션 + 매칭 타임아웃 통합
   useEffect(() => {
-    const checkConnection = setInterval(() => {
-      const connected = socket.isConnected();
-      setIsSocketConnected(connected);
-
-      if (!connected) {
-        Toast.show({
-          type: 'error',
-          text1: '연결 끊김',
-          text2: '서버와 연결이 끊어졌습니다.',
-        });
-        navigation.goBack();
-      }
-    }, 5000); // 5초마다 체크
-
-    return () => clearInterval(checkConnection);
-  }, [socket, navigation]);
-
-  // 맥박 애니메이션
-  useEffect(() => {
+    // 맥박 애니메이션 시작
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(scaleAnim, {
@@ -76,8 +57,23 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     );
     pulse.start();
 
-    return () => pulse.stop();
-  }, [scaleAnim]);
+    // 매칭 타임아웃 (2분)
+    const timeout = setTimeout(() => {
+      Toast.show({
+        type: 'info',
+        text1: '매칭 시간 초과',
+        text2: '현재 매칭 가능한 사용자가 없습니다. 나중에 다시 시도해주세요.',
+      });
+      socketService.cancelMatch();
+      navigation.goBack();
+    }, 120000); // 2분
+
+    // Cleanup: 애니메이션 중지 및 타임아웃 정리
+    return () => {
+      pulse.stop();
+      clearTimeout(timeout);
+    };
+  }, [scaleAnim, navigation]);
 
   // 매칭 대기 이벤트 리스너
   useSocketEvent('match:waiting', (data: any) => {
@@ -116,21 +112,6 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     navigation.goBack();
   });
 
-  // 매칭 타임아웃 (2분) - 서버의 10초 주기 매칭에 의존
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      Toast.show({
-        type: 'info',
-        text1: '매칭 시간 초과',
-        text2: '현재 매칭 가능한 사용자가 없습니다. 나중에 다시 시도해주세요.',
-      });
-      socketService.cancelMatch();
-      navigation.goBack();
-    }, 120000); // 2분
-
-    return () => clearTimeout(timeout);
-  }, [navigation]);
-
   const handleCancel = () => {
     socketService.cancelMatch();
     navigation.goBack();
@@ -145,14 +126,14 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
             style={[
               styles.connectionDot,
               {
-                backgroundColor: isSocketConnected
+                backgroundColor: socket.isConnected()
                   ? colors.success
                   : colors.error,
               },
             ]}
           />
           <Text style={styles.connectionText}>
-            {isSocketConnected ? '서버 연결됨' : '연결 중...'}
+            {socket.isConnected() ? '서버 연결됨' : '연결 중...'}
           </Text>
         </View>
 
