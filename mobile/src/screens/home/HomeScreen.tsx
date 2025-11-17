@@ -2,7 +2,7 @@
  * 홈 화면
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -27,13 +27,6 @@ const HomeScreen: React.FC = () => {
   const incomingCall = useCallStore((state) => state.incomingCall);
   const setIncomingCall = useCallStore((state) => state.setIncomingCall);
   const [showIncomingCall, setShowIncomingCall] = useState(false);
-
-  // Socket 연결
-  useEffect(() => {
-    if (!socket.isConnected()) {
-      // Socket은 useSocket hook에서 자동 연결됨
-    }
-  }, [socket]);
 
   // 통화 수신 이벤트
   useSocketEvent('call:incoming', (data: any) => {

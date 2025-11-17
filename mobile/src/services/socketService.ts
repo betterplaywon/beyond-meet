@@ -99,7 +99,8 @@ export const emit = (event: string, data?: any): void => {
  */
 export const on = (event: string, callback: Function): void => {
   if (!socket) {
-    console.error('[SOCKET] Socket not initialized');
+    console.warn('[SOCKET] Socket not initialized yet. Listener will be registered after connection.');
+    // Socket이 없으면 연결 시도 (RootNavigator의 connect()보다 먼저 호출될 수 있음)
     return;
   }
 

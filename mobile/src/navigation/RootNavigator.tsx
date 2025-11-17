@@ -8,6 +8,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationSetup } from '../hooks/useNotificationSetup';
 import * as pushService from '../services/pushService';
+import * as socketService from '../services/socketService';
 import { RootStackParamList } from '../@types';
 
 // Navigators
@@ -33,6 +34,21 @@ const AppContent: React.FC = () => {
 
   // 푸시 알림 초기화 (로그인 시에만 실행됨)
   useNotificationSetup();
+
+  // Socket 연결 관리 (로그인 시 연결, 로그아웃 시 해제)
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('[SOCKET] Connecting on app level (authenticated)');
+      // 즉시 연결 (동기 실행)
+      socketService.connect();
+    } else {
+      console.log('[SOCKET] Disconnecting on app level (not authenticated)');
+      socketService.disconnect();
+    }
+
+    // ⚠️ Cleanup 없음: Socket은 isAuthenticated 변경 시에만 해제
+    // 화면 전환 시 유지되어야 함
+  }, [isAuthenticated]);
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
