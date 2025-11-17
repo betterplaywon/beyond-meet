@@ -106,7 +106,17 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
               matchService.getUserMatchInfo(matchedUserId),
             ]);
 
-            // 두 사용자에게 매칭 성공 알림
+            // 각 사용자별로 Agora 토큰 및 UID 생성
+            const user1TokenData = matchService.generateAgoraToken(
+              session.channelName,
+              userId
+            );
+            const user2TokenData = matchService.generateAgoraToken(
+              session.channelName,
+              matchedUserId
+            );
+
+            // 두 사용자에게 매칭 성공 알림 (개별 토큰/UID 전달)
             console.log("[MATCH] Emitting match:found to userId:", userId);
             io.to(userId).emit("match:found", {
               session: {
@@ -114,7 +124,8 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
                 channelName: session.channelName,
               },
               partner: user2,
-              token: session.token,
+              token: user1TokenData.token,
+              uid: user1TokenData.uid,
             });
 
             console.log(
@@ -127,7 +138,8 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
                 channelName: session.channelName,
               },
               partner: user1,
-              token: session.token,
+              token: user2TokenData.token,
+              uid: user2TokenData.uid,
             });
           } else {
             // 매칭 대기 중
@@ -193,24 +205,36 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
     try {
       const session = await matchService.acceptMatch(data.sessionId, userId);
 
-      // 토큰 생성
-      const token = matchService.generateAgoraToken(
+      // 수락한 사용자 (userId2)의 토큰 및 UID 생성
+      const user2TokenData = matchService.generateAgoraToken(
         session.channelName,
         userId
       );
 
-      // 수락한 사용자에게
+      // 발신자 (userId1)의 토큰 및 UID 생성
+      const user1TokenData = matchService.generateAgoraToken(
+        session.channelName,
+        session.userId1
+      );
+
+      // 수락한 사용자에게 (본인의 토큰/UID 전달)
       socket.emit("call:accepted", {
         session: {
           id: session.id,
           channelName: session.channelName,
         },
-        token,
+        token: user2TokenData.token,
+        uid: user2TokenData.uid,
       });
 
-      // 발신자에게 수락 알림
+      // 발신자에게 수락 알림 (발신자의 토큰/UID 전달)
       io.to(session.userId1).emit("call:accepted", {
-        sessionId: session.id,
+        session: {
+          id: session.id,
+          channelName: session.channelName,
+        },
+        token: user1TokenData.token,
+        uid: user1TokenData.uid,
       });
     } catch (error: any) {
       socket.emit("call:failed", {

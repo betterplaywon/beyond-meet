@@ -5,6 +5,7 @@
 import prisma from '../config/database';
 import { AppError } from '../middlewares/errorHandler';
 import { RtcTokenBuilder, RtcRole } from 'agora-token';
+import crypto from 'crypto';
 
 /**
  * 매칭에 필요한 사용자 정보 조회
@@ -34,15 +35,35 @@ interface MatchSession {
   userId2: string;
   channelName: string;
   token: string;
+  uid: number;
 }
 
 // 매칭 대기열 (메모리)
 const matchQueue: Map<string, { userId: string; filters: any; timestamp: Date }> = new Map();
 
 /**
- * Agora 토큰 생성
+ * userId를 기반으로 고유 Agora UID 생성
+ * - Agora UID는 32-bit unsigned integer (0 ~ 4,294,967,295)
+ * - userId를 해시하여 고정된 UID 생성 (동일 사용자는 항상 동일 UID)
  */
-export const generateAgoraToken = (channelName: string, userId: string): string => {
+export const generateAgoraUid = (userId: string): number => {
+  const hash = crypto.createHash('sha256').update(userId).digest();
+  // 첫 4바이트를 32-bit unsigned integer로 변환
+  const uid = hash.readUInt32BE(0);
+  console.log(`[Agora UID] userId=${userId} → uid=${uid}`);
+  return uid;
+};
+
+/**
+ * Agora 토큰 생성
+ * @param channelName 채널 이름
+ * @param userId 사용자 ID
+ * @returns { token: string, uid: number }
+ */
+export const generateAgoraToken = (
+  channelName: string,
+  userId: string
+): { token: string; uid: number } => {
   const appId = process.env.AGORA_APP_ID;
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
@@ -54,7 +75,9 @@ export const generateAgoraToken = (channelName: string, userId: string): string 
   const expirationTimeInSeconds = 3600; // 1시간
   const currentTimestamp = Math.floor(Date.now() / 1000);
   const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
-  const uid = 0; // 0 = auto assign
+
+  // userId 기반 고유 UID 생성
+  const uid = generateAgoraUid(userId);
 
   const token = RtcTokenBuilder.buildTokenWithUid(
     appId,
@@ -66,7 +89,9 @@ export const generateAgoraToken = (channelName: string, userId: string): string 
     privilegeExpiredTs
   );
 
-  return token;
+  console.log(`[Agora Token] channel=${channelName}, userId=${userId}, uid=${uid}`);
+
+  return { token, uid };
 };
 
 /**
@@ -89,9 +114,6 @@ export const createMatchSession = async (
     },
   });
 
-  // Agora 토큰 생성
-  const token = generateAgoraToken(channelName, userId1);
-
   // 사용자 상태 업데이트
   await prisma.user.updateMany({
     where: {
@@ -104,12 +126,17 @@ export const createMatchSession = async (
     },
   });
 
+  // NOTE: 토큰과 UID는 각 사용자별로 생성되어야 하므로
+  // Socket 핸들러에서 각 사용자에게 전달할 때 개별 생성합니다.
+  // 여기서는 세션 정보만 반환합니다.
+
   return {
     id: session.id,
     userId1: session.userId1,
     userId2: session.userId2,
     channelName: session.channelName,
-    token,
+    token: '', // Socket 핸들러에서 각 사용자별로 생성
+    uid: 0, // Socket 핸들러에서 각 사용자별로 생성
   };
 };
 
