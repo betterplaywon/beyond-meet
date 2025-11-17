@@ -45,6 +45,8 @@ interface Props {
 const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId, channelName, token, uid } = route.params;
   const clearCallState = useCallStore((state) => state.clearCallState);
+  const isJoined = useCallStore((state) => state.isJoined);
+  const setIsJoined = useCallStore((state) => state.setIsJoined);
 
   const agoraEngineRef = useRef<IRtcEngine | undefined>(undefined);
   const [localUid, setLocalUid] = useState<number>(uid || 0);
@@ -52,7 +54,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [isJoined, setIsJoined] = useState(false);
 
   // 상대방이 통화를 종료한 경우
   useSocketEvent('call:ended', (data: any) => {
