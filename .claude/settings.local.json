@@ -5,7 +5,17 @@
       "Bash(pod install)",
       "Bash(export LANG=en_US.UTF-8)",
       "Bash(sed:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(tee:*)",
+      "Bash(xargs:*)",
+      "Bash(npx react-native:*)",
+      "Bash(while ps aux)",
+      "Bash(do sleep 3)",
+      "Bash(done)",
+      "Bash(swift --version:*)",
+      "Bash(rm:*)",
+      "Bash(npm run ios:*)"
     ],
     "deny": [],
     "ask": []
