@@ -25,7 +25,7 @@ interface Props {
 const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId } = route.params;
 
-  // TODO: 세션 정보 가져오기
+  // TODO: 세션 정보 가져오기 (useCallSession hook 구현 필요)
   const callDuration = '04:32';
   const partner = {
     nickname: '상대방',
@@ -33,7 +33,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleAddFriend = () => {
-    // TODO: 친구 추가 API
+    // TODO: 친구 추가 API 구현 (Beta v2에서 구현 예정)
     console.log('Adding friend');
   };
 
