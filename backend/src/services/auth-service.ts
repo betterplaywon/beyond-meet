@@ -275,7 +275,7 @@ export const createPasswordResetToken = async (email: string): Promise<string> =
   // Beta: 간단한 토큰 생성 (실제로는 JWT나 random token 사용 권장)
   const resetToken = Buffer.from(`${email}:${Date.now()}`).toString('base64');
 
-  // TODO: 실제 배포 시 Redis에 토큰 저장 및 만료 시간 설정
+  // TODO: 실제 배포 시 Redis에 토큰 저장 및 만료 시간 설정 (Beta 기간 동안 생략)
   // await redis.set(`reset:${resetToken}`, email, 'EX', 3600); // 1시간
 
   return resetToken;
@@ -304,6 +304,39 @@ export const resetPassword = async (email: string, newPassword: string): Promise
     },
   });
 
-  // TODO: 실제 배포 시 Redis에서 토큰 삭제
+  // TODO: 실제 배포 시 Redis에서 토큰 삭제 (Beta 기간 동안 생략)
   // await redis.del(`reset:${resetToken}`);
+};
+
+/**
+ * 현재 사용자 정보 조회
+ */
+export const getCurrentUser = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      nickname: true,
+      birthDate: true,
+      gender: true,
+      country: true,
+      bio: true,
+      profilePhotos: true,
+      interests: true,
+      preferredGender: true,
+      minAge: true,
+      maxAge: true,
+      preferredCountries: true,
+      onlineStatus: true,
+      lastActive: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+  }
+
+  return user;
 };
