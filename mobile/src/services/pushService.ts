@@ -165,12 +165,14 @@ const handleNotificationNavigation = (
       if (
         notificationData.sessionId &&
         notificationData.channelName &&
-        notificationData.token
+        notificationData.token &&
+        notificationData.uid !== undefined
       ) {
         navigationRef.navigate('VideoCall', {
           sessionId: notificationData.sessionId,
           channelName: notificationData.channelName,
           token: notificationData.token,
+          uid: Number(notificationData.uid),
         });
       }
       break;
@@ -180,12 +182,14 @@ const handleNotificationNavigation = (
       if (
         notificationData.sessionId &&
         notificationData.channelName &&
-        notificationData.token
+        notificationData.token &&
+        notificationData.uid !== undefined
       ) {
         navigationRef.navigate('VideoCall', {
           sessionId: notificationData.sessionId,
           channelName: notificationData.channelName,
           token: notificationData.token,
+          uid: Number(notificationData.uid),
         });
       }
       break;
@@ -324,19 +328,6 @@ export const checkPermission = async (): Promise<boolean> => {
     authStatus === messaging.AuthorizationStatus.PROVISIONAL
   );
 };
-
-/**
- * 앱 배지 숫자 설정 (iOS만 지원)
- */
-// export const setBadgeCount = async (count: number): Promise<void> => {
-//   if (Platform.OS === 'ios') {
-//     try {
-//       await messaging().setAPNSBadgeCount(count);
-//     } catch (error) {
-//       console.error('[PushService] Failed to set badge count:', error);
-//     }
-//   }
-// };
 
 /**
  * 특정 토픽 구독
