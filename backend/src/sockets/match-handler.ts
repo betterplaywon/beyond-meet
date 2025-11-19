@@ -237,6 +237,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
         uid: user1TokenData.uid,
       });
     } catch (error: any) {
+      console.error("[SOCKET] call:accept error:", error);
       socket.emit("call:failed", {
         reason: error.message || "통화 수락 실패",
       });
@@ -248,20 +249,18 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
    */
   socket.on("call:reject", async (data: { sessionId: string }) => {
     try {
-      await matchService.rejectMatch(data.sessionId, userId);
+      // Service 레이어 사용 (Prisma 직접 호출 제거)
+      const result = await matchService.rejectMatch(data.sessionId, userId);
 
-      const session = await prisma.matchSession.findUnique({
-        where: { id: data.sessionId },
+      // 발신자에게 거절 알림
+      io.to(result.session.userId1).emit("call:rejected", {
+        sessionId: result.session.id,
       });
-
-      if (session) {
-        // 발신자에게 거절 알림
-        io.to(session.userId1).emit("call:rejected", {
-          sessionId: session.id,
-        });
-      }
     } catch (error: any) {
-      // Error handled silently
+      console.error("[SOCKET] call:reject error:", error);
+      socket.emit("error", {
+        message: "통화 거절 중 오류가 발생했습니다",
+      });
     }
   });
 
@@ -270,26 +269,24 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
    */
   socket.on("call:end", async (data: { sessionId: string }) => {
     try {
+      // Service 레이어 사용 (Prisma 직접 호출 제거)
       const result = await matchService.endCall(data.sessionId, userId);
 
-      const session = await prisma.matchSession.findUnique({
-        where: { id: data.sessionId },
+      // 두 사용자에게 통화 종료 알림
+      io.to(result.session.userId1).emit("call:ended", {
+        sessionId: result.session.id,
+        duration: result.duration,
       });
 
-      if (session) {
-        // 두 사용자에게 통화 종료 알림
-        io.to(session.userId1).emit("call:ended", {
-          sessionId: session.id,
-          duration: result.duration,
-        });
-
-        io.to(session.userId2).emit("call:ended", {
-          sessionId: session.id,
-          duration: result.duration,
-        });
-      }
+      io.to(result.session.userId2).emit("call:ended", {
+        sessionId: result.session.id,
+        duration: result.duration,
+      });
     } catch (error: any) {
-      // Error handled silently
+      console.error("[SOCKET] call:end error:", error);
+      socket.emit("error", {
+        message: "통화 종료 중 오류가 발생했습니다",
+      });
     }
   });
 
@@ -310,7 +307,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
         },
       });
     } catch (error) {
-      // Error handled silently
+      console.error("[SOCKET] disconnect - failed to update user status:", error);
     }
   });
 };
@@ -359,7 +356,17 @@ export const startPeriodicMatching = (io: Server) => {
           matchService.getUserMatchInfo(user2),
         ]);
 
-        // 두 사용자에게 매칭 성공 알림
+        // 각 사용자별로 Agora 토큰 및 UID 생성
+        const user1TokenData = matchService.generateAgoraToken(
+          session.channelName,
+          user1
+        );
+        const user2TokenData = matchService.generateAgoraToken(
+          session.channelName,
+          user2
+        );
+
+        // 두 사용자에게 매칭 성공 알림 (개별 토큰/UID 전달)
         console.log("[PERIODIC_MATCHING] Emitting match:found to user1:", user1);
         io.to(user1).emit("match:found", {
           session: {
@@ -367,7 +374,8 @@ export const startPeriodicMatching = (io: Server) => {
             channelName: session.channelName,
           },
           partner: userData2,
-          token: session.token,
+          token: user1TokenData.token,
+          uid: user1TokenData.uid,
         });
 
         console.log("[PERIODIC_MATCHING] Emitting match:found to user2:", user2);
@@ -377,7 +385,8 @@ export const startPeriodicMatching = (io: Server) => {
             channelName: session.channelName,
           },
           partner: userData1,
-          token: session.token,
+          token: user2TokenData.token,
+          uid: user2TokenData.uid,
         });
       }
     } catch (error) {
