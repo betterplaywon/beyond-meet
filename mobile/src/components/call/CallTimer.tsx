@@ -2,7 +2,7 @@
  * 통화 타이머 컴포넌트
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -16,6 +16,13 @@ export const CallTimer: React.FC<Props> = ({
   onTimeUp,
 }) => {
   const [elapsed, setElapsed] = useState(0);
+  // onTimeUp을 ref에 저장하여 의존성 배열에서 제거 (무한 루프 방지)
+  const onTimeUpRef = useRef(onTimeUp);
+
+  // onTimeUp이 변경되면 ref 업데이트
+  useEffect(() => {
+    onTimeUpRef.current = onTimeUp;
+  }, [onTimeUp]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,7 +32,7 @@ export const CallTimer: React.FC<Props> = ({
         // 시간 초과
         if (next >= maxDuration) {
           clearInterval(interval);
-          onTimeUp?.();
+          onTimeUpRef.current?.();
           return maxDuration;
         }
 
@@ -34,7 +41,7 @@ export const CallTimer: React.FC<Props> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [maxDuration, onTimeUp]);
+  }, [maxDuration]); // onTimeUp 제거
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
