@@ -468,7 +468,15 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
     },
   });
 
-  return { rejected: true };
+  // Socket handler에서 사용할 수 있도록 세션 정보 반환
+  return {
+    rejected: true,
+    session: {
+      id: session.id,
+      userId1: session.userId1,
+      userId2: session.userId2,
+    },
+  };
 };
 
 /**
@@ -575,5 +583,14 @@ export const endCall = async (sessionId: string, userId: string) => {
     },
   });
 
-  return { ended: true, duration };
+  // Socket handler에서 사용할 수 있도록 세션 정보 반환
+  return {
+    ended: true,
+    duration,
+    session: {
+      id: session.id,
+      userId1: session.userId1,
+      userId2: session.userId2,
+    },
+  };
 };
