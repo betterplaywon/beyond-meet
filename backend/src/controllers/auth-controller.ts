@@ -6,7 +6,6 @@ import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth-service';
 import { verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../middlewares/errorHandler';
-import prisma from '../config/database';
 
 /**
  * 회원가입
@@ -159,31 +158,8 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        nickname: true,
-        birthDate: true,
-        gender: true,
-        country: true,
-        bio: true,
-        profilePhotos: true,
-        interests: true,
-        preferredGender: true,
-        minAge: true,
-        maxAge: true,
-        preferredCountries: true,
-        onlineStatus: true,
-        lastActive: true,
-        createdAt: true,
-      },
-    });
-
-    if (!user) {
-      throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
-    }
+    // Service 레이어 사용
+    const user = await authService.getCurrentUser(userId);
 
     res.status(200).json({
       success: true,
