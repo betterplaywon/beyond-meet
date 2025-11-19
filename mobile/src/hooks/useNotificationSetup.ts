@@ -2,7 +2,7 @@
  * 푸시 알림 초기화 및 설정 Hook
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as pushService from '../services/pushService';
 import { useRegisterDevice } from './usePushNotifications';
 import { useAuthStore } from '../store/authStore';
@@ -16,10 +16,10 @@ import { useAuthStore } from '../store/authStore';
  * - 포그라운드/백그라운드 알림 수신 처리
  */
 export const useNotificationSetup = () => {
-  const registerDeviceMutation = useRegisterDevice();
+  const { mutate: registerDevice } = useRegisterDevice();
   const userId = useAuthStore((state) => state.userId);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
     // 로그인하지 않은 경우 초기화하지 않음
@@ -28,7 +28,7 @@ export const useNotificationSetup = () => {
     }
 
     // 이미 초기화된 경우 중복 실행 방지
-    if (isInitialized) {
+    if (isInitializedRef.current) {
       return;
     }
 
@@ -48,7 +48,7 @@ export const useNotificationSetup = () => {
 
         // 3. 서버에 디바이스 토큰 등록
         if (isMounted && userId) {
-          registerDeviceMutation.mutate({
+          registerDevice({
             userId,
             deviceToken: token,
             platform: pushService.getPlatform(),
@@ -57,7 +57,7 @@ export const useNotificationSetup = () => {
 
         // 4. 초기화 완료 표시
         if (isMounted) {
-          setIsInitialized(true);
+          isInitializedRef.current = true;
           console.log('[useNotificationSetup] Notification setup completed');
         }
       } catch (error) {
@@ -69,8 +69,8 @@ export const useNotificationSetup = () => {
 
     // 5. 토큰 갱신 리스너
     const unsubscribeTokenRefresh = pushService.onTokenRefresh((newToken) => {
-      if (isMounted && userId) {
-        registerDeviceMutation.mutate({
+      if (userId) {
+        registerDevice({
           userId,
           deviceToken: newToken,
           platform: pushService.getPlatform(),
@@ -82,5 +82,7 @@ export const useNotificationSetup = () => {
       isMounted = false;
       unsubscribeTokenRefresh();
     };
-  }, [userId, isAuthenticated, isInitialized, registerDeviceMutation]);
+    // registerDevice는 React Query의 mutate 함수로 안정적
+    // isInitialized는 early return으로 이미 처리됨
+  }, [userId, isAuthenticated, registerDevice]);
 };
