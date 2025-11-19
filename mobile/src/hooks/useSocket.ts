@@ -4,29 +4,21 @@
 
 import { useEffect, useRef } from 'react';
 import * as socketService from '../services/socketService';
-import { useAuthStore } from '../store/authStore';
 
 /**
  * Socket 연결 관리
+ *
+ * ⚠️ Socket은 앱 전체에서 공유되는 싱글톤입니다.
+ * 개별 컴포넌트의 mount/unmount와 무관하게 유지됩니다.
+ *
+ * 연결 생명주기:
+ * - 로그인 시 connect() (App.tsx 또는 최상위 컴포넌트)
+ * - 로그아웃 시 disconnect()
+ * - 화면 전환 시 연결 유지
  */
 export const useSocket = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isConnectedRef = useRef(false);
-
-  useEffect(() => {
-    if (isAuthenticated && !isConnectedRef.current) {
-      socketService.connect();
-      isConnectedRef.current = true;
-    }
-
-    return () => {
-      if (isConnectedRef.current) {
-        socketService.disconnect();
-        isConnectedRef.current = false;
-      }
-    };
-  }, [isAuthenticated]);
-
+  // Socket 접근자 역할만 수행 (연결 관리 X)
+  // socketService는 싱글톤이므로 useMemo 불필요
   return {
     emit: socketService.emit,
     on: socketService.on,
@@ -40,7 +32,6 @@ export const useSocket = () => {
  * useRef를 사용하여 callback 안정화 (리스너 재등록 방지)
  */
 export const useSocketEvent = (event: string, callback: Function) => {
-  const socket = useSocket();
   const callbackRef = useRef(callback);
 
   // callback이 변경되면 ref 업데이트 (리스너 재등록 없이)
@@ -55,11 +46,12 @@ export const useSocketEvent = (event: string, callback: Function) => {
     };
 
     console.log('[DEBUG] Socket listener registered:', event);
-    socket.on(event, stableCallback);
+    // socketService를 직접 사용 (useSocket 객체 생성 불필요)
+    socketService.on(event, stableCallback);
 
     return () => {
       console.log('[DEBUG] Socket listener removed:', event);
-      socket.off(event, stableCallback);
+      socketService.off(event, stableCallback);
     };
-  }, [event, socket]); // callback 제거 - 재등록 방지
+  }, [event]); // socket 제거 - 싱글톤이므로 의존성 불필요
 };
