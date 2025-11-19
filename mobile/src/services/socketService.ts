@@ -9,7 +9,10 @@ import { useAuthStore } from '../store/authStore';
 
 // Private 상태 변수
 let socket: Socket | null = null;
-const listeners: Map<string, Function[]> = new Map();
+// callback -> wrapper function 매핑 (메모리 누수 방지)
+const listenerWrappers: WeakMap<Function, Function> = new WeakMap();
+// event별 등록된 callback 추적
+const listeners: Map<string, Set<Function>> = new Map();
 
 /**
  * 이벤트 핸들러 설정
@@ -95,31 +98,36 @@ export const emit = (event: string, data?: any): void => {
 
 /**
  * 이벤트 리스너 등록
- * 여러 콜백을 지원하도록 개선 (중복 제거 로직 수정)
+ * WeakMap을 사용하여 메모리 누수 방지
  */
 export const on = (event: string, callback: Function): void => {
   if (!socket) {
     console.warn('[SOCKET] Socket not initialized yet. Listener will be registered after connection.');
-    // Socket이 없으면 연결 시도 (RootNavigator의 connect()보다 먼저 호출될 수 있음)
     return;
   }
 
   // 이미 등록된 콜백인지 확인
-  const existingListeners = listeners.get(event) || [];
-  if (existingListeners.includes(callback)) {
+  const eventListeners = listeners.get(event) || new Set<Function>();
+  if (eventListeners.has(callback)) {
     console.log('[DEBUG] Listener already registered:', event);
     return;
   }
 
-  // 콜백 추가
-  existingListeners.push(callback);
-  listeners.set(event, existingListeners);
-
-  // Socket.io 리스너 등록
-  socket.on(event, (...args: any[]) => {
+  // wrapper 함수 생성 (cleanup을 위해 참조 저장)
+  const wrapper = (...args: any[]) => {
     console.log('[DEBUG] Event received:', event, args);
     callback(...args);
-  });
+  };
+
+  // callback -> wrapper 매핑 저장
+  listenerWrappers.set(callback, wrapper);
+
+  // callback 추적
+  eventListeners.add(callback);
+  listeners.set(event, eventListeners);
+
+  // Socket.io에 wrapper 등록
+  socket.on(event, wrapper);
 };
 
 /**
@@ -129,17 +137,29 @@ export const off = (event: string, callback?: Function): void => {
   if (!socket) return;
 
   if (callback) {
-    socket.off(event, callback as any);
+    // wrapper 함수 가져오기
+    const wrapper = listenerWrappers.get(callback);
+
+    if (wrapper) {
+      // Socket.io에서 wrapper 제거
+      socket.off(event, wrapper as any);
+
+      // WeakMap에서 제거
+      listenerWrappers.delete(callback);
+    }
 
     // listeners에서도 제거
     const eventListeners = listeners.get(event);
     if (eventListeners) {
-      const index = eventListeners.indexOf(callback);
-      if (index > -1) {
-        eventListeners.splice(index, 1);
+      eventListeners.delete(callback);
+
+      // Set이 비었으면 Map에서 제거
+      if (eventListeners.size === 0) {
+        listeners.delete(event);
       }
     }
   } else {
+    // 모든 리스너 제거
     socket.off(event);
     listeners.delete(event);
   }
