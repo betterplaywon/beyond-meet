@@ -3,7 +3,20 @@
  */
 
 import api from './api';
-import { ApiResponse, CallRecord, User } from '../@types';
+import { ApiResponse, CallRecord } from '../@types';
+
+export interface CallHistoryItem {
+  id: string;
+  partner: {
+    id: string;
+    nickname: string;
+    profilePhotos: string[];
+  };
+  status: string;
+  callTime: Date;
+  duration: number | null;
+  type: 'COMPLETED' | 'MISSED';
+}
 
 /**
  * 통화 기록 조회
@@ -14,9 +27,7 @@ export const getCallHistory = async (params: {
   page?: number;
   limit?: number;
 }): Promise<{
-  calls: Array<CallRecord & {
-    partner: Pick<User, 'id' | 'nickname' | 'profilePhotos'>;
-  }>;
+  calls: CallHistoryItem[];
   pagination: {
     page: number;
     limit: number;
@@ -26,17 +37,17 @@ export const getCallHistory = async (params: {
 }> => {
   const { userId, page = 1, limit = 20 } = params;
 
-  const response = await api.get<ApiResponse<{
-    calls: Array<CallRecord & {
-      partner: Pick<User, 'id' | 'nickname' | 'profilePhotos'>;
-    }>;
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
-  }>>('/call/history', {
+  const response = await api.get<
+    ApiResponse<{
+      calls: CallHistoryItem[];
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>
+  >('/call/history', {
     params: {
       userId,
       page,
@@ -58,7 +69,7 @@ export const startCall = async (params: {
 }): Promise<{ call: CallRecord }> => {
   const response = await api.post<ApiResponse<{ call: CallRecord }>>(
     '/call/start',
-    params
+    params,
   );
 
   return response.data.data!;
@@ -73,11 +84,11 @@ export const endCall = async (
   params: {
     endTime: string;
     duration: number;
-  }
+  },
 ): Promise<{ call: CallRecord }> => {
   const response = await api.post<ApiResponse<{ call: CallRecord }>>(
     `/call/${callId}/end`,
-    params
+    params,
   );
 
   return response.data.data!;
@@ -93,7 +104,7 @@ export const recordCallEvent = async (
     eventType: string;
     timestamp: string;
     data?: Record<string, any>;
-  }
+  },
 ): Promise<void> => {
   await api.post(`/call/${callId}/event`, params);
 };
