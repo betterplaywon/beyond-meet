@@ -73,7 +73,10 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
       pulse.stop();
       clearTimeout(timeout);
     };
-  }, [scaleAnim, navigation]);
+    // 의존성 배열 비움 - 마운트 시 한 번만 실행
+    // scaleAnim은 ref이므로 의존성에 포함하면 안 됨
+    // navigation은 안정적인 참조이므로 생략 가능
+  }, []);
 
   // 매칭 대기 이벤트 리스너
   useSocketEvent('match:waiting', (data: any) => {
