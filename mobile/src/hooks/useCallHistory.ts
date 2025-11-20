@@ -4,16 +4,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as callApi from '../services/callApi';
-import { CallRecord } from '../@types';
+import { queryKeys } from '../constants/queryKeys';
 
-/**
- * Query Keys
- */
-export const callKeys = {
-  all: ['call'] as const,
-  history: (userId: string, page?: number) =>
-    [...callKeys.all, 'history', userId, page] as const,
-};
+export const callKeys = queryKeys.call;
 
 /**
  * 통화 기록 조회 Hook
@@ -78,17 +71,17 @@ export const useEndCall = () => {
         endTime,
         duration,
       }),
-    onSuccess: (data) => {
+    onSuccess: data => {
       // 통화 기록 쿼리 업데이트
       const callerId = data.call.callerId;
       const receiverId = data.call.receiverId;
 
-      // 양쪽 사용자의 통화 기록 무효화
+      // 양쪽 사용자의 통화 기록 무효화 (모든 페이지)
       queryClient.invalidateQueries({
-        queryKey: [...callKeys.all, 'history', callerId],
+        queryKey: callKeys.history(callerId),
       });
       queryClient.invalidateQueries({
-        queryKey: [...callKeys.all, 'history', receiverId],
+        queryKey: callKeys.history(receiverId),
       });
     },
   });

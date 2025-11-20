@@ -4,7 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as userApi from '../services/userApi';
-import { User } from '../@types';
+import { queryKeys } from '../constants/queryKeys';
 
 /**
  * 프로필 업데이트 데이터 타입
@@ -19,14 +19,7 @@ type UserUpdateData = Partial<{
   preferredCountries: string[];
 }>;
 
-/**
- * Query Keys
- */
-export const profileKeys = {
-  all: ['profile'] as const,
-  me: () => [...profileKeys.all, 'me'] as const,
-  detail: (userId: string) => [...profileKeys.all, 'detail', userId] as const,
-};
+export const profileKeys = queryKeys.profile;
 
 /**
  * 내 프로필 조회 Hook
@@ -58,11 +51,12 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: UserUpdateData }) =>
       userApi.updateProfile(userId, data),
-    onSuccess: updatedUser => {
-      // 내 프로필 쿼리 업데이트
-      queryClient.setQueryData(profileKeys.me(), updatedUser);
-      // 상세 프로필 쿼리 업데이트
-      queryClient.setQueryData(profileKeys.detail(updatedUser.id), updatedUser);
+    onSuccess: (_, variables) => {
+      // 서버에서 최신 데이터를 다시 가져옴 (Server is source of truth)
+      queryClient.invalidateQueries({ queryKey: profileKeys.me() });
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.detail(variables.userId),
+      });
     },
   });
 };
@@ -81,26 +75,12 @@ export const useUploadProfilePhoto = () => {
       userId: string;
       photo: { uri: string; type: string; name: string };
     }) => userApi.uploadProfilePhoto(userId, photo),
-    onSuccess: (result, variables) => {
-      // 프로필 쿼리의 사진 업데이트
-      queryClient.setQueryData<User>(profileKeys.me(), old => {
-        if (!old) return old;
-        return {
-          ...old,
-          profilePhotos: result.profilePhotos,
-        };
+    onSuccess: (_, variables) => {
+      // 서버에서 최신 프로필 데이터를 다시 가져옴
+      queryClient.invalidateQueries({ queryKey: profileKeys.me() });
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.detail(variables.userId),
       });
-
-      queryClient.setQueryData<User>(
-        profileKeys.detail(variables.userId),
-        old => {
-          if (!old) return old;
-          return {
-            ...old,
-            profilePhotos: result.profilePhotos,
-          };
-        },
-      );
     },
   });
 };
@@ -143,10 +123,12 @@ export const useUpdateSettings = () => {
         preferredCountries?: string[];
       };
     }) => userApi.updateSettings(userId, settings),
-    onSuccess: updatedUser => {
-      // 내 프로필 쿼리 업데이트
-      queryClient.setQueryData(profileKeys.me(), updatedUser);
-      queryClient.setQueryData(profileKeys.detail(updatedUser.id), updatedUser);
+    onSuccess: (_, variables) => {
+      // 서버에서 최신 데이터를 다시 가져옴
+      queryClient.invalidateQueries({ queryKey: profileKeys.me() });
+      queryClient.invalidateQueries({
+        queryKey: profileKeys.detail(variables.userId),
+      });
     },
   });
 };

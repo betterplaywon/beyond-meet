@@ -7,6 +7,7 @@ import { authApi } from '../api/auth.api';
 import { useAuthStore } from '../store/authStore';
 import { LoginCredentials, RegisterData } from '../@types';
 import Toast from 'react-native-toast-message';
+import { queryKeys } from '../constants/queryKeys';
 
 /**
  * 로그인 mutation
@@ -20,7 +21,7 @@ export const useLogin = () => {
     onSuccess: (data) => {
       // authStore에 토큰과 userId 저장, 사용자 프로필은 react-query가 관리
       setAuth(data.accessToken, data.refreshToken, data.user.id);
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.me() });
       Toast.show({
         type: 'success',
         text1: '로그인 성공',
@@ -49,7 +50,7 @@ export const useRegister = () => {
     onSuccess: (data) => {
       // authStore에 토큰과 userId 저장, 사용자 프로필은 react-query가 관리
       setAuth(data.accessToken, data.refreshToken, data.user.id);
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile.me() });
       Toast.show({
         type: 'success',
         text1: '회원가입 완료',
