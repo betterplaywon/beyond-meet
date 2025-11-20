@@ -7,6 +7,19 @@ import * as userApi from '../services/userApi';
 import { User } from '../@types';
 
 /**
+ * 프로필 업데이트 데이터 타입
+ */
+type UserUpdateData = Partial<{
+  nickname: string;
+  bio: string;
+  interests: string[];
+  minAge: number;
+  maxAge: number;
+  preferredGender: 'MALE' | 'FEMALE' | 'ANYONE';
+  preferredCountries: string[];
+}>;
+
+/**
  * Query Keys
  */
 export const profileKeys = {
@@ -43,9 +56,9 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, data }: { userId: string; data: Partial<User> }) =>
+    mutationFn: ({ userId, data }: { userId: string; data: UserUpdateData }) =>
       userApi.updateProfile(userId, data),
-    onSuccess: (updatedUser) => {
+    onSuccess: updatedUser => {
       // 내 프로필 쿼리 업데이트
       queryClient.setQueryData(profileKeys.me(), updatedUser);
       // 상세 프로필 쿼리 업데이트
@@ -70,7 +83,7 @@ export const useUploadProfilePhoto = () => {
     }) => userApi.uploadProfilePhoto(userId, photo),
     onSuccess: (result, variables) => {
       // 프로필 쿼리의 사진 업데이트
-      queryClient.setQueryData<User>(profileKeys.me(), (old) => {
+      queryClient.setQueryData<User>(profileKeys.me(), old => {
         if (!old) return old;
         return {
           ...old,
@@ -80,13 +93,13 @@ export const useUploadProfilePhoto = () => {
 
       queryClient.setQueryData<User>(
         profileKeys.detail(variables.userId),
-        (old) => {
+        old => {
           if (!old) return old;
           return {
             ...old,
             profilePhotos: result.profilePhotos,
           };
-        }
+        },
       );
     },
   });
@@ -130,7 +143,7 @@ export const useUpdateSettings = () => {
         preferredCountries?: string[];
       };
     }) => userApi.updateSettings(userId, settings),
-    onSuccess: (updatedUser) => {
+    onSuccess: updatedUser => {
       // 내 프로필 쿼리 업데이트
       queryClient.setQueryData(profileKeys.me(), updatedUser);
       queryClient.setQueryData(profileKeys.detail(updatedUser.id), updatedUser);

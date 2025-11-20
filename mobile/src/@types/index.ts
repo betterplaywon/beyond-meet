@@ -10,16 +10,16 @@ export interface User {
   birthDate: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
   country: string;
-  bio?: string;
+  bio: string | null;
   profilePhotos: string[];
   interests: string[];
   onlineStatus: 'ONLINE' | 'OFFLINE' | 'IN_CALL';
   // 매칭 필터
-  preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
-  minAge?: number;
-  maxAge?: number;
-  preferredCountries?: string[];
-  lastActive?: string;
+  preferredGender: 'MALE' | 'FEMALE' | 'ANYONE' | null;
+  minAge: number; // 백엔드가 기본값 보장 (default: 20)
+  maxAge: number; // 백엔드가 기본값 보장 (default: 50)
+  preferredCountries: string[] | null;
+  lastActive: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,9 +69,9 @@ export interface MatchSession {
   channelName: string;
   status: MatchStatus;
   matchType: MatchType;
-  startTime?: string;
-  endTime?: string;
-  duration?: number;
+  startTime: string | null;
+  endTime: string | null;
+  duration: number | null;
   createdAt: string;
 }
 
@@ -91,10 +91,10 @@ export interface CallRecord {
   callerId: string;
   receiverId: string;
   status: CallStatus;
-  startTime?: string;
-  endTime?: string;
-  duration?: number;
-  quality?: number;
+  startTime: string | null;
+  endTime: string | null;
+  duration: number | null;
+  quality: number | null;
   createdAt: string;
 }
 
