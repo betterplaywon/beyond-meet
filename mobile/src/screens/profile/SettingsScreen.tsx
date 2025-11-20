@@ -3,7 +3,7 @@
  * UI_FLOW.md 3.10 참고
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -40,21 +40,9 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { mutate: updateSettings } = useUpdateSettings();
 
   const [pushEnabled, setPushEnabled] = useState(true);
-  const [genderFilter, setGenderFilter] = useState<
-    'MALE' | 'FEMALE' | 'ANYONE'
-  >('ANYONE');
-  const [ageRange, setAgeRange] = useState({ min: 20, max: 30 });
 
-  // 사용자 설정 로드
-  useEffect(() => {
-    if (!user) return;
-
-    if (user.preferredGender) {
-      setGenderFilter(user.preferredGender);
-    }
-
-    setAgeRange({ min: user.minAge, max: user.maxAge });
-  }, [user]);
+  const genderFilter = user?.preferredGender || 'ANYONE';
+  const ageRange = { min: user?.minAge || 20, max: user?.maxAge || 30 };
 
   const handleChangePassword = () => {
     // TODO: 비밀번호 변경 화면으로 이동
@@ -107,7 +95,8 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       },
       {
         onSuccess: () => {
-          setGenderFilter(gender);
+          // React Query가 자동으로 user 데이터를 refetch하므로
+          // genderFilter는 자동으로 업데이트됨 (로컬 상태 업데이트 불필요)
           Alert.alert('성공', '매칭 필터가 업데이트되었습니다.');
         },
         onError: err => {
