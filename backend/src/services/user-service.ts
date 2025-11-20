@@ -47,7 +47,12 @@ export const getProfile = async (userId: string) => {
     throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
   }
 
-  return user;
+  // 기본값 보장: minAge, maxAge가 null이면 기본값 설정
+  return {
+    ...user,
+    minAge: user.minAge ?? 20,
+    maxAge: user.maxAge ?? 50,
+  };
 };
 
 /**
@@ -145,7 +150,12 @@ export const updateProfile = async (userId: string, data: UpdateProfileInput) =>
     },
   });
 
-  return user;
+  // 기본값 보장
+  return {
+    ...user,
+    minAge: user.minAge ?? 20,
+    maxAge: user.maxAge ?? 50,
+  };
 };
 
 /**
