@@ -47,13 +47,13 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   // 사용자 설정 로드
   useEffect(() => {
-    if (user?.preferredGender) {
+    if (!user) return;
+
+    if (user.preferredGender) {
       setGenderFilter(user.preferredGender);
     }
 
-    if (user?.minAge !== undefined && user?.maxAge !== undefined) {
-      setAgeRange({ min: user.minAge, max: user.maxAge });
-    }
+    setAgeRange({ min: user.minAge, max: user.maxAge });
   }, [user]);
 
   const handleChangePassword = () => {
