@@ -13,7 +13,7 @@ export interface CallHistoryItem {
     profilePhotos: string[];
   };
   status: string;
-  callTime: Date;
+  callTime: string;
   duration: number | null;
   type: 'COMPLETED' | 'MISSED';
 }
