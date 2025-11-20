@@ -20,6 +20,7 @@ import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useCallHistory } from '../../hooks/useCallHistory';
 import { colors, typography, spacing } from '../../styles/theme';
+import { CallHistoryItem } from '../../services/callApi';
 
 type CallHistoryScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -30,50 +31,17 @@ interface Props {
   navigation: CallHistoryScreenNavigationProp;
 }
 
-interface CallHistory {
-  id: string;
-  user: {
-    id: string;
-    nickname: string;
-    profilePhotos: string[];
-  };
-  duration: number | null; // null이면 부재중
-  createdAt: string;
-  type: 'COMPLETED' | 'MISSED';
-}
-
 const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
   const { data: user } = useMyProfile();
 
   // React Query로 통화 기록 조회
-  const {
-    data,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useCallHistory({
+  const { data, isFetching, error, refetch } = useCallHistory({
     userId: user?.id,
     page: 1,
     limit: 50,
   });
 
-  // API 응답을 UI 형식으로 변환
-  const callHistory: CallHistory[] = React.useMemo(() => {
-    if (!data?.calls) return [];
-
-    return data.calls.map((call) => ({
-      id: call.id,
-      user: {
-        id: call.partner.id,
-        nickname: call.partner.nickname,
-        profilePhotos: call.partner.profilePhotos,
-      },
-      duration: call.duration ?? null,
-      createdAt: call.startTime ?? call.createdAt,
-      type: call.status === 'MISSED' ? 'MISSED' : 'COMPLETED',
-    }));
-  }, [data]);
+  const callHistory: CallHistoryItem[] = data?.calls || [];
 
   // 에러 발생 시 Alert 표시
   React.useEffect(() => {
@@ -90,21 +58,25 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
     if (seconds === null) return '부재중';
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+    return `${String(minutes).padStart(2, '0')}:${String(
+      remainingSeconds,
+    ).padStart(2, '0')}`;
   };
 
-  const formatTime = (dateString: string): string => {
-    const date = new Date(dateString);
+  const formatTime = (date: Date): string => {
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+      2,
+      '0',
+    )}`;
   };
 
-  const groupByDate = (history: CallHistory[]) => {
-    const grouped: { [key: string]: CallHistory[] } = {};
+  const groupByDate = (history: CallHistoryItem[]) => {
+    const grouped: { [key: string]: CallHistoryItem[] } = {};
 
-    history.forEach((item) => {
-      const date = new Date(item.createdAt);
+    history.forEach(item => {
+      const date = new Date(item.callTime);
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -127,7 +99,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
     return Object.entries(grouped);
   };
 
-  const renderCallHistoryItem = (item: CallHistory) => {
+  const renderCallHistoryItem = (item: CallHistoryItem) => {
     const isMissed = item.type === 'MISSED';
 
     return (
@@ -140,17 +112,17 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
         activeOpacity={0.7}
       >
         <Avatar
-          source={item.user.profilePhotos[0]}
-          name={item.user.nickname}
+          source={item.partner.profilePhotos[0]}
+          name={item.partner.nickname}
           size="medium"
         />
 
         <View style={styles.historyInfo}>
-          <Text style={styles.historyName}>{item.user.nickname}</Text>
+          <Text style={styles.historyName}>{item.partner.nickname}</Text>
           <Text style={[styles.historyDuration, isMissed && styles.missedText]}>
             {formatDuration(item.duration)}
           </Text>
-          <Text style={styles.historyTime}>{formatTime(item.createdAt)}</Text>
+          <Text style={styles.historyTime}>{formatTime(item.callTime)}</Text>
         </View>
 
         <Text style={styles.historyIcon}>{isMissed ? '⊗' : '📞'}</Text>
@@ -158,13 +130,13 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
-  const renderSection = ({ item }: { item: [string, CallHistory[]] }) => {
+  const renderSection = ({ item }: { item: [string, CallHistoryItem[]] }) => {
     const [dateLabel, items] = item;
 
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{dateLabel}</Text>
-        {items.map((historyItem) => renderCallHistoryItem(historyItem))}
+        {items.map(historyItem => renderCallHistoryItem(historyItem))}
       </View>
     );
   };
@@ -198,7 +170,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
       {/* List */}
       <FlatList
         data={groupedHistory}
-        keyExtractor={(item) => item[0]}
+        keyExtractor={item => item[0]}
         renderItem={renderSection}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={[
