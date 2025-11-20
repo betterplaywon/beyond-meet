@@ -63,7 +63,8 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
     ).padStart(2, '0')}`;
   };
 
-  const formatTime = (date: Date): string => {
+  const formatTime = (dateString: string): string => {
+    const date = new Date(dateString);
     const hours = date.getHours();
     const minutes = date.getMinutes();
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
@@ -112,7 +113,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
         activeOpacity={0.7}
       >
         <Avatar
-          source={item.partner.profilePhotos[0]}
+          source={item.partner.profilePhotos?.[0]}
           name={item.partner.nickname}
           size="medium"
         />
