@@ -14,21 +14,17 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList, Friendship } from '../../@types';
+
+import { useIsFocused } from '@react-navigation/native';
+import { Friendship } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
 import { colors, typography, spacing } from '../../styles/theme';
 
-type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
-
-interface Props {
-  navigation: FriendsScreenNavigationProp;
-}
-
-const FriendsScreen: React.FC<Props> = ({ navigation }) => {
+const FriendsScreen = () => {
   const { data: user } = useMyProfile();
+  const isFocused = useIsFocused(); // 현재 탭이 포커스되어 있는지 확인
 
   // React Query로 친구 목록 조회
   const {
@@ -39,12 +35,14 @@ const FriendsScreen: React.FC<Props> = ({ navigation }) => {
     refetch,
   } = useFriends(user?.id);
 
-  // 에러 발생 시 Alert 표시
+  // 네트워크 에러 등 실제 API 에러 발생 시에만 Alert 표시
+  // 친구가 0명인 경우는 정상 응답(빈 배열)이므로 error가 null임
+  // 단, 현재 탭이 포커스되어 있을 때만 Alert 표시 (다른 탭에서 에러 발생 방지)
   React.useEffect(() => {
-    if (error) {
+    if (error && isFocused) {
       Alert.alert('오류', '친구 목록을 불러오는데 실패했습니다.');
     }
-  }, [error]);
+  }, [error, isFocused]);
 
   const handleRefresh = () => {
     refetch();
@@ -111,7 +109,7 @@ const FriendsScreen: React.FC<Props> = ({ navigation }) => {
       ) : (
         <FlatList
           data={friends}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           renderItem={renderFriend}
           ListEmptyComponent={renderEmpty}
           contentContainerStyle={styles.listContent}
