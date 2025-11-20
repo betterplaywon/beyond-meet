@@ -2,9 +2,9 @@
  * 통화 관리 서비스
  */
 
-import prisma from '../config/database';
-import { AppError } from '../middlewares/errorHandler';
-import { CallStatus, CallEventType } from '@prisma/client';
+import prisma from "../config/database";
+import { AppError } from "../middlewares/errorHandler";
+import { CallEventType } from "@prisma/client";
 
 interface StartCallInput {
   sessionId: string;
@@ -40,23 +40,31 @@ export const startCall = async (data: StartCallInput) => {
   });
 
   if (!session) {
-    throw new AppError(404, 'SESSION_NOT_FOUND', '매칭 세션을 찾을 수 없습니다');
+    throw new AppError(
+      404,
+      "SESSION_NOT_FOUND",
+      "매칭 세션을 찾을 수 없습니다"
+    );
   }
 
-  if (session.status === 'COMPLETED' || session.status === 'CANCELLED') {
-    throw new AppError(400, 'SESSION_ENDED', '이미 종료된 세션입니다');
+  if (session.status === "COMPLETED" || session.status === "CANCELLED") {
+    throw new AppError(400, "SESSION_ENDED", "이미 종료된 세션입니다");
   }
 
   // 2. 이미 진행 중인 통화가 있는지 확인
   const existingCall = await prisma.callRecord.findFirst({
     where: {
       sessionId,
-      status: { in: ['INITIATED', 'RINGING', 'ONGOING'] },
+      status: { in: ["INITIATED", "RINGING", "ONGOING"] },
     },
   });
 
   if (existingCall) {
-    throw new AppError(400, 'CALL_ALREADY_EXISTS', '이미 진행 중인 통화가 있습니다');
+    throw new AppError(
+      400,
+      "CALL_ALREADY_EXISTS",
+      "이미 진행 중인 통화가 있습니다"
+    );
   }
 
   // 3. 통화 기록 생성 및 세션 상태 업데이트
@@ -67,7 +75,7 @@ export const startCall = async (data: StartCallInput) => {
         sessionId,
         callerId,
         receiverId,
-        status: 'ONGOING',
+        status: "ONGOING",
         startTime: new Date(),
       },
     });
@@ -76,7 +84,7 @@ export const startCall = async (data: StartCallInput) => {
     await tx.matchSession.update({
       where: { id: sessionId },
       data: {
-        status: 'ACTIVE',
+        status: "ACTIVE",
         startTime: new Date(),
       },
     });
@@ -87,7 +95,7 @@ export const startCall = async (data: StartCallInput) => {
         id: { in: [callerId, receiverId] },
       },
       data: {
-        onlineStatus: 'IN_CALL',
+        onlineStatus: "IN_CALL",
       },
     });
 
@@ -95,7 +103,7 @@ export const startCall = async (data: StartCallInput) => {
     await tx.callEvent.create({
       data: {
         sessionId,
-        eventType: 'CALL_STARTED',
+        eventType: "CALL_STARTED",
         timestamp: new Date(),
       },
     });
@@ -121,17 +129,19 @@ export const endCall = async (callId: string, data: EndCallInput) => {
   });
 
   if (!call) {
-    throw new AppError(404, 'CALL_NOT_FOUND', '통화 기록을 찾을 수 없습니다');
+    throw new AppError(404, "CALL_NOT_FOUND", "통화 기록을 찾을 수 없습니다");
   }
 
-  if (call.status === 'COMPLETED') {
-    throw new AppError(400, 'CALL_ALREADY_ENDED', '이미 종료된 통화입니다');
+  if (call.status === "COMPLETED") {
+    throw new AppError(400, "CALL_ALREADY_ENDED", "이미 종료된 통화입니다");
   }
 
   // 2. 실제 통화 시간 계산
   let actualDuration = duration;
   if (!actualDuration && call.startTime) {
-    actualDuration = Math.floor((endTime.getTime() - call.startTime.getTime()) / 1000);
+    actualDuration = Math.floor(
+      (endTime.getTime() - call.startTime.getTime()) / 1000
+    );
   }
 
   // 3. 통화 종료 처리
@@ -140,7 +150,7 @@ export const endCall = async (callId: string, data: EndCallInput) => {
     const updated = await tx.callRecord.update({
       where: { id: callId },
       data: {
-        status: 'COMPLETED',
+        status: "COMPLETED",
         endTime,
         duration: actualDuration,
       },
@@ -150,7 +160,7 @@ export const endCall = async (callId: string, data: EndCallInput) => {
     await tx.matchSession.update({
       where: { id: call.sessionId },
       data: {
-        status: 'COMPLETED',
+        status: "COMPLETED",
         endTime,
         duration: actualDuration,
       },
@@ -162,7 +172,7 @@ export const endCall = async (callId: string, data: EndCallInput) => {
         id: { in: [call.callerId, call.receiverId] },
       },
       data: {
-        onlineStatus: 'ONLINE',
+        onlineStatus: "ONLINE",
         lastActive: new Date(),
       },
     });
@@ -171,7 +181,7 @@ export const endCall = async (callId: string, data: EndCallInput) => {
     await tx.callEvent.create({
       data: {
         sessionId: call.sessionId,
-        eventType: 'CALL_ENDED',
+        eventType: "CALL_ENDED",
         timestamp: endTime,
         metadata: {
           duration: actualDuration,
@@ -188,7 +198,10 @@ export const endCall = async (callId: string, data: EndCallInput) => {
 /**
  * 통화 기록 조회 (페이지네이션)
  */
-export const getCallHistory = async (userId: string, pagination: PaginationInput) => {
+export const getCallHistory = async (
+  userId: string,
+  pagination: PaginationInput
+) => {
   const { page, limit } = pagination;
   const skip = (page - 1) * limit;
 
@@ -198,7 +211,7 @@ export const getCallHistory = async (userId: string, pagination: PaginationInput
   });
 
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
   // 2. 통화 기록 조회 (caller 또는 receiver로 참여한 통화)
@@ -224,7 +237,7 @@ export const getCallHistory = async (userId: string, pagination: PaginationInput
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       skip,
       take: limit,
@@ -248,10 +261,14 @@ export const getCallHistory = async (userId: string, pagination: PaginationInput
         nickname: partner.nickname,
         profilePhotos: partner.profilePhotos,
       },
+      // status는 명확한 값만 반환 (COMPLETED, MISSED, REJECTED 등)
       status: call.status,
-      startTime: call.startTime,
-      endTime: call.endTime,
-      duration: call.duration,
+      // startTime이 없으면 createdAt 사용 (항상 유효한 값 보장)
+      callTime: call.startTime || call.createdAt,
+      // duration은 완료된 통화만 있음, 부재중/거절은 null
+      duration: call.status === "COMPLETED" ? call.duration || 0 : null,
+      // UI에서 사용할 타입 (COMPLETED vs MISSED/REJECTED)
+      type: call.status === "COMPLETED" ? "COMPLETED" : "MISSED",
     };
   });
 
@@ -269,7 +286,10 @@ export const getCallHistory = async (userId: string, pagination: PaginationInput
 /**
  * 통화 이벤트 기록
  */
-export const recordCallEvent = async (callId: string, data: RecordEventInput) => {
+export const recordCallEvent = async (
+  callId: string,
+  data: RecordEventInput
+) => {
   const { eventType, timestamp, metadata } = data;
 
   // 1. 통화 기록 조회
@@ -278,7 +298,7 @@ export const recordCallEvent = async (callId: string, data: RecordEventInput) =>
   });
 
   if (!call) {
-    throw new AppError(404, 'CALL_NOT_FOUND', '통화 기록을 찾을 수 없습니다');
+    throw new AppError(404, "CALL_NOT_FOUND", "통화 기록을 찾을 수 없습니다");
   }
 
   // 2. 이벤트 기록
