@@ -1453,11 +1453,111 @@ Allowed Origins:
 
 ---
 
+## 📋 데이터 계약 (Data Contracts)
+
+### 배열 필드 보장
+
+**항상 배열로 반환되는 필드** (null/undefined 불가, 빈 배열 가능):
+
+- `user.profilePhotos`: `string[]`
+  - 신규 사용자나 사진 미업로드 시 빈 배열 `[]` 반환
+  - 프론트엔드: `profilePhotos?.[0]` 또는 `profilePhotos[0] || fallback` 패턴 권장
+
+- `user.interests`: `string[]`
+  - 관심사 미선택 시 빈 배열 `[]` 반환
+  - 프론트엔드: `interests.length > 0` 체크 권장
+
+### Null 가능 필드
+
+**명시적으로 `null` 반환 가능한 필드**:
+
+- `call.duration`: `number | null`
+  - COMPLETED 통화: `number` (≥0)
+  - MISSED/REJECTED/FAILED 통화: `null`
+
+- `user.bio`: `string | null`
+  - 미작성 시: `null`
+
+- `session.endTime`: `string | null`
+  - 진행 중인 세션: `null`
+  - 종료된 세션: ISO 8601 문자열
+
+- `user.lastActive`: `string | null`
+  - 한 번도 활동하지 않은 신규 사용자: `null`
+  - 활동 기록 있음: ISO 8601 문자열
+
+- `user.preferredGender`: `"MALE" | "FEMALE" | "ANYONE" | null`
+- `user.minAge`: `number | null`
+- `user.maxAge`: `number | null`
+- `user.preferredCountries`: `string[] | null`
+
+### Date 필드 형식
+
+**모든 날짜/시간 필드는 ISO 8601 문자열**:
+
+- 형식: `"2025-11-04T13:05:00Z"` (UTC 기준)
+- JSON 응답에서 Date 객체가 아닌 `string` 타입
+- 프론트엔드: `new Date(dateString)` 변환 필요 시 사용
+
+**예시**:
+```json
+{
+  "createdAt": "2025-11-04T13:05:00Z",
+  "startTime": "2025-11-04T14:20:00Z",
+  "lastActive": "2025-11-04T10:30:00Z"
+}
+```
+
+### 타입 정의 예시 (TypeScript)
+
+```typescript
+// ✅ 올바른 타입 정의
+interface User {
+  profilePhotos: string[];        // 빈 배열 가능
+  interests: string[];             // 빈 배열 가능
+  bio: string | null;              // 명시적 null
+  lastActive: string | null;       // ISO 문자열 또는 null
+}
+
+interface CallRecord {
+  duration: number | null;         // 명시적 null
+  startTime: string | null;        // ISO 문자열 또는 null
+  createdAt: string;               // ISO 문자열 (항상 존재)
+}
+
+// ❌ 잘못된 타입 정의
+interface User {
+  profilePhotos?: string[];        // optional이 아님
+  bio?: string;                    // null 명시 필요
+  createdAt: Date;                 // 실제로는 string
+}
+```
+
+### 프론트엔드 처리 패턴
+
+```typescript
+// ✅ 올바른 패턴
+const photoUrl = user.profilePhotos?.[0];  // 빈 배열 대응
+if (call.duration !== null) {
+  // duration은 number 타입 보장
+  console.log(`통화 시간: ${call.duration}초`);
+}
+
+// ❌ 잘못된 패턴
+const photoUrl = user.profilePhotos && user.profilePhotos[0];  // 불필요한 null 체크
+if (call.duration) {  // duration이 0일 수 있음 (falsy)
+  // 0초 통화 누락
+}
+```
+
+---
+
 ## 📝 변경 이력
 
 | 버전 | 날짜 | 변경 내용 |
 |------|------|-----------|
 | 1.0.0 | 2025-11-04 | 초안 작성 |
+| 1.1.0 | 2025-11-20 | 데이터 계약 섹션 추가 |
 
 ---
 
