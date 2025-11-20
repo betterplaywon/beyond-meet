@@ -58,7 +58,10 @@ export const getFriends = async (req: Request, res: Response, next: NextFunction
 
     res.status(200).json({
       success: true,
-      data: friends,
+      data: {
+        friends: friends,
+        total: friends.length,
+      },
     });
   } catch (error) {
     next(error);
