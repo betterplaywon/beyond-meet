@@ -42,17 +42,23 @@ const setupEventHandlers = (): void => {
  */
 export const connect = (): void => {
   if (socket?.connected) {
+    console.log('[SOCKET] Already connected');
     return;
   }
 
   const token = useAuthStore.getState().accessToken;
+  console.log('[SOCKET] Access Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+
   if (!token) {
+    console.error('[SOCKET] ❌ No access token available');
     return;
   }
 
   const socketUrl = ENV.API_BASE_URL.endsWith('/api')
     ? ENV.API_BASE_URL.slice(0, -4)
     : ENV.API_BASE_URL;
+
+  console.log('[SOCKET] Connecting to:', socketUrl);
 
   socket = io(socketUrl, {
     auth: {
