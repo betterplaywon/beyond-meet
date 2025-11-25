@@ -12,6 +12,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Alert,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -43,17 +45,56 @@ interface Props {
 }
 
 const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { sessionId, channelName, token, uid } = route.params;
+  const { sessionId, channelName, token } = route.params;
+  // uid는 백엔드에서 전달되지만 사용하지 않음 (Agora 자동 할당)
+
+  // Route params 검증 및 로깅
+  console.log('🎬 VideoCallScreen initialized with params:', {
+    sessionId,
+    channelName,
+    token: token?.substring(0, 20) + '...',
+    tokenLength: token?.length,
+  });
+
+  if (!sessionId || !channelName || !token) {
+    console.error('❌ Missing required params:', {
+      sessionId: !!sessionId,
+      channelName: !!channelName,
+      token: !!token,
+    });
+    Alert.alert('오류', '통화 정보가 올바르지 않습니다.', [
+      { text: '확인', onPress: () => navigation.goBack() },
+    ]);
+  }
+
   const clearCallState = useCallStore((state) => state.clearCallState);
   const isJoined = useCallStore((state) => state.isJoined);
   const setIsJoined = useCallStore((state) => state.setIsJoined);
 
   const agoraEngineRef = useRef<IRtcEngine | undefined>(undefined);
-  const [localUid, setLocalUid] = useState<number>(uid || 0);
+  const [localUid, setLocalUid] = useState<number>(0);
   const [remoteUid, setRemoteUid] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showControls, setShowControls] = useState(true);
+
+  // remoteUid 상태 변경 모니터링
+  useEffect(() => {
+    console.log('🎯 [STATE] remoteUid changed:', remoteUid);
+    if (remoteUid !== 0) {
+      console.log('✅ [RENDER] Remote video should be visible now with UID:', remoteUid);
+    } else {
+      console.log('⏸️ [RENDER] Showing placeholder (waiting for remote user)');
+    }
+  }, [remoteUid]);
+
+  // localUid 상태 변경 모니터링
+  useEffect(() => {
+    console.log('🎯 [STATE] localUid changed:', localUid);
+    if (localUid !== 0) {
+      console.log('✅ [RENDER] Local video (PIP) should be visible now with UID:', localUid);
+    }
+  }, [localUid]);
 
   // 상대방이 통화를 종료한 경우
   useSocketEvent('call:ended', (data: any) => {
@@ -71,11 +112,48 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
 
   // Agora SDK 초기화
   useEffect(() => {
+    const requestPermissions = async () => {
+      if (Platform.OS === 'android') {
+        try {
+          const grants = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          ]);
+
+          if (
+            grants['android.permission.CAMERA'] !== PermissionsAndroid.RESULTS.GRANTED ||
+            grants['android.permission.RECORD_AUDIO'] !== PermissionsAndroid.RESULTS.GRANTED
+          ) {
+            console.error('❌ Permissions not granted');
+            Alert.alert('권한 필요', '카메라와 마이크 권한이 필요합니다.');
+            return false;
+          }
+          console.log('✅ Android permissions granted');
+        } catch (err) {
+          console.error('❌ Permission error:', err);
+          return false;
+        }
+      }
+      return true;
+    };
+
     const setupVideoSDK = async () => {
       try {
         console.log('🎥 Initializing Agora SDK...');
         console.log('Channel:', channelName);
         console.log('AGORA_APP_ID:', ENV.AGORA_APP_ID);
+
+        if (!ENV.AGORA_APP_ID) {
+          console.error('❌ AGORA_APP_ID is empty!');
+          Alert.alert('설정 오류', 'Agora App ID가 설정되지 않았습니다.');
+          return;
+        }
+
+        // 권한 요청
+        const hasPermissions = await requestPermissions();
+        if (!hasPermissions) {
+          return;
+        }
 
         // Agora Engine 생성
         agoraEngineRef.current = createAgoraRtcEngine();
@@ -87,35 +165,88 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           channelProfile: ChannelProfileType.ChannelProfileCommunication,
         });
 
+        // 자동 구독 활성화 (기본값이지만 명시적으로 설정)
+        console.log('🔧 Configuring channel media options...');
+        agoraEngine.muteAllRemoteAudioStreams(false);
+        agoraEngine.muteAllRemoteVideoStreams(false);
+
         // 이벤트 핸들러 등록
         agoraEngine.registerEventHandler({
           onJoinChannelSuccess: (_connection, joinedUid) => {
             console.log('✅ Successfully joined channel with UID:', joinedUid);
-            // 서버로부터 받은 UID와 Agora가 할당한 UID가 일치하는지 확인
-            console.log('Server UID:', uid, 'Agora UID:', joinedUid);
+            console.log('📋 Channel:', channelName);
+            console.log('🆔 Agora assigned UID:', joinedUid);
             setLocalUid(joinedUid);
             setIsJoined(true);
           },
           onUserJoined: (_connection, remoteUserUid) => {
             console.log('👤 Remote user joined:', remoteUserUid);
+            console.log('📹 Remote UID:', remoteUserUid);
+            console.log('🔄 Setting remoteUid state to:', remoteUserUid);
             setRemoteUid(remoteUserUid);
+
+            // 상태 업데이트 확인을 위한 지연 로그
+            setTimeout(() => {
+              console.log('✔️ RemoteUid state should be updated now');
+            }, 100);
           },
           onUserOffline: (_connection, remoteUserUid) => {
             console.log('👋 Remote user left:', remoteUserUid);
             setRemoteUid(0);
           },
+          onRemoteVideoStateChanged: (_connection, remoteUserUid, state, reason) => {
+            console.log('📹 Remote video state changed:', {
+              uid: remoteUserUid,
+              state,
+              reason,
+              stateDescription: state === 0 ? 'Stopped' : state === 1 ? 'Starting' : state === 2 ? 'Decoding' : state === 3 ? 'Frozen' : 'Failed',
+            });
+
+            // state=2 (Decoding)이면 비디오가 정상적으로 수신되고 있음
+            if (state === 2) {
+              console.log('✅ Remote video is being decoded - should be visible!');
+            }
+          },
+          onLocalVideoStateChanged: (_connection, state, reason) => {
+            console.log('📹 Local video state changed:', {
+              state,
+              reason,
+            });
+          },
           onError: (err, msg) => {
             console.error('❌ Agora error:', err, msg);
+            Alert.alert('Agora 오류', `에러 코드: ${err}\n메시지: ${msg}`);
           },
         });
 
         // 비디오 활성화 및 미리보기 시작
+        console.log('📹 Enabling video and starting preview...');
         agoraEngine.enableVideo();
+
+        // Android: 비디오 인코더 설정
+        if (Platform.OS === 'android') {
+          agoraEngine.setVideoEncoderConfiguration({
+            dimensions: { width: 640, height: 480 },
+            frameRate: 15,
+            bitrate: 0, // Standard bitrate
+          });
+          console.log('🤖 Android video encoder configured');
+        }
+
         agoraEngine.startPreview();
 
-        // 채널 참가 (서버로부터 받은 UID 사용)
-        console.log('🚀 Joining channel with UID:', uid);
-        agoraEngine.joinChannel(token, channelName, uid, {
+        // 채널 참가
+        // ⚠️ 해결책: UID를 0으로 전달하여 Agora가 자동으로 UID를 할당하도록 함
+        // 토큰도 uid=0으로 생성되어 모든 자동 할당 UID에 대해 유효함
+        console.log('🚀 Joining channel:', {
+          channelName,
+          token: token.substring(0, 20) + '...',
+          uid: 0, // Agora 자동 할당
+        });
+
+        // joinChannel(token, channelName, uid, options)
+        // uid=0 전달 → Agora가 자동으로 고유 UID 할당
+        agoraEngine.joinChannel(token, channelName, 0, {
           clientRoleType: ClientRoleType.ClientRoleBroadcaster,
         });
       } catch (error) {
@@ -132,7 +263,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       agoraEngineRef.current?.leaveChannel();
       agoraEngineRef.current?.release();
     };
-  }, [channelName, token, uid]);
+  }, [channelName, token, setIsJoined]);
 
   const handleToggleMute = () => {
     agoraEngineRef.current?.muteLocalAudioStream(!isMuted);
@@ -190,7 +321,12 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         {remoteUid !== 0 ? (
           <RtcSurfaceView
             style={styles.remoteVideo}
-            canvas={{ uid: remoteUid }}
+            canvas={{
+              uid: remoteUid,
+              renderMode: 1, // Hidden (fit mode)
+              mirrorMode: 0, // Auto
+            }}
+            zOrderOnTop={false}
           />
         ) : (
           <View style={styles.remoteVideo}>
@@ -204,8 +340,13 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         {localUid !== 0 ? (
           <RtcSurfaceView
             style={styles.localVideo}
-            canvas={{ uid: localUid }}
+            canvas={{
+              uid: 0,
+              renderMode: 1, // Hidden (fit mode)
+              mirrorMode: 1, // Enabled (mirror for front camera)
+            }}
             zOrderMediaOverlay={true}
+            zOrderOnTop={true}
           />
         ) : (
           <View style={styles.localVideo}>
