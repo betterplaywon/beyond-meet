@@ -85,8 +85,13 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
 
   // 매칭 성공 이벤트 리스너
   useSocketEvent('match:found', (data: any) => {
-    console.log('Match found:', data);
-    console.log('Agora UID:', data.uid);
+    console.log('🎉 Match found! Full data:', JSON.stringify(data, null, 2));
+    console.log('📋 Session ID:', data.session?.id);
+    console.log('📺 Channel Name:', data.session?.channelName);
+    console.log('🔑 Token:', data.token?.substring(0, 20) + '...');
+    console.log('🆔 Agora UID:', data.uid);
+    console.log('👤 Partner:', data.partner?.nickname);
+
     setCurrentSession(data.session);
 
     Toast.show({
