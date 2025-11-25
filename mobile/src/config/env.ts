@@ -19,8 +19,24 @@ export const ENV = {
     : 'https://beyond-meet-api.onrender.com/api',
 
   // Agora WebRTC App ID
-  // .env 파일에서 AGORA_APP_ID 읽기
-  AGORA_APP_ID: Config.AGORA_APP_ID || '',
+  // ⚠️ 반드시 .env 파일에 AGORA_APP_ID 설정 필요
+  // 설정하지 않으면 앱 실행 시 에러 발생
+  AGORA_APP_ID: (() => {
+    if (!Config.AGORA_APP_ID) {
+      if (__DEV__) {
+        // 개발 환경에서는 경고만 출력하고 진행 (빌드는 성공하도록)
+        console.warn(
+          '⚠️  Using empty AGORA_APP_ID - Video calls will not work!',
+        );
+        return '';
+      }
+
+      throw new Error(
+        'AGORA_APP_ID is required. Please check mobile/.env file.',
+      );
+    }
+    return Config.AGORA_APP_ID;
+  })(),
 
   // 기타 설정
   TIMEOUT: 10000, // API 요청 타임아웃 (10초)
