@@ -22,13 +22,18 @@ export const authenticateSocket = async (
   try {
     const token = socket.handshake.auth.token;
 
+    console.log('[SOCKET_AUTH] Token received:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+
     if (!token) {
+      console.error('[SOCKET_AUTH] ❌ No token provided');
       return next(new Error("인증 토큰이 필요합니다"));
     }
 
     const decoded = verifyAccessToken(token);
+    console.log('[SOCKET_AUTH] Decoded token:', decoded ? `userId=${decoded.id}` : 'INVALID');
 
     if (!decoded || !decoded.id) {
+      console.error('[SOCKET_AUTH] ❌ Invalid token');
       return next(new Error("유효하지 않은 토큰입니다"));
     }
 
@@ -44,8 +49,10 @@ export const authenticateSocket = async (
       },
     });
 
+    console.log('[SOCKET_AUTH] ✅ Authentication successful:', decoded.id);
     next();
   } catch (error) {
+    console.error('[SOCKET_AUTH] ❌ Authentication error:', error);
     next(new Error("인증 실패"));
   }
 };

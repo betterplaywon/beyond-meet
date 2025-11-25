@@ -76,8 +76,8 @@ export const generateAgoraToken = (
   const currentTimestamp = Math.floor(Date.now() / 1000);
   const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-  // userId 기반 고유 UID 생성
-  const uid = generateAgoraUid(userId);
+  // UID를 0으로 설정하여 Agora가 자동 할당하도록 처리해 토큰이 모든 UID에 대해 유효.
+  const uid = 0;
 
   const token = RtcTokenBuilder.buildTokenWithUid(
     appId,
@@ -89,7 +89,7 @@ export const generateAgoraToken = (
     privilegeExpiredTs
   );
 
-  console.log(`[Agora Token] channel=${channelName}, userId=${userId}, uid=${uid}`);
+  console.log(`[Agora Token] channel=${channelName}, userId=${userId}, uid=0 (auto-assign)`);
 
   return { token, uid };
 };
