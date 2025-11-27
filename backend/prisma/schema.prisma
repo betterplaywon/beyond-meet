@@ -48,6 +48,9 @@ model User {
   deviceTokens     DeviceToken[]
   matchSessionsAsUser1 MatchSession[] @relation("User1Sessions")
   matchSessionsAsUser2 MatchSession[] @relation("User2Sessions")
+  moderationLogs   ContentModerationLog[]
+  reportsAsSender  Report[]       @relation("ReporterReports")
+  reportsAsReceiver Report[]      @relation("ReportedUserReports")
 
   @@map("users")
 }
@@ -83,6 +86,8 @@ model MatchSession {
   user2           User      @relation("User2Sessions", fields: [userId2], references: [id])
   callRecords     CallRecord[]
   callEvents      CallEvent[]
+  moderationLogs  ContentModerationLog[]
+  reports         Report[]
 
   @@map("match_sessions")
 }
@@ -233,4 +238,65 @@ model InviteCodeUsage {
 
   @@unique([inviteCodeId, userId])
   @@map("invite_code_usage")
+}
+
+model Report {
+  id              String       @id @default(uuid())
+  reporterId      String       @map("reporter_id")
+  reportedUserId  String       @map("reported_user_id")
+  sessionId       String?      @map("session_id")
+  reason          ReportReason
+  description     String?      @db.VarChar(500)
+  isAiGenerated   Boolean      @default(false) @map("is_ai_generated")
+  aiConfidence    Float?       @map("ai_confidence") // 0.0 ~ 1.0
+  status          ReportStatus @default(PENDING)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  resolvedAt      DateTime?    @map("resolved_at")
+  resolvedBy      String?      @map("resolved_by")
+
+  // Relations
+  reporter        User         @relation("ReporterReports", fields: [reporterId], references: [id])
+  reportedUser    User         @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
+  session         MatchSession? @relation(fields: [sessionId], references: [id])
+
+  @@map("reports")
+}
+
+enum ReportReason {
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  SPAM
+  FAKE_PROFILE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+model ContentModerationLog {
+  id              String           @id @default(uuid())
+  sessionId       String           @map("session_id")
+  userId          String           @map("user_id")
+  detectedAt      DateTime         @default(now()) @map("detected_at")
+  confidence      Float
+  actionTaken     ModerationAction @map("action_taken")
+  metadata        Json?
+
+  // Relations
+  session         MatchSession @relation(fields: [sessionId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("content_moderation_logs")
+}
+
+enum ModerationAction {
+  NONE
+  WARNING_ISSUED
+  CALL_ENDED
 }
