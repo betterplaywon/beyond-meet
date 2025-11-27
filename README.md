@@ -242,6 +242,10 @@ cd mobile
 # 의존성 설치
 npm install
 
+# 환경 변수 설정 (.env.development와 .env.production으로 분리 관리)
+# 개발 환경과 프로덕션 환경 파일이 이미 생성되어 있습니다
+# 자세한 내용은 mobile/ENV_SETUP.md 참조
+
 # iOS 의존성 (Mac만)
 cd ios && pod install && cd ..
 
@@ -258,6 +262,17 @@ npm run ios
 # Android
 npm run android
 ```
+
+**환경 변수 관리:**
+
+모바일 앱은 개발 환경과 프로덕션 환경을 분리하여 관리합니다:
+
+- `.env.development` - 개발 환경 (localhost)
+- `.env.production` - 프로덕션 환경 (Render.com 배포 서버)
+
+자세한 설정 방법은 [mobile/ENV_SETUP.md](mobile/ENV_SETUP.md)를 참조하세요.
+
+**중요**: `react-native-config`는 네이티브 모듈이므로 환경 변수 변경 후 **반드시 앱을 재빌드**해야 합니다.
 
 ---
 
