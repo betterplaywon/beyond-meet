@@ -43,4 +43,18 @@ router.patch('/invite-codes/:codeId/deactivate', adminController.deactivateInvit
  */
 router.get('/stats', adminController.getStats);
 
+/**
+ * @route   GET /api/admin/moderation-logs
+ * @desc    모니터링 로그 조회
+ * @access  Private (Admin)
+ */
+router.get('/moderation-logs', adminController.getModerationLogs);
+
+/**
+ * @route   GET /api/admin/reports
+ * @desc    신고 내역 조회
+ * @access  Private (Admin)
+ */
+router.get('/reports', adminController.getReports);
+
 export default router;

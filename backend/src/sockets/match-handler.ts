@@ -298,6 +298,65 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
   });
 
   /**
+   * 모니터링 이벤트: 경고 발송
+   */
+  socket.on("moderation:warning", async (data: { sessionId: string; targetUserId: string }) => {
+    try {
+      console.log("[MODERATION] Warning event:", data);
+
+      // 상대방에게 경고 알림
+      io.to(data.targetUserId).emit("moderation:warning-received", {
+        sessionId: data.sessionId,
+        message: "부적절한 행동이 감지되었습니다. 경고를 받았습니다.",
+      });
+    } catch (error) {
+      console.error("[MODERATION] Warning error:", error);
+    }
+  });
+
+  /**
+   * 모니터링 이벤트: 강제 종료
+   */
+  socket.on("moderation:force-end", async (data: { sessionId: string; reportedUserId: string }) => {
+    try {
+      console.log("[MODERATION] Force end event:", data);
+
+      // 세션 가져오기
+      const session = await prisma.matchSession.findUnique({
+        where: { id: data.sessionId },
+      });
+
+      if (!session) {
+        return;
+      }
+
+      // 통화 종료 처리
+      const result = await matchService.endCall(data.sessionId, data.reportedUserId);
+
+      // 양쪽 사용자에게 강제 종료 알림
+      io.to(session.userId1).emit("moderation:call-force-ended", {
+        sessionId: data.sessionId,
+        reason: "Inappropriate content detected",
+      });
+
+      io.to(session.userId2).emit("moderation:call-force-ended", {
+        sessionId: data.sessionId,
+        reason: "Inappropriate content detected",
+      });
+
+      // 자동 신고 생성
+      const moderationService = await import("../services/moderation-service");
+      await moderationService.createAutoReport({
+        reportedUserId: data.reportedUserId,
+        sessionId: data.sessionId,
+        confidence: 0.7, // 임시 값 (실제로는 analyze에서 전달받아야 함)
+      });
+    } catch (error) {
+      console.error("[MODERATION] Force end error:", error);
+    }
+  });
+
+  /**
    * 연결 해제
    */
   socket.on("disconnect", async () => {
