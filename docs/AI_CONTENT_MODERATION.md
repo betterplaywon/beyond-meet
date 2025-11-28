@@ -47,6 +47,25 @@
 - **대상**: 통화 중인 양측 사용자의 화면
 - **AI 모델**: Hugging Face `Falconsai/nsfw_image_detection`
 
+#### 이미지 요구사항
+> ⚠️ **중요**: AI 모델에 전송하는 이미지는 다음 요구사항을 충족해야 합니다.
+
+- **최소 크기**: 224 x 224 픽셀
+- **지원 포맷**: JPEG, PNG, WebP
+- **전송 형식**: Base64 인코딩 (`data:image/jpeg;base64,...`)
+- **검증**: 백엔드에서 자동으로 크기 및 포맷 검증
+  - ✅ 요구사항 충족 → AI 분석 진행
+  - ❌ 요구사항 미충족 → `400 IMAGE_TOO_SMALL` 또는 `UNSUPPORTED_IMAGE_FORMAT` 에러
+
+**React Native에서 프레임 캡처 시 주의사항**:
+```typescript
+// ❌ 너무 작은 이미지 (에러 발생)
+const smallFrame = await captureFrame({ width: 100, height: 100 });
+
+// ✅ 올바른 크기
+const validFrame = await captureFrame({ width: 480, height: 640 });
+```
+
 ### FR-2: 단계적 대응 시스템
 - **경미한 위반** (신뢰도 0.3 ~ 0.6):
   - 상대방에게 경고 알림 전송
@@ -665,6 +684,36 @@ const CallControls = ({ sessionId, partnerId }) => {
   "data": {
     "action": "NONE",
     "message": "Moderation temporarily unavailable (quota exceeded)"
+  }
+}
+```
+
+**에러 응답**:
+```json
+// 이미지가 너무 작은 경우
+{
+  "success": false,
+  "error": {
+    "code": "IMAGE_TOO_SMALL",
+    "message": "이미지가 너무 작습니다. 최소 크기: 224x224px (현재: 100x100px)"
+  }
+}
+
+// 지원하지 않는 포맷
+{
+  "success": false,
+  "error": {
+    "code": "UNSUPPORTED_IMAGE_FORMAT",
+    "message": "지원하지 않는 이미지 형식입니다. 지원 형식: jpg, jpeg, png, webp (현재: gif)"
+  }
+}
+
+// AI 분석 실패
+{
+  "success": false,
+  "error": {
+    "code": "AI_ANALYSIS_FAILED",
+    "message": "AI 분석 실패"
   }
 }
 ```
