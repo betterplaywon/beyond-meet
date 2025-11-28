@@ -33,7 +33,9 @@ const setupEventHandlers = (): void => {
   });
 
   socket.on('connect_error', error => {
-    console.error('[SOCKET] ⚠️ Connection Error:', error.message);
+    // 개발 환경에서 서버 미실행 시 발생 가능 (정상적인 케이스)
+    // 재연결 로직이 자동으로 처리하므로 warn 레벨로 로깅
+    console.warn('[SOCKET] ⚠️ Connection Error (will retry):', error.message);
   });
 };
 
@@ -232,4 +234,18 @@ export const updateStatus = (
   status: 'ONLINE' | 'OFFLINE' | 'IN_CALL',
 ): void => {
   emit('user:status', { status });
+};
+
+/**
+ * 모니터링 경고 전송
+ */
+export const sendModerationWarning = (sessionId: string, targetUserId: string): void => {
+  emit('moderation:warning', { sessionId, targetUserId });
+};
+
+/**
+ * 모니터링 강제 종료 전송
+ */
+export const sendModerationForceEnd = (sessionId: string): void => {
+  emit('moderation:force-end', { sessionId, reportedUserId: useAuthStore.getState().userId });
 };
