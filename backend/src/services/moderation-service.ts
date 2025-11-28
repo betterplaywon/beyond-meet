@@ -2,10 +2,11 @@
  * 콘텐츠 모니터링 서비스
  */
 
-import axios from 'axios';
+import { imageClassification } from '@huggingface/inference';
 import prisma from '../config/database';
 import redis from '../config/redis';
 import { AppError } from '../middlewares/errorHandler';
+import { validateImageForModeration } from '../utils/image-validator';
 
 const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
 const HUGGINGFACE_MODEL = 'Falconsai/nsfw_image_detection';
@@ -64,28 +65,40 @@ export const analyzeImage = async (
   imageBase64: string
 ): Promise<{ confidence: number; label: string }> => {
   try {
-    const response = await axios.post(
-      `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`,
-      { inputs: imageBase64 },
-      {
-        headers: {
-          Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000, // 10초
-      }
-    );
+    // 1. 이미지 검증 (크기, 포맷 등)
+    validateImageForModeration(imageBase64);
 
-    // Hugging Face 응답 형식: [{ label: 'nsfw', score: 0.95 }, { label: 'normal', score: 0.05 }]
-    const nsfwResult = response.data.find((r: any) => r.label === 'nsfw');
+    // 2. Base64 문자열을 Buffer로 변환
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // 3. Buffer를 Blob으로 변환 (Hugging Face API 요구사항)
+    const blob = new Blob([buffer.buffer], { type: 'image/png' });
+
+    // 4. AI 모델로 이미지 분석
+    const result = await imageClassification({
+      model: HUGGINGFACE_MODEL,
+      data: blob,
+      accessToken: HUGGINGFACE_API_KEY,
+    });
+
+    // 5. 응답 파싱: [{ label: 'nsfw', score: 0.95 }, { label: 'normal', score: 0.05 }]
+    const nsfwResult = result.find((r: { label: string; score: number }) => r.label === 'nsfw');
     const confidence = nsfwResult?.score || 0;
 
     return {
       confidence,
       label: nsfwResult?.label || 'normal',
     };
-  } catch (error: any) {
-    console.error('[MODERATION] Hugging Face API error:', error.message);
+  } catch (error: unknown) {
+    // AppError는 그대로 전달 (검증 에러 포함)
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    // Hugging Face API 에러
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[MODERATION] Hugging Face API error:', errorMessage);
     throw new AppError(500, 'AI_ANALYSIS_FAILED', 'AI 분석 실패');
   }
 };
