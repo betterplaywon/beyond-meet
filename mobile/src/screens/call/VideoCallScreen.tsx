@@ -24,6 +24,8 @@ import {
   ClientRoleType,
   RtcSurfaceView,
 } from 'react-native-agora';
+import { captureRef } from 'react-native-view-shot';
+import RNFS from 'react-native-fs';
 import { RootStackParamList } from '../../@types';
 import { CallControls } from '../../components/call/CallControls';
 import { CallTimer } from '../../components/call/CallTimer';
@@ -32,6 +34,8 @@ import { useSocketEvent } from '../../hooks/useSocket';
 import * as socketService from '../../services/socketService';
 import { colors, typography, spacing } from '../../styles/theme';
 import { ENV } from '../../config/env';
+import { ModerationWarningModal } from '../../components/moderation/ModerationWarningModal';
+import api from '../../services/api';
 
 type VideoCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -72,11 +76,15 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const setIsJoined = useCallStore((state) => state.setIsJoined);
 
   const agoraEngineRef = useRef<IRtcEngine | undefined>(undefined);
+  const videoViewRef = useRef(null);
+  const moderationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [localUid, setLocalUid] = useState<number>(0);
   const [remoteUid, setRemoteUid] = useState<number>(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
 
   // remoteUid 상태 변경 모니터링
   useEffect(() => {
@@ -96,6 +104,85 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [localUid]);
 
+  // 프레임 캡처 및 AI 분석
+  const captureAndAnalyzeFrame = async () => {
+    try {
+      if (!videoViewRef.current) {
+        console.log('[MODERATION] Video view ref not available');
+        return;
+      }
+
+      // 화면 캡처
+      const uri = await captureRef(videoViewRef, {
+        format: 'jpg',
+        quality: 0.8,
+        width: 640,
+        height: 480,
+      });
+
+      // Base64 변환
+      const base64 = await RNFS.readFile(uri, 'base64');
+      const imageBase64 = `data:image/jpeg;base64,${base64}`;
+
+      console.log('[MODERATION] Frame captured, sending to API...');
+
+      // API 호출
+      const response = await api.post('/moderation/analyze', {
+        sessionId,
+        imageBase64,
+      });
+
+      const { confidence, action } = response.data.data;
+      console.log('[MODERATION] Analysis result:', { confidence, action });
+
+      // 액션 처리
+      if (action === 'WARNING_ISSUED') {
+        // Socket.io로 상대방에게 경고 전송
+        socketService.sendModerationWarning(sessionId, remoteUid.toString());
+      } else if (action === 'CALL_ENDED') {
+        // 강제 종료
+        socketService.sendModerationForceEnd(sessionId);
+        Alert.alert(
+          '통화 종료',
+          '부적절한 콘텐츠가 감지되어 통화가 종료되었습니다.',
+          [
+            {
+              text: '확인',
+              onPress: () => {
+                clearCallState();
+                navigation.replace('CallEnd', { sessionId });
+              },
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      console.error('[MODERATION] Frame analysis failed:', error);
+      if (error.response?.data?.error?.code === 'IMAGE_TOO_SMALL') {
+        console.warn('[MODERATION] Image too small, skipping this frame');
+      }
+    }
+  };
+
+  // 모니터링 시작/중지
+  useEffect(() => {
+    if (isJoined && remoteUid !== 0) {
+      console.log('[MODERATION] Starting monitoring interval (4 seconds)');
+      const interval = setInterval(() => {
+        captureAndAnalyzeFrame();
+      }, 4000); // 4초마다
+
+      moderationIntervalRef.current = interval;
+
+      return () => {
+        if (moderationIntervalRef.current) {
+          console.log('[MODERATION] Stopping monitoring interval');
+          clearInterval(moderationIntervalRef.current);
+        }
+      };
+    }
+  }, [isJoined, remoteUid]);
+
   // 상대방이 통화를 종료한 경우
   useSocketEvent('call:ended', (data: any) => {
     console.log('Call ended by other party:', data);
@@ -108,6 +195,31 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         },
       },
     ]);
+  });
+
+  // 모니터링 경고 수신
+  useSocketEvent('moderation:warning-received', (data: any) => {
+    console.log('[MODERATION] Warning received:', data);
+    setWarningMessage(data.message || '부적절한 행동이 감지되었습니다.\n반복될 경우 통화가 종료될 수 있습니다.');
+    setShowWarningModal(true);
+  });
+
+  // 모니터링 강제 종료 수신
+  useSocketEvent('moderation:call-force-ended', (data: any) => {
+    console.log('[MODERATION] Call force ended:', data);
+    Alert.alert(
+      '통화 종료',
+      '부적절한 콘텐츠가 감지되어 통화가 종료되었습니다.',
+      [
+        {
+          text: '확인',
+          onPress: () => {
+            clearCallState();
+            navigation.replace('CallEnd', { sessionId: data.sessionId });
+          },
+        },
+      ]
+    );
   });
 
   // Agora SDK 초기화
@@ -310,15 +422,43 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     navigation.replace('CallEnd', { sessionId });
   };
 
+  const handleReport = async () => {
+    Alert.alert(
+      '신고하기',
+      '이 사용자를 신고하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '신고',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.post('/moderation/report', {
+                sessionId,
+                reason: 'INAPPROPRIATE_CONTENT',
+                description: '사용자가 직접 신고',
+              });
+              Alert.alert('신고 완료', '신고가 접수되었습니다.');
+            } catch (error) {
+              console.error('[REPORT] Failed to submit report:', error);
+              Alert.alert('오류', '신고 접수에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity
-        style={styles.videoContainer}
-        activeOpacity={1}
-        onPress={() => setShowControls(!showControls)}
-      >
-        {/* 상대방 영상 (전체 화면) */}
-        {remoteUid !== 0 ? (
+      <View ref={videoViewRef} style={styles.videoContainer}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => setShowControls(!showControls)}
+        >
+          {/* 상대방 영상 (전체 화면) */}
+          {remoteUid !== 0 ? (
           <RtcSurfaceView
             style={styles.remoteVideo}
             canvas={{
@@ -371,10 +511,19 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
               onToggleVideo={handleToggleVideo}
               onSwitchCamera={handleSwitchCamera}
               onEndCall={handleEndCall}
+              onReport={handleReport}
             />
           </View>
         )}
       </TouchableOpacity>
+      </View>
+
+      {/* 모니터링 경고 모달 */}
+      <ModerationWarningModal
+        visible={showWarningModal}
+        onClose={() => setShowWarningModal(false)}
+        message={warningMessage}
+      />
     </SafeAreaView>
   );
 };
