@@ -35,33 +35,32 @@ export const useNotificationSetup = () => {
     let isMounted = true;
 
     const setupNotifications = async () => {
-      try {
-        // 1. pushService 초기화 (권한 요청, 리스너 등록)
-        await pushService.initialize();
+      // ⏱️ 네이티브 모듈이 완전히 초기화될 때까지 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-        // 2. FCM 토큰 가져오기
-        const token = await pushService.getDeviceToken();
-        if (!token) {
-          console.warn('[useNotificationSetup] Failed to get FCM token');
-          return;
-        }
+      // 1. pushService 초기화 (권한 요청, 리스너 등록)
+      await pushService.initialize();
 
-        // 3. 서버에 디바이스 토큰 등록
-        if (isMounted && userId) {
-          registerDevice({
-            userId,
-            deviceToken: token,
-            platform: pushService.getPlatform(),
-          });
-        }
+      // 2. FCM 토큰 가져오기
+      const token = await pushService.getDeviceToken();
+      if (!token) {
+        console.warn('[useNotificationSetup] Failed to get FCM token');
+        return;
+      }
 
-        // 4. 초기화 완료 표시
-        if (isMounted) {
-          isInitializedRef.current = true;
-          console.log('[useNotificationSetup] Notification setup completed');
-        }
-      } catch (error) {
-        console.error('[useNotificationSetup] Failed to setup notifications:', error);
+      // 3. 서버에 디바이스 토큰 등록
+      if (isMounted && userId) {
+        registerDevice({
+          userId,
+          deviceToken: token,
+          platform: pushService.getPlatform(),
+        });
+      }
+
+      // 4. 초기화 완료 표시
+      if (isMounted) {
+        isInitializedRef.current = true;
+        console.log('[useNotificationSetup] Notification setup completed');
       }
     };
 
