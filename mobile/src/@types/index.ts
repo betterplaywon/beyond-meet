@@ -148,4 +148,11 @@ export type MainTabParamList = {
   Home: undefined;
   Friends: undefined;
   Profile: undefined;
+  Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
+};
+
+export type AdminStackParamList = {
+  AdminMain: undefined;
+  ModerationLogs: undefined;
+  Reports: undefined;
 };
