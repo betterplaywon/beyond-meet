@@ -215,30 +215,40 @@ const handleNotificationNavigation = (
 };
 
 /**
+ * 백그라운드 메시지 핸들러 설정
+ * IMPORTANT: index.js에서 호출하면 안 됨 (네이티브 모듈 초기화 전)
+ */
+const setupBackgroundMessageHandler = (): void => {
+  messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+    console.log('[PushService] Background message received:', remoteMessage);
+    // 백그라운드 메시지 처리 로직
+  });
+};
+
+/**
  * 푸시 알림 초기화
  */
 export const initialize = async (): Promise<void> => {
-  try {
-    // 1. 권한 요청
-    const hasPermission = await requestPermission();
-    if (!hasPermission) {
-      console.warn('[PushService] Notification permission denied');
-      return;
-    }
+  // 0. 백그라운드 메시지 핸들러 등록 (먼저 설정)
+  setupBackgroundMessageHandler();
 
-    // 2. 포그라운드 메시지 리스너 등록
-    setupForegroundListener();
-
-    // 3. 백그라운드 메시지 리스너 등록
-    setupBackgroundListener();
-
-    // 4. 초기 알림 확인 (앱이 종료 상태에서 알림으로 열린 경우)
-    await handleInitialNotification();
-
-    console.log('[PushService] Initialized successfully');
-  } catch (error) {
-    console.error('[PushService] Initialization failed:', error);
+  // 1. 권한 요청
+  const hasPermission = await requestPermission();
+  if (!hasPermission) {
+    console.warn('[PushService] Notification permission denied');
+    return;
   }
+
+  // 2. 포그라운드 메시지 리스너 등록
+  setupForegroundListener();
+
+  // 3. 백그라운드 메시지 리스너 등록
+  setupBackgroundListener();
+
+  // 4. 초기 알림 확인 (앱이 종료 상태에서 알림으로 열린 경우)
+  await handleInitialNotification();
+
+  console.log('[PushService] Initialized successfully');
 };
 
 /**
