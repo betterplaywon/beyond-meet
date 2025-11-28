@@ -5,5 +5,6 @@ import { authenticate } from '../middlewares/auth';
 const router = express.Router();
 
 router.post('/analyze', authenticate, moderationController.analyzeFrame);
+router.post('/report', authenticate, moderationController.createManualReport);
 
 export default router;
