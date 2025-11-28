@@ -13,6 +13,7 @@ import { colors } from '../styles/theme';
 import HomeScreen from '../screens/home/HomeScreen';
 import FriendsScreen from '../screens/friends/FriendsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import AdminNavigator from './AdminNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -60,6 +61,14 @@ const MainNavigator: React.FC = () => {
         options={{
           tabBarLabel: '프로필',
           tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="Admin"
+        component={AdminNavigator}
+        options={{
+          tabBarLabel: '관리자',
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>⚙️</Text>,
         }}
       />
     </Tab.Navigator>

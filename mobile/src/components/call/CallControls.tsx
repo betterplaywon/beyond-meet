@@ -13,6 +13,7 @@ interface Props {
   onToggleVideo: () => void;
   onSwitchCamera: () => void;
   onEndCall: () => void;
+  onReport?: () => void;
 }
 
 export const CallControls: React.FC<Props> = ({
@@ -22,6 +23,7 @@ export const CallControls: React.FC<Props> = ({
   onToggleVideo,
   onSwitchCamera,
   onEndCall,
+  onReport,
 }) => {
   return (
     <View style={styles.container}>
@@ -45,6 +47,13 @@ export const CallControls: React.FC<Props> = ({
       <TouchableOpacity style={styles.button} onPress={onSwitchCamera}>
         <Text style={styles.icon}>🔄</Text>
       </TouchableOpacity>
+
+      {/* 신고 버튼 */}
+      {onReport && (
+        <TouchableOpacity style={styles.reportButton} onPress={onReport}>
+          <Text style={styles.icon}>🚩</Text>
+        </TouchableOpacity>
+      )}
 
       {/* 통화 종료 */}
       <TouchableOpacity style={styles.endButton} onPress={onEndCall}>
@@ -74,6 +83,14 @@ const styles = StyleSheet.create({
   },
   buttonActive: {
     backgroundColor: colors.error + '80',
+  },
+  reportButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FF9800',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   endButton: {
     width: 60,
