@@ -15,6 +15,7 @@ export const colors = {
   surface: '#FFFFFF',
 
   // Text
+  text: '#2D3436',
   textPrimary: '#2D3436',
   textSecondary: '#636E72',
   textTertiary: '#95A5A6',
@@ -32,6 +33,7 @@ export const colors = {
   black: '#000000',
   white: '#FFFFFF',
   transparent: 'transparent',
+  border: '#E0E0E0',
 
   // Shadows
   shadowColor: '#000',
