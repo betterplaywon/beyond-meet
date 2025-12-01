@@ -66,15 +66,16 @@ api.interceptors.response.use(
         const response = await axios.post<ApiResponse<{
           accessToken: string;
           refreshToken: string;
+          user: { id: string; email: string; role: 'USER' | 'ADMIN' };
         }>>(
           `${ENV.API_BASE_URL}/auth/refresh`,
           { refreshToken }
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data!;
+        const { accessToken, refreshToken: newRefreshToken, user } = response.data.data!;
 
-        // 새 토큰 저장
-        useAuthStore.getState().setTokens(accessToken, newRefreshToken);
+        // 새 토큰과 role 저장
+        useAuthStore.getState().setAuth(accessToken, newRefreshToken, user.id, user.role);
 
         // 원래 요청 재시도
         if (originalRequest.headers) {

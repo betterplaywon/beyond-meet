@@ -18,29 +18,33 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   userId: string | null;
+  userRole: 'USER' | 'ADMIN' | null;
 
   // Actions
-  setAuth: (accessToken: string, refreshToken: string, userId: string) => void;
+  setAuth: (accessToken: string, refreshToken: string, userId: string, userRole: 'USER' | 'ADMIN') => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
+  isAdmin: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Initial State
       isAuthenticated: false,
       accessToken: null,
       refreshToken: null,
       userId: null,
+      userRole: null,
 
       // Actions
-      setAuth: (accessToken, refreshToken, userId) =>
+      setAuth: (accessToken, refreshToken, userId, userRole) =>
         set({
           isAuthenticated: true,
           accessToken,
           refreshToken,
           userId,
+          userRole,
         }),
 
       setTokens: (accessToken, refreshToken) =>
@@ -55,7 +59,10 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           userId: null,
+          userRole: null,
         }),
+
+      isAdmin: () => get().userRole === 'ADMIN',
     }),
     {
       name: 'auth-storage',
