@@ -121,6 +121,7 @@ export const useUpdateSettings = () => {
         maxAge?: number;
         preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
         preferredCountries?: string[];
+        pushEnabled?: boolean;
       };
     }) => userApi.updateSettings(userId, settings),
     onSuccess: (_, variables) => {

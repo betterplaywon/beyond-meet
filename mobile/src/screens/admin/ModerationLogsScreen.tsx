@@ -2,7 +2,7 @@
  * 모니터링 로그 화면 (어드민)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,64 +11,38 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/theme';
-import { getModerationLogs, ModerationLog } from '../../services/adminApi';
-import { parseApiError } from '../../services/api';
+import { ModerationLog } from '../../services/adminApi';
+import { useModerationLogs } from '../../hooks/useAdmin';
 
 const ModerationLogsScreen: React.FC = () => {
-  const [logs, setLogs] = useState<ModerationLog[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<string | undefined>(undefined);
 
-  const fetchLogs = async (pageNum: number, refresh = false) => {
-    try {
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useModerationLogs(filter);
 
-      const data = await getModerationLogs({
-        page: pageNum,
-        limit: 20,
-        actionTaken: filter,
-      });
+  // 모든 페이지의 logs를 flat하게 합침
+  const logs = data?.pages.flatMap((page) => page.logs) ?? [];
+  const total = data?.pages[0]?.pagination.total ?? 0;
 
-      if (refresh || pageNum === 1) {
-        setLogs(data.logs);
-      } else {
-        setLogs((prev) => [...prev, ...data.logs]);
-      }
+  const onRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
-      setTotal(data.pagination.total);
-      setPage(pageNum);
-    } catch (error) {
-      Alert.alert('오류', parseApiError(error));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-  };
-
-  useEffect(() => {
-    fetchLogs(1);
-  }, [filter]);
-
-  const onRefresh = () => {
-    fetchLogs(1, true);
-  };
-
-  const loadMore = () => {
-    if (!loading && logs.length < total) {
-      fetchLogs(page + 1);
-    }
-  };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const getActionColor = (action: string) => {
     switch (action) {
@@ -177,6 +151,8 @@ const ModerationLogsScreen: React.FC = () => {
     );
   };
 
+  const isInitialLoading = isLoading && !isRefetching;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -192,21 +168,25 @@ const ModerationLogsScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
         }
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          loading && !refreshing ? (
+          isFetchingNextPage ? (
             <ActivityIndicator style={styles.loader} />
           ) : null
         }
         ListEmptyComponent={
-          !loading ? (
+          !isInitialLoading ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>로그가 없습니다</Text>
             </View>
-          ) : null
+          ) : (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" />
+            </View>
+          )
         }
       />
     </SafeAreaView>

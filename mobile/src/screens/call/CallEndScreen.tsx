@@ -2,7 +2,7 @@
  * 통화 종료 화면
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -45,23 +45,15 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
   const userId = useAuthStore(state => state.userId);
   const callDuration = useCallStore(state => state.callDuration);
 
-  const [isAlreadyFriend, setIsAlreadyFriend] = useState(false);
-  const [friendAdded, setFriendAdded] = useState(false);
-
   // React Query hooks
   const { data: sessionInfo, isLoading: isSessionLoading } = useSessionInfo(sessionId);
   const { data: friendsList } = useFriends(userId || undefined);
   const addFriendMutation = useAddFriend();
 
-  // 이미 친구인지 확인
-  useEffect(() => {
-    if (friendsList && sessionInfo) {
-      const isFriend = friendsList.some(
-        f => f.friendId === sessionInfo.partner.id,
-      );
-      setIsAlreadyFriend(isFriend);
-    }
-  }, [friendsList, sessionInfo]);
+  // 파생 상태: 이미 친구인지 확인 (useMemo로 계산)
+  const isAlreadyFriend = useMemo(() => {
+    return friendsList?.some(f => f.friendId === sessionInfo?.partner.id) ?? false;
+  }, [friendsList, sessionInfo?.partner.id]);
 
   const handleAddFriend = () => {
     if (!userId || !sessionInfo) return;
@@ -73,7 +65,6 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
       },
       {
         onSuccess: () => {
-          setFriendAdded(true);
           Alert.alert('성공', `${sessionInfo.partner.nickname}님을 친구로 추가했습니다.`);
         },
         onError: (error: any) => {
@@ -113,7 +104,8 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
     ? formatDuration(callDuration)
     : formatDuration(sessionInfo?.session.duration || null);
 
-  const showAddFriendButton = !isAlreadyFriend && !friendAdded;
+  // friendAdded 상태 대신 mutation.isSuccess 사용
+  const showAddFriendButton = !isAlreadyFriend && !addFriendMutation.isSuccess;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -154,7 +146,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
               <Text style={styles.alreadyFriendText}>이미 친구입니다</Text>
             </View>
           )}
-          {friendAdded && (
+          {addFriendMutation.isSuccess && (
             <View style={styles.friendAddedContainer}>
               <Text style={styles.friendAddedText}>친구로 추가되었습니다</Text>
             </View>

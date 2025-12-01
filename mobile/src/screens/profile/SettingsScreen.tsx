@@ -3,7 +3,7 @@
  * UI_FLOW.md 3.10 참고
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -39,7 +39,8 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   // React Query mutation hook
   const { mutate: updateSettings } = useUpdateSettings();
 
-  const [pushEnabled, setPushEnabled] = useState(true);
+  // 서버 상태를 source of truth로 사용
+  const pushEnabled = user?.pushEnabled ?? true;
 
   const genderFilter = user?.preferredGender || 'ANYONE';
   const ageRange = { min: user?.minAge || 20, max: user?.maxAge || 30 };
@@ -133,21 +134,12 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       {
         text: '로그아웃',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            await logout();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Auth' }],
-            });
-          } catch (err) {
-            console.error('Failed to logout:', err);
-            // 에러가 발생해도 로그아웃 진행
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Auth' }],
-            });
-          }
+        onPress: () => {
+          logout();
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Auth' }],
+          });
         },
       },
     ]);
@@ -259,7 +251,21 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.menuLabel}>푸시 알림</Text>
             <Switch
               value={pushEnabled}
-              onValueChange={setPushEnabled}
+              onValueChange={(value) => {
+                if (!user?.id) return;
+                updateSettings(
+                  {
+                    userId: user.id,
+                    settings: { pushEnabled: value },
+                  },
+                  {
+                    onError: err => {
+                      console.error('Failed to update push settings:', err);
+                      Alert.alert('오류', parseApiError(err));
+                    },
+                  },
+                );
+              }}
               trackColor={{
                 false: colors.textSecondary + '40',
                 true: colors.primary + '60',

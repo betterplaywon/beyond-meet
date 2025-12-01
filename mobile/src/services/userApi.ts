@@ -102,6 +102,7 @@ export const updateSettings = async (
     maxAge?: number;
     preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
     preferredCountries?: string[];
+    pushEnabled?: boolean;
   }
 ): Promise<User> => {
   return updateProfile(userId, settings);
