@@ -71,10 +71,12 @@ mobile/src/
 ## Socket.io vs HTTP REST
 
 **Use Socket.io** (real-time bidirectional):
+
 - Random matching request/response, match cancel/accept/reject
 - Call signaling (start, end, incoming notifications)
 
 **Use HTTP REST** (request-response):
+
 - Direct/friend matching (needs DB persistence even if socket disconnects)
 - User CRUD, file uploads, non-real-time operations
 
@@ -107,26 +109,33 @@ All API responses must follow this format:
 ## Code Conventions
 
 ### File Naming
+
 - Files: `kebab-case.ts` (e.g., `auth-controller.ts`)
 - Components: `PascalCase.tsx` (e.g., `HomeScreen.tsx`)
 
 ### Frontend Environment Variables
+
 Use `mobile/src/config/env.ts` for centralized env access, NOT direct `Config` imports:
 
 ```typescript
-import { ENV } from '@/config/env';
+import { ENV } from "@/config/env";
 const api = axios.create({ baseURL: ENV.API_BASE_URL });
 ```
 
 Development auto-detects localhost (iOS: `localhost:5000`, Android: `10.0.2.2:5000`).
 
 ### Backend Controller Pattern
+
 Controllers are thin - extract logic to services:
 
 ```typescript
-export const register = async (req: Request, res: Response, next: NextFunction) => {
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const result = await registerUser(req.body);  // Service handles logic
+    const result = await registerUser(req.body); // Service handles logic
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     next(error);
@@ -136,12 +145,12 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
 ## External Services
 
-| Service | Purpose | Config Location |
-|---------|---------|-----------------|
-| Supabase | PostgreSQL + Storage | `backend/src/config/database.ts`, `supabase.ts` |
-| Agora | Video calls (10,000 min/mo free) | `backend/src/controllers/agora-controller.ts` |
-| Firebase | FCM push notifications | `backend/src/config/firebase.ts` |
-| Upstash | Redis cache | `backend/src/config/redis.ts` |
+| Service  | Purpose                          | Config Location                                 |
+| -------- | -------------------------------- | ----------------------------------------------- |
+| Supabase | PostgreSQL + Storage             | `backend/src/config/database.ts`, `supabase.ts` |
+| Agora    | Video calls (10,000 min/mo free) | `backend/src/controllers/agora-controller.ts`   |
+| Firebase | FCM push notifications           | `backend/src/config/firebase.ts`                |
+| Upstash  | Redis cache                      | `backend/src/config/redis.ts`                   |
 
 ## Reference Documentation
 
@@ -150,4 +159,4 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 - [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md) - Complete API reference
 - [docs/UI_FLOW.md](docs/UI_FLOW.md) - Screen designs, user flows
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Production deployment guide
-
+- [TDD_HELP.md](docs/TDD_HELP.md) - Test-Driven Development guide
