@@ -8,16 +8,19 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList } from '../@types';
 import { colors } from '../styles/theme';
+import { useAuthStore } from '../store/authStore';
 
 // Screens
 import HomeScreen from '../screens/home/HomeScreen';
 import FriendsScreen from '../screens/friends/FriendsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import AdminNavigator from './AdminNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const isAdmin = useAuthStore((state) => state.isAdmin());
 
   return (
     <Tab.Navigator
@@ -62,6 +65,17 @@ const MainNavigator: React.FC = () => {
           tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
         }}
       />
+      {/* 관리자에게만 Admin 탭 표시 */}
+      {isAdmin && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminNavigator}
+          options={{
+            tabBarLabel: '관리자',
+            tabBarIcon: () => <Text style={{ fontSize: 24 }}>⚙️</Text>,
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 };

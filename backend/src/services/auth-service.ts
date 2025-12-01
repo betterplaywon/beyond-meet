@@ -121,6 +121,7 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
         country: true,
         bio: true,
         interests: true,
+        role: true,
       },
     });
 
@@ -144,11 +145,13 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
   const accessToken = generateAccessToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   const refreshToken = generateRefreshToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   return {
@@ -174,6 +177,7 @@ export const login = async (data: LoginInput): Promise<RegisterOutput> => {
       country: true,
       bio: true,
       interests: true,
+      role: true,
     },
   });
 
@@ -198,11 +202,13 @@ export const login = async (data: LoginInput): Promise<RegisterOutput> => {
   const accessToken = generateAccessToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   const refreshToken = generateRefreshToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   const { passwordHash, ...userWithoutPassword } = user;
@@ -217,12 +223,13 @@ export const login = async (data: LoginInput): Promise<RegisterOutput> => {
 /**
  * 토큰 갱신
  */
-export const refreshToken = async (userId: string): Promise<{ accessToken: string; refreshToken: string }> => {
+export const refreshToken = async (userId: string): Promise<{ accessToken: string; refreshToken: string; user: { id: string; email: string; role: 'USER' | 'ADMIN' } }> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
       id: true,
       email: true,
+      role: true,
     },
   });
 
@@ -233,16 +240,23 @@ export const refreshToken = async (userId: string): Promise<{ accessToken: strin
   const accessToken = generateAccessToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   const newRefreshToken = generateRefreshToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   return {
     accessToken,
     refreshToken: newRefreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
   };
 };
 
@@ -331,6 +345,7 @@ export const getCurrentUser = async (userId: string) => {
       onlineStatus: true,
       lastActive: true,
       createdAt: true,
+      role: true,
     },
   });
 

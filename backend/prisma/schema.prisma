@@ -21,6 +21,7 @@ model User {
   bio             String?   @db.VarChar(200)
   profilePhotos   String[]  @map("profile_photos")
   interests       String[]
+  role            UserRole  @default(USER)
 
   // 매칭 필터 설정
   preferredGender Gender    @map("preferred_gender")
@@ -66,6 +67,11 @@ enum OnlineStatus {
   ONLINE
   OFFLINE
   IN_CALL
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 model MatchSession {
