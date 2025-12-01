@@ -30,6 +30,13 @@ router.post('/:callId/end', authenticate, callController.endCall);
 router.get('/history', authenticate, callController.getCallHistory);
 
 /**
+ * @route   GET /api/call/session/:sessionId
+ * @desc    세션 정보 조회 (통화 종료 후 상대방 정보 확인)
+ * @access  Private
+ */
+router.get('/session/:sessionId', authenticate, callController.getSessionInfo);
+
+/**
  * @route   POST /api/call/:callId/event
  * @desc    통화 이벤트 기록
  * @access  Private

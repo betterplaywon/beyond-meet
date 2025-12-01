@@ -284,6 +284,55 @@ export const getCallHistory = async (
 };
 
 /**
+ * 세션 정보 조회 (통화 종료 후 상대방 정보 확인용)
+ */
+export const getSessionInfo = async (sessionId: string, userId: string) => {
+  const session = await prisma.matchSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      user1: {
+        select: {
+          id: true,
+          nickname: true,
+          profilePhotos: true,
+        },
+      },
+      user2: {
+        select: {
+          id: true,
+          nickname: true,
+          profilePhotos: true,
+        },
+      },
+    },
+  });
+
+  if (!session) {
+    throw new AppError(404, "SESSION_NOT_FOUND", "세션을 찾을 수 없습니다");
+  }
+
+  // 요청한 사용자가 세션 참여자인지 확인
+  if (session.userId1 !== userId && session.userId2 !== userId) {
+    throw new AppError(403, "FORBIDDEN", "이 세션에 접근할 수 없습니다");
+  }
+
+  // 상대방 정보 추출
+  const partner = session.userId1 === userId ? session.user2 : session.user1;
+
+  return {
+    session: {
+      id: session.id,
+      status: session.status,
+      matchType: session.matchType,
+      startTime: session.startTime,
+      endTime: session.endTime,
+      duration: session.duration,
+    },
+    partner,
+  };
+};
+
+/**
  * 통화 이벤트 기록
  */
 export const recordCallEvent = async (
