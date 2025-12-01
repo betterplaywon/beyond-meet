@@ -6,6 +6,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secre
 export interface TokenPayload {
   id: string;
   email: string;
+  role: 'USER' | 'ADMIN';
 }
 
 export const generateAccessToken = (payload: TokenPayload): string => {
