@@ -98,6 +98,34 @@ export const getCallHistory = async (req: Request, res: Response, next: NextFunc
 };
 
 /**
+ * 세션 정보 조회
+ * GET /api/call/session/:sessionId
+ */
+export const getSessionInfo = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?.id;
+
+    if (!sessionId) {
+      throw new AppError(400, 'MISSING_SESSION_ID', '세션 ID가 필요합니다');
+    }
+
+    if (!userId) {
+      throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+    }
+
+    const result = await callService.getSessionInfo(sessionId, userId);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * 통화 이벤트 기록
  * POST /api/call/:callId/event
  */

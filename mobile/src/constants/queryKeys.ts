@@ -23,6 +23,8 @@ export const queryKeys = {
     all: ['call'] as const,
     history: (userId: string, page?: number) =>
       [...queryKeys.call.all, 'history', userId, page] as const,
+    session: (sessionId: string) =>
+      [...queryKeys.call.all, 'session', sessionId] as const,
   },
 } as const;
 
