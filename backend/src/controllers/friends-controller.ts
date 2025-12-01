@@ -18,23 +18,12 @@ export const getFriends = async (req: Request, res: Response, next: NextFunction
       throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
     }
 
+    // 자신이 추가한 친구만 조회 (단방향 친구 관계)
     const friendships = await prisma.friendship.findMany({
       where: {
-        OR: [
-          { userId: userId },
-          { friendId: userId },
-        ],
+        userId: userId,
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            nickname: true,
-            profilePhotos: true,
-            onlineStatus: true,
-            lastActive: true,
-          },
-        },
         friend: {
           select: {
             id: true,
@@ -48,13 +37,7 @@ export const getFriends = async (req: Request, res: Response, next: NextFunction
     });
 
     // 친구 정보만 추출
-    const friends = friendships.map((friendship) => {
-      if (friendship.userId === userId) {
-        return friendship.friend;
-      } else {
-        return friendship.user;
-      }
-    });
+    const friends = friendships.map((friendship) => friendship.friend);
 
     res.status(200).json({
       success: true,
@@ -85,18 +68,16 @@ export const addFriend = async (req: Request, res: Response, next: NextFunction)
       throw new AppError(400, 'CANNOT_ADD_SELF', '자기 자신을 친구로 추가할 수 없습니다');
     }
 
-    // 이미 친구인지 확인
+    // 이미 친구인지 확인 (자신이 추가한 친구만 체크 - 단방향)
     const existingFriendship = await prisma.friendship.findFirst({
       where: {
-        OR: [
-          { userId: userId, friendId: friendId },
-          { userId: friendId, friendId: userId },
-        ],
+        userId: userId,
+        friendId: friendId,
       },
     });
 
     if (existingFriendship) {
-      throw new AppError(400, 'ALREADY_FRIENDS', '이미 친구입니다');
+      throw new AppError(400, 'ALREADY_FRIENDS', '이미 친구로 추가한 사용자입니다');
     }
 
     // 차단 여부 확인
