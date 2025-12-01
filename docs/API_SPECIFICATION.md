@@ -6,7 +6,7 @@
 ## 📋 문서 정보
 
 - **작성일**: 2025-11-04
-- **버전**: 1.0.0
+- **버전**: 1.2.0
 - **Base URL**: `https://your-app.onrender.com/api`
 - **프로토콜**: HTTPS
 - **인증 방식**: JWT Bearer Token
@@ -51,7 +51,7 @@ Content-Type: application/json
 | POST | `/auth/logout` | 로그아웃 | ✅ |
 | POST | `/auth/forgot-password` | 비밀번호 재설정 요청 | ❌ |
 | POST | `/auth/reset-password` | 비밀번호 재설정 | ❌ |
-| POST | `/auth/validate-invite` | 초대 코드 검증 | ❌ |
+| POST | `/auth/validate-invite` | 초대 코드 검증 (미구현 - 회원가입 시 자동 검증) | ❌ |
 
 ### 2. 사용자 (Users)
 
@@ -68,14 +68,19 @@ Content-Type: application/json
 | POST | `/users/:id/block` | 사용자 차단 | ✅ |
 | DELETE | `/users/:id/block/:blockedId` | 차단 해제 | ✅ |
 
-### 3. 매칭 (Match)
+### 3. 매칭 (Match) - ⚡ Socket.io 기반
 
-| Method | Endpoint | 설명 | 인증 필요 |
-|--------|----------|------|-----------|
-| POST | `/match/random` | 랜덤 매칭 요청 | ✅ |
-| POST | `/match/direct` | 선택 매칭 요청 | ✅ |
-| DELETE | `/match/:sessionId` | 매칭 취소 | ✅ |
-| GET | `/match/:sessionId` | 매칭 세션 조회 | ✅ |
+> **참고**: 매칭 시스템은 실시간 통신을 위해 REST API 대신 **Socket.io 이벤트**로 구현되었습니다.
+> 자세한 내용은 [WebSocket (Socket.io) 이벤트](#-websocket-socketio-이벤트) 섹션을 참조하세요.
+
+| Event | 방향 | 설명 |
+|-------|------|------|
+| `match:request` | 클라이언트 → 서버 | 랜덤 매칭 요청 |
+| `match:cancel` | 클라이언트 → 서버 | 매칭 취소 |
+| `match:waiting` | 서버 → 클라이언트 | 매칭 대기 중 |
+| `match:found` | 서버 → 클라이언트 | 매칭 성공 |
+| `match:failed` | 서버 → 클라이언트 | 매칭 실패 |
+| `match:cancelled` | 서버 → 클라이언트 | 매칭 취소됨 |
 
 ### 4. 통화 (Call)
 
@@ -105,7 +110,17 @@ Content-Type: application/json
 |--------|----------|------|-----------|
 | POST | `/admin/invite-codes` | 초대 코드 생성 | ✅ (관리자) |
 | GET | `/admin/invite-codes` | 초대 코드 목록 조회 | ✅ (관리자) |
+| PATCH | `/admin/invite-codes/:codeId/deactivate` | 초대 코드 비활성화 | ✅ (관리자) |
 | GET | `/admin/stats` | 사용자 통계 조회 | ✅ (관리자) |
+| GET | `/admin/moderation-logs` | 모더레이션 로그 조회 | ✅ (관리자) |
+| GET | `/admin/reports` | 신고 목록 조회 | ✅ (관리자) |
+
+### 8. AI 콘텐츠 모더레이션 (Moderation)
+
+| Method | Endpoint | 설명 | 인증 필요 |
+|--------|----------|------|-----------|
+| POST | `/moderation/analyze` | 콘텐츠 분석 요청 | ✅ |
+| POST | `/moderation/report` | 사용자 신고 | ✅ |
 
 ---
 
@@ -664,66 +679,109 @@ photo: [파일]
 
 ---
 
-## 🔀 3. 매칭 API (Match)
+## 🔀 3. 매칭 시스템 (Match) - Socket.io 기반
 
-### 3.1 랜덤 매칭 요청
+> ⚡ **아키텍처 변경 사항**: 매칭 시스템은 실시간 양방향 통신을 위해 REST API 대신 **Socket.io 이벤트** 기반으로 구현되었습니다.
+> 이는 실시간 매칭 대기열 관리와 즉각적인 매칭 알림에 더 적합한 아키텍처입니다.
 
-**POST** `/api/match/random`
+### 3.1 매칭 이벤트 상세
 
-**Headers**: `Authorization: Bearer {accessToken}`
+#### 랜덤 매칭 요청
 
-#### 요청
+**클라이언트 → 서버**: `match:request`
 
-```json
-{
-  "userId": "uuid-1234"
-}
+```javascript
+socket.emit('match:request', {
+  userId: 'uuid-1234',
+  filters: {
+    preferredGender: 'FEMALE',  // optional
+    minAge: 20,                  // optional
+    maxAge: 30                   // optional
+  }
+});
 ```
 
-#### 응답
+#### 매칭 대기 중
 
-**성공 (200 OK) - 즉시 매칭**
+**서버 → 클라이언트**: `match:waiting`
 
-```json
-{
-  "success": true,
-  "data": {
-    "matched": true,
-    "session": {
-      "id": "session-uuid",
-      "userId1": "uuid-1234",
-      "userId2": "uuid-5678",
-      "channelName": "channel_1699097600_abc123xyz",
-      "matchType": "RANDOM",
-      "status": "PENDING",
-      "createdAt": "2025-11-04T13:00:00Z"
+```javascript
+socket.on('match:waiting', (data) => {
+  /*
+  {
+    message: '매칭 대기 중입니다...',
+    queuePosition: 3,
+    estimatedWaitTime: 30  // 초 단위 (예상치)
+  }
+  */
+});
+```
+
+#### 매칭 성공
+
+**서버 → 클라이언트**: `match:found`
+
+```javascript
+socket.on('match:found', (data) => {
+  /*
+  {
+    sessionId: 'session-uuid',
+    partner: {
+      id: 'uuid-5678',
+      nickname: '김영희',
+      profilePhotos: ['https://storage.url/photo3.jpg'],
+      age: 26,
+      country: 'KR'
     },
-    "partner": {
-      "id": "uuid-5678",
-      "nickname": "김영희",
-      "profilePhotos": ["https://storage.url/photo3.jpg"],
-      "age": 26,
-      "country": "KR"
-    }
+    channelName: 'channel_1699097600_abc123xyz',
+    matchType: 'RANDOM'
   }
-}
+  */
+});
 ```
 
-**성공 (200 OK) - 대기 중**
+#### 매칭 취소
 
-```json
-{
-  "success": true,
-  "data": {
-    "matched": false,
-    "message": "매칭 대기 중입니다..."
+**클라이언트 → 서버**: `match:cancel`
+
+```javascript
+socket.emit('match:cancel', {
+  userId: 'uuid-1234'
+});
+```
+
+**서버 → 클라이언트**: `match:cancelled`
+
+```javascript
+socket.on('match:cancelled', (data) => {
+  /*
+  {
+    message: '매칭이 취소되었습니다.'
   }
-}
+  */
+});
+```
+
+#### 매칭 실패
+
+**서버 → 클라이언트**: `match:failed`
+
+```javascript
+socket.on('match:failed', (data) => {
+  /*
+  {
+    code: 'MATCH_TIMEOUT',
+    message: '매칭 가능한 상대를 찾지 못했습니다.'
+  }
+  */
+});
 ```
 
 ---
 
-### 3.2 선택 매칭 요청 (친구에게 통화 요청)
+### 3.2 선택 매칭 (Direct Match) - HTTP Fallback
+
+> 선택 매칭(친구에게 직접 통화 요청)은 Socket.io 연결이 끊어져도 동작해야 하므로 HTTP REST API로도 제공됩니다.
 
 **POST** `/api/match/direct`
 
@@ -733,7 +791,6 @@ photo: [파일]
 
 ```json
 {
-  "callerId": "uuid-1234",
   "receiverId": "uuid-5678"
 }
 ```
@@ -767,57 +824,6 @@ photo: [파일]
   "error": {
     "code": "RECEIVER_OFFLINE",
     "message": "상대방이 오프라인입니다."
-  }
-}
-```
-
----
-
-### 3.3 매칭 취소
-
-**DELETE** `/api/match/:sessionId`
-
-**Headers**: `Authorization: Bearer {accessToken}`
-
-#### 응답
-
-**성공 (200 OK)**
-
-```json
-{
-  "success": true,
-  "message": "매칭이 취소되었습니다."
-}
-```
-
----
-
-### 3.4 매칭 세션 조회
-
-**GET** `/api/match/:sessionId`
-
-**Headers**: `Authorization: Bearer {accessToken}`
-
-#### 응답
-
-**성공 (200 OK)**
-
-```json
-{
-  "success": true,
-  "data": {
-    "session": {
-      "id": "session-uuid",
-      "userId1": "uuid-1234",
-      "userId2": "uuid-5678",
-      "channelName": "channel_1699097600_abc123xyz",
-      "matchType": "RANDOM",
-      "status": "ACTIVE",
-      "startTime": "2025-11-04T13:05:00Z",
-      "endTime": null,
-      "duration": null,
-      "createdAt": "2025-11-04T13:00:00Z"
-    }
   }
 }
 ```
@@ -1223,6 +1229,230 @@ photo: [파일]
 
 ---
 
+### 7.4 초대 코드 비활성화
+
+**PATCH** `/api/admin/invite-codes/:codeId/deactivate`
+
+**Headers**: `Authorization: Bearer {accessToken}` (관리자 권한 필요)
+
+#### 응답
+
+**성공 (200 OK)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid-1",
+    "code": "BETA2025ABC",
+    "isActive": false,
+    "deactivatedAt": "2025-11-04T15:00:00Z"
+  }
+}
+```
+
+---
+
+### 7.5 모더레이션 로그 조회
+
+**GET** `/api/admin/moderation-logs`
+
+**Headers**: `Authorization: Bearer {accessToken}` (관리자 권한 필요)
+
+**Query Parameters**:
+- `page`: 페이지 번호 (기본값: 1)
+- `limit`: 페이지당 항목 수 (기본값: 20)
+- `severity`: 심각도 필터 (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)
+
+#### 응답
+
+**성공 (200 OK)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "logs": [
+      {
+        "id": "log-uuid-1",
+        "userId": "uuid-1234",
+        "contentType": "IMAGE",
+        "result": {
+          "isViolation": true,
+          "category": "INAPPROPRIATE_CONTENT",
+          "confidence": 0.92,
+          "severity": "HIGH"
+        },
+        "action": "CONTENT_REMOVED",
+        "createdAt": "2025-11-04T14:30:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 45,
+      "totalPages": 3
+    }
+  }
+}
+```
+
+---
+
+### 7.6 신고 목록 조회
+
+**GET** `/api/admin/reports`
+
+**Headers**: `Authorization: Bearer {accessToken}` (관리자 권한 필요)
+
+**Query Parameters**:
+- `page`: 페이지 번호 (기본값: 1)
+- `limit`: 페이지당 항목 수 (기본값: 20)
+- `status`: 상태 필터 (`PENDING`, `REVIEWED`, `RESOLVED`, `DISMISSED`)
+
+#### 응답
+
+**성공 (200 OK)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "reports": [
+      {
+        "id": "report-uuid-1",
+        "reporterId": "uuid-1234",
+        "reportedUserId": "uuid-5678",
+        "reason": "INAPPROPRIATE_BEHAVIOR",
+        "description": "통화 중 부적절한 행동",
+        "status": "PENDING",
+        "createdAt": "2025-11-04T16:00:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 12,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+---
+
+## 🛡️ 8. AI 콘텐츠 모더레이션 API (Moderation)
+
+> AI 기반 콘텐츠 모더레이션은 Hugging Face API를 활용하여 부적절한 콘텐츠를 자동으로 감지합니다.
+> 자세한 내용은 [AI_CONTENT_MODERATION.md](./AI_CONTENT_MODERATION.md)를 참조하세요.
+
+### 8.1 콘텐츠 분석 요청
+
+**POST** `/api/moderation/analyze`
+
+**Headers**: `Authorization: Bearer {accessToken}`
+
+#### 요청
+
+```json
+{
+  "contentType": "IMAGE",
+  "contentUrl": "https://storage.url/image.jpg"
+}
+```
+
+또는 텍스트 분석:
+
+```json
+{
+  "contentType": "TEXT",
+  "content": "분석할 텍스트 내용"
+}
+```
+
+#### 응답
+
+**성공 (200 OK)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "isViolation": false,
+    "categories": {
+      "nsfw": 0.02,
+      "violence": 0.01,
+      "hate": 0.00
+    },
+    "overallScore": 0.02,
+    "decision": "APPROVED"
+  }
+}
+```
+
+**위반 감지 시 (200 OK)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "isViolation": true,
+    "categories": {
+      "nsfw": 0.95,
+      "violence": 0.03,
+      "hate": 0.01
+    },
+    "overallScore": 0.95,
+    "decision": "REJECTED",
+    "reason": "부적절한 콘텐츠가 감지되었습니다."
+  }
+}
+```
+
+---
+
+### 8.2 사용자 신고
+
+**POST** `/api/moderation/report`
+
+**Headers**: `Authorization: Bearer {accessToken}`
+
+#### 요청
+
+```json
+{
+  "reportedUserId": "uuid-5678",
+  "reason": "INAPPROPRIATE_BEHAVIOR",
+  "description": "통화 중 부적절한 언행을 했습니다.",
+  "sessionId": "session-uuid"
+}
+```
+
+**신고 사유 (reason) 유형**:
+- `INAPPROPRIATE_BEHAVIOR`: 부적절한 행동
+- `HARASSMENT`: 괴롭힘
+- `SPAM`: 스팸
+- `FAKE_PROFILE`: 가짜 프로필
+- `UNDERAGE`: 미성년자 의심
+- `OTHER`: 기타
+
+#### 응답
+
+**성공 (201 Created)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "reportId": "report-uuid",
+    "status": "PENDING",
+    "message": "신고가 접수되었습니다. 검토 후 조치하겠습니다."
+  }
+}
+```
+
+---
+
 ## 🔌 WebSocket (Socket.io) 이벤트
 
 ### 연결 (Connection)
@@ -1558,6 +1788,7 @@ if (call.duration) {  // duration이 0일 수 있음 (falsy)
 |------|------|-----------|
 | 1.0.0 | 2025-11-04 | 초안 작성 |
 | 1.1.0 | 2025-11-20 | 데이터 계약 섹션 추가 |
+| 1.2.0 | 2025-12-01 | Match API Socket.io 전환 반영, Moderation API 추가, Admin API 확장 |
 
 ---
 

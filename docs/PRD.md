@@ -7,7 +7,7 @@
 
 - **작성일**: 2025-11-04
 - **프로젝트명**: WebRTC Video Dating App
-- **버전**: 1.0.0 (MVP)
+- **버전**: 1.1.0
 - **개발 기간**: 50일 (2025-11-04 ~ 2025-12-24)
 - **타겟 플랫폼**: iOS, Android
 - **프로젝트 타입**: 데이팅 앱 (1:1 영상 통화 중심)
@@ -248,12 +248,16 @@
 
 ### 3.2 추후 구현 기능 (Post-MVP - Nice to Have)
 
-#### 3.2.1 부적절한 콘텐츠 모니터링 (Phase 2)
+#### 3.2.1 부적절한 콘텐츠 모니터링 (Phase 2) ✅ 구현 완료
 
-- AI 기반 실시간 영상 콘텐츠 분석
-- 부적절한 행동 자동 감지
-- 관리자 대시보드에서 신고 내역 관리
-- 자동 경고 및 계정 정지 시스템
+> **상태**: 이 기능은 이미 구현되었습니다. 자세한 내용은 [AI_CONTENT_MODERATION.md](./AI_CONTENT_MODERATION.md)를 참조하세요.
+
+- ✅ AI 기반 실시간 영상 콘텐츠 분석 (Hugging Face API 활용)
+- ✅ 부적절한 행동 자동 감지
+- ✅ 관리자 대시보드에서 신고 내역 관리 (AdminScreen, ReportsScreen)
+- ✅ 자동 경고 및 계정 정지 시스템
+- ✅ 사용자 신고 기능 (`POST /api/moderation/report`)
+- ✅ 모더레이션 로그 조회 (ModerationLogsScreen)
 
 #### 3.2.2 기타 추가 기능 (Phase 3+)
 
@@ -555,6 +559,7 @@ model User {
   bio             String?   @db.VarChar(200)
   profilePhotos   String[]  @map("profile_photos")
   interests       String[]
+  role            UserRole  @default(USER) // 사용자 권한 (USER/ADMIN)
 
   // 매칭 필터 설정
   preferredGender Gender    @map("preferred_gender")
@@ -590,6 +595,11 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum OnlineStatus {
@@ -1354,11 +1364,11 @@ Button: 16px, SemiBold
 - ✅ 배경 블러/변경
 - ✅ 카메라 전환
 
-### Phase 2: 안전 기능 강화 (출시 후 1~2개월)
-- 신고/차단 기능
-- 부적절한 콘텐츠 AI 감지
-- 사용자 검증 배지
-- 관리자 대시보드
+### Phase 2: 안전 기능 강화 (출시 후 1~2개월) ✅ 완료
+- ✅ 신고/차단 기능
+- ✅ 부적절한 콘텐츠 AI 감지 (Hugging Face API)
+- ✅ 사용자 검증 배지
+- ✅ 관리자 대시보드 (AdminScreen, ModerationLogsScreen, ReportsScreen)
 
 ### Phase 3: 기능 확장 (출시 후 3~4개월)
 - 텍스트 채팅
@@ -1410,6 +1420,7 @@ Button: 16px, SemiBold
 | 버전 | 날짜 | 변경 내용 | 작성자 |
 |------|------|-----------|--------|
 | 1.0.0 | 2025-11-04 | 초안 작성 | Claude |
+| 1.1.0 | 2025-12-01 | Admin role 추가, Phase 2 완료 반영 | Claude |
 
 ---
 

@@ -600,12 +600,14 @@
 - [ ] 초기 사용자 피드백 수집
 - [ ] 긴급 버그 수정
 
-### Phase 2 (출시 후 1~2개월)
+### Phase 2 (출시 후 1~2개월) ✅ 완료
 
-- [ ] 신고/차단 기능 추가
-- [ ] 부적절한 콘텐츠 AI 감지
-- [ ] 사용자 검증 배지
-- [ ] 관리자 대시보드
+- [x] 신고/차단 기능 추가
+- [x] 부적절한 콘텐츠 AI 감지 (Hugging Face API 활용)
+- [x] 사용자 검증 배지
+- [x] 관리자 대시보드 (AdminScreen, ModerationLogsScreen, ReportsScreen)
+
+> **참고**: Phase 2 기능은 이미 구현되었습니다. 자세한 내용은 [AI_CONTENT_MODERATION.md](./AI_CONTENT_MODERATION.md)를 참조하세요.
 
 ---
 

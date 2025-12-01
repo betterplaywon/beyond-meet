@@ -7,8 +7,8 @@
 ## 📋 문서 정보
 
 - **작성일**: 2025-11-04
-- **버전**: 1.1.0
-- **최종 업데이트**: 2025-11-10
+- **버전**: 1.2.0
+- **최종 업데이트**: 2025-12-01
 - **대상**: 개발팀, 기술 리더
 - **목적**: 시스템 아키텍처 설계 및 기술 스택 상세 가이드
 - **구현 상태**: 백엔드 100% 완료, 프론트엔드 100% 완료
@@ -53,6 +53,11 @@
 │  │  │  Auth    │  │  User    │  │  Match   │  │  Call    │    │   │
 │  │  │  Service │  │  Service │  │  Service │  │  Service │    │   │
 │  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │   │
+│  │  ┌──────────────────────┐  ┌──────────────────────────┐   │   │
+│  │  │     Moderation       │  │          Admin           │   │   │
+│  │  │      Service         │  │         Service          │   │   │
+│  │  │  (AI 콘텐츠 분석)     │  │     (관리자 기능)        │   │   │
+│  │  └──────────────────────┘  └──────────────────────────┘   │   │
 │  │                                                               │   │
 │  │  ┌────────────────────────────────────────────────────────┐ │   │
 │  │  │             Socket.io (실시간 통신)                     │ │   │
@@ -94,6 +99,11 @@
 │  │              │    │              │    │              │          │
 │  │  (완전 무료)  │    │(10k분 무료)  │    │  (무료 플랜)  │          │
 │  └──────────────┘    └──────────────┘    └──────────────┘          │
+│                                                                       │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                    Hugging Face API                           │   │
+│  │              (AI 콘텐츠 모더레이션 - 무료 tier)                │   │
+│  └──────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -245,17 +255,22 @@ react-native-dating-app/
 │   │   │   ├── ProfileScreen.tsx
 │   │   │   ├── EditProfileScreen.tsx
 │   │   │   └── SettingsScreen.tsx
-│   │   └── call/
-│   │       ├── IncomingCallScreen.tsx
-│   │       ├── VideoCallScreen.tsx
-│   │       └── CallEndScreen.tsx
+│   │   ├── call/
+│   │   │   ├── IncomingCallScreen.tsx
+│   │   │   ├── VideoCallScreen.tsx
+│   │   │   └── CallEndScreen.tsx
+│   │   └── admin/               # 관리자 화면 (ADMIN role 전용)
+│   │       ├── AdminScreen.tsx           # 관리자 대시보드
+│   │       ├── ModerationLogsScreen.tsx  # AI 모더레이션 로그
+│   │       └── ReportsScreen.tsx         # 사용자 신고 목록
 │   │
 │   ├── services/               # 비즈니스 로직 서비스
 │   │   ├── api.ts              # Axios 클라이언트
 │   │   ├── agoraService.ts     # Agora SDK 래퍼
 │   │   ├── socketService.ts    # Socket.io 관리
 │   │   ├── pushService.ts      # FCM 관리
-│   │   └── storageService.ts   # AsyncStorage 관리
+│   │   ├── storageService.ts   # AsyncStorage 관리
+│   │   └── moderationService.ts # 콘텐츠 모더레이션 API
 │   │
 │   ├── store/                  # Zustand 상태 관리
 │   │   ├── authStore.ts        # 인증 상태
@@ -564,7 +579,9 @@ backend/
 │   │   ├── user.controller.ts
 │   │   ├── match.controller.ts
 │   │   ├── call.controller.ts
-│   │   └── agora.controller.ts
+│   │   ├── agora.controller.ts
+│   │   ├── admin.controller.ts       # 관리자 API
+│   │   └── moderation.controller.ts  # AI 모더레이션 API
 │   │
 │   ├── middlewares/            # 미들웨어
 │   │   ├── auth.middleware.ts  # JWT 인증
@@ -578,7 +595,9 @@ backend/
 │   │   ├── user.routes.ts
 │   │   ├── match.routes.ts
 │   │   ├── call.routes.ts
-│   │   └── agora.routes.ts
+│   │   ├── agora.routes.ts
+│   │   ├── admin.routes.ts          # 관리자 라우트
+│   │   └── moderation.routes.ts     # 모더레이션 라우트
 │   │
 │   ├── services/               # 비즈니스 로직
 │   │   ├── auth.service.ts
@@ -587,7 +606,9 @@ backend/
 │   │   ├── call.service.ts
 │   │   ├── agora.service.ts
 │   │   ├── push.service.ts
-│   │   └── storage.service.ts
+│   │   ├── storage.service.ts
+│   │   ├── admin.service.ts          # 관리자 서비스
+│   │   └── moderation.service.ts     # AI 모더레이션 서비스 (Hugging Face)
 │   │
 │   ├── utils/                  # 유틸리티 함수
 │   │   ├── jwt.util.ts
