@@ -52,6 +52,8 @@ export const Input: React.FC<InputProps> = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
+          textContentType={secureTextEntry ? 'oneTimeCode' : undefined}
+          autoComplete={secureTextEntry ? 'off' : undefined}
           {...props}
         />
 
