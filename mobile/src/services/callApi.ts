@@ -108,3 +108,36 @@ export const recordCallEvent = async (
 ): Promise<void> => {
   await api.post(`/call/${callId}/event`, params);
 };
+
+/**
+ * 세션 정보 조회
+ */
+export interface SessionInfo {
+  session: {
+    id: string;
+    status: string;
+    matchType: string;
+    startTime: string | null;
+    endTime: string | null;
+    duration: number | null;
+  };
+  partner: {
+    id: string;
+    nickname: string;
+    profilePhotos: string[];
+  };
+}
+
+/**
+ * 세션 정보 조회
+ * GET /api/call/session/:sessionId
+ */
+export const getSessionInfo = async (
+  sessionId: string,
+): Promise<SessionInfo> => {
+  const response = await api.get<ApiResponse<SessionInfo>>(
+    `/call/session/${sessionId}`,
+  );
+
+  return response.data.data!;
+};

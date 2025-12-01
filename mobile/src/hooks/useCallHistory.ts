@@ -110,3 +110,14 @@ export const useRecordCallEvent = () => {
       }),
   });
 };
+
+/**
+ * 세션 정보 조회 Hook (통화 종료 후 상대방 정보 확인)
+ */
+export const useSessionInfo = (sessionId: string | undefined) => {
+  return useQuery({
+    queryKey: callKeys.session(sessionId || ''),
+    queryFn: () => callApi.getSessionInfo(sessionId!),
+    enabled: !!sessionId,
+  });
+};
