@@ -7,68 +7,61 @@ import { ApiResponse, Friendship, User } from '../@types';
 
 /**
  * 친구 목록 조회
- * GET /api/users/:id/friends
+ * GET /api/friends
+ * 백엔드는 User 객체 배열을 반환함 (단방향 친구 관계)
  */
-export const getFriends = async (userId: string): Promise<{
-  friends: Array<Friendship & { friend: User }>;
+export const getFriends = async (): Promise<{
+  friends: User[];
   total: number;
 }> => {
   const response = await api.get<ApiResponse<{
-    friends: Array<Friendship & { friend: User }>;
+    friends: User[];
     total: number;
-  }>>(`/users/${userId}/friends`);
+  }>>('/friends');
 
   return response.data.data!;
 };
 
 /**
  * 친구 추가
- * POST /api/users/:id/friends
+ * POST /api/friends/:friendId
  */
 export const addFriend = async (
-  userId: string,
   friendId: string
 ): Promise<{ friendship: Friendship }> => {
   const response = await api.post<ApiResponse<{
     friendship: Friendship;
-  }>>(`/users/${userId}/friends`, {
-    friendId,
-  });
+  }>>(`/friends/${friendId}`);
 
   return response.data.data!;
 };
 
 /**
  * 친구 삭제
- * DELETE /api/users/:id/friends/:friendId
+ * DELETE /api/friends/:friendId
  */
 export const removeFriend = async (
-  userId: string,
   friendId: string
 ): Promise<void> => {
-  await api.delete(`/users/${userId}/friends/${friendId}`);
+  await api.delete(`/friends/${friendId}`);
 };
 
 /**
  * 사용자 차단
- * POST /api/users/:id/block
+ * POST /api/friends/block/:blockedUserId
  */
 export const blockUser = async (
-  userId: string,
   blockedUserId: string
 ): Promise<void> => {
-  await api.post(`/users/${userId}/block`, {
-    blockedUserId,
-  });
+  await api.post(`/friends/block/${blockedUserId}`);
 };
 
 /**
  * 차단 해제
- * DELETE /api/users/:id/block/:blockedId
+ * DELETE /api/friends/block/:blockedUserId
  */
 export const unblockUser = async (
-  userId: string,
-  blockedId: string
+  blockedUserId: string
 ): Promise<void> => {
-  await api.delete(`/users/${userId}/block/${blockedId}`);
+  await api.delete(`/friends/block/${blockedUserId}`);
 };

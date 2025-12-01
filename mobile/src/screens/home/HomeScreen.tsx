@@ -13,6 +13,7 @@ import { IncomingCallModal } from '../../components/call/IncomingCallModal';
 import { useCallStore } from '../../store/callStore';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import { useMyProfile } from '../../hooks/useProfile';
+import { useFriends } from '../../hooks/useFriends';
 import * as socketService from '../../services/socketService';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
@@ -22,6 +23,7 @@ type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { data: user } = useMyProfile();
+  const { data: friends = [] } = useFriends(user?.id);
   const socket = useSocket();
 
   const incomingCall = useCallStore((state) => state.incomingCall);
@@ -131,7 +133,7 @@ const HomeScreen: React.FC = () => {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>0</Text>
+          <Text style={styles.statValue}>{friends.length}</Text>
           <Text style={styles.statLabel}>친구</Text>
         </View>
         <View style={styles.statDivider} />
