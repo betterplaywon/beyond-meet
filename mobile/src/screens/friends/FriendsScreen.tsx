@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useIsFocused } from '@react-navigation/native';
-import { Friendship } from '../../@types';
+import { User } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
@@ -48,9 +48,9 @@ const FriendsScreen = () => {
     refetch();
   };
 
-  const handleCallFriend = (friendship: Friendship) => {
+  const handleCallFriend = (friend: User) => {
     // TODO: 친구에게 통화 요청
-    console.log('Call friend:', friendship.friend.nickname);
+    console.log('Call friend:', friend.nickname);
   };
 
   const renderEmpty = () => (
@@ -63,26 +63,26 @@ const FriendsScreen = () => {
     </View>
   );
 
-  const renderFriend = ({ item }: { item: Friendship }) => (
+  const renderFriend = ({ item }: { item: User }) => (
     <View style={styles.friendCard}>
       <Avatar
-        source={item.friend.profilePhotos?.[0]}
-        name={item.friend.nickname}
+        source={item.profilePhotos?.[0]}
+        name={item.nickname}
         size="medium"
-        online={item.friend.onlineStatus === 'ONLINE'}
+        online={item.onlineStatus === 'ONLINE'}
       />
       <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.friend.nickname}</Text>
+        <Text style={styles.friendName}>{item.nickname}</Text>
         <Text style={styles.friendStatus}>
-          {item.friend.onlineStatus === 'ONLINE' ? '🟢 온라인' : '⚪ 오프라인'}
+          {item.onlineStatus === 'ONLINE' ? '🟢 온라인' : '⚪ 오프라인'}
         </Text>
       </View>
       <TouchableOpacity
         onPress={() => handleCallFriend(item)}
-        disabled={item.friend.onlineStatus !== 'ONLINE'}
+        disabled={item.onlineStatus !== 'ONLINE'}
         style={[
           styles.callButtonContainer,
-          item.friend.onlineStatus !== 'ONLINE' && styles.callButtonDisabled,
+          item.onlineStatus !== 'ONLINE' && styles.callButtonDisabled,
         ]}
       >
         <Text style={styles.callButton}>📞</Text>

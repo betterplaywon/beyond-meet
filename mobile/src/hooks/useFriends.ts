@@ -14,7 +14,7 @@ export const friendsKeys = queryKeys.friends;
 export const useFriends = (userId: string | undefined) => {
   return useQuery({
     queryKey: friendsKeys.list(userId || ''),
-    queryFn: () => friendsApi.getFriends(userId!),
+    queryFn: () => friendsApi.getFriends(),
     enabled: !!userId, // userId가 있을 때만 실행
     select: data => data.friends, // friends 배열만 반환
   });
@@ -28,7 +28,7 @@ export const useAddFriend = () => {
 
   return useMutation({
     mutationFn: ({ userId, friendId }: { userId: string; friendId: string }) =>
-      friendsApi.addFriend(userId, friendId),
+      friendsApi.addFriend(friendId),
     onSuccess: (_, variables) => {
       // 친구 목록 쿼리 무효화하여 재조회
       queryClient.invalidateQueries({
@@ -46,7 +46,7 @@ export const useRemoveFriend = () => {
 
   return useMutation({
     mutationFn: ({ userId, friendId }: { userId: string; friendId: string }) =>
-      friendsApi.removeFriend(userId, friendId),
+      friendsApi.removeFriend(friendId),
     onSuccess: (_, variables) => {
       // 서버에서 최신 친구 목록을 다시 가져옴 (단순하고 일관성 있는 패턴)
       queryClient.invalidateQueries({
@@ -69,7 +69,7 @@ export const useBlockUser = () => {
     }: {
       userId: string;
       blockedUserId: string;
-    }) => friendsApi.blockUser(userId, blockedUserId),
+    }) => friendsApi.blockUser(blockedUserId),
     onSuccess: (_, variables) => {
       // 친구 목록 무효화 (차단된 사용자가 친구 목록에서 제거되도록)
       queryClient.invalidateQueries({
@@ -92,7 +92,7 @@ export const useUnblockUser = () => {
     }: {
       userId: string;
       blockedId: string;
-    }) => friendsApi.unblockUser(userId, blockedId),
+    }) => friendsApi.unblockUser(blockedId),
     onSuccess: (_, variables) => {
       // 친구 목록 무효화 (차단 해제된 사용자가 다시 친구 목록에 나타날 수 있도록)
       queryClient.invalidateQueries({
