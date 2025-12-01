@@ -20,6 +20,8 @@ export interface User {
   minAge: number; // 백엔드가 기본값 보장 (default: 20)
   maxAge: number; // 백엔드가 기본값 보장 (default: 50)
   preferredCountries: string[] | null;
+  // 알림 설정
+  pushEnabled: boolean;
   lastActive: string | null;
   createdAt: string;
   updatedAt: string;

@@ -2,7 +2,7 @@
  * 신고 내역 화면 (어드민)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,64 +11,38 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/theme';
-import { getReports, Report } from '../../services/adminApi';
-import { parseApiError } from '../../services/api';
+import { Report } from '../../services/adminApi';
+import { useReports } from '../../hooks/useAdmin';
 
 const ReportsScreen: React.FC = () => {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<string | undefined>(undefined);
 
-  const fetchReports = async (pageNum: number, refresh = false) => {
-    try {
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useReports(filter);
 
-      const data = await getReports({
-        page: pageNum,
-        limit: 20,
-        status: filter,
-      });
+  // 모든 페이지의 reports를 flat하게 합침
+  const reports = data?.pages.flatMap((page) => page.reports) ?? [];
+  const total = data?.pages[0]?.pagination.total ?? 0;
 
-      if (refresh || pageNum === 1) {
-        setReports(data.reports);
-      } else {
-        setReports((prev) => [...prev, ...data.reports]);
-      }
+  const onRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
-      setTotal(data.pagination.total);
-      setPage(pageNum);
-    } catch (error) {
-      Alert.alert('오류', parseApiError(error));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-  };
-
-  useEffect(() => {
-    fetchReports(1);
-  }, [filter]);
-
-  const onRefresh = () => {
-    fetchReports(1, true);
-  };
-
-  const loadMore = () => {
-    if (!loading && reports.length < total) {
-      fetchReports(page + 1);
-    }
-  };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -199,7 +173,7 @@ const ReportsScreen: React.FC = () => {
           )}
           <View style={styles.reportMeta}>
             <Text style={styles.metaText}>
-              {item.isAiGenerated ? '🤖 AI 자동 신고' : '👤 수동 신고'}
+              {item.isAiGenerated ? 'AI 자동 신고' : '수동 신고'}
             </Text>
             <Text style={styles.metaText}>{formattedDate}</Text>
           </View>
@@ -207,6 +181,8 @@ const ReportsScreen: React.FC = () => {
       </View>
     );
   };
+
+  const isInitialLoading = isLoading && !isRefetching;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -223,21 +199,25 @@ const ReportsScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
         }
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          loading && !refreshing ? (
+          isFetchingNextPage ? (
             <ActivityIndicator style={styles.loader} />
           ) : null
         }
         ListEmptyComponent={
-          !loading ? (
+          !isInitialLoading ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>신고 내역이 없습니다</Text>
             </View>
-          ) : null
+          ) : (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator size="large" />
+            </View>
+          )
         }
       />
     </SafeAreaView>
