@@ -14,6 +14,7 @@ export interface User {
   profilePhotos: string[];
   interests: string[];
   onlineStatus: 'ONLINE' | 'OFFLINE' | 'IN_CALL';
+  role: 'USER' | 'ADMIN';
   // 매칭 필터
   preferredGender: 'MALE' | 'FEMALE' | 'ANYONE' | null;
   minAge: number; // 백엔드가 기본값 보장 (default: 20)
