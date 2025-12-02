@@ -8,12 +8,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   RefreshControl,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
@@ -155,7 +155,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
   const groupedHistory = groupByDate(callHistory);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

@@ -7,10 +7,10 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../@types';
@@ -85,7 +85,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
 
   if (isSessionLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.content}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>불러오는 중...</Text>
@@ -108,7 +108,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
   const showAddFriendButton = !isAlreadyFriend && !addFriendMutation.isSuccess;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
         {/* 성공 아이콘 */}
         <View style={styles.iconContainer}>
