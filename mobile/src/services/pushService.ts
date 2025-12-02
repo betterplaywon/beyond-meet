@@ -341,30 +341,18 @@ export const checkPermission = async (): Promise<boolean> => {
 
 /**
  * 특정 토픽 구독
+ * 에러 발생 시 호출자가 처리해야 합니다.
  */
 export const subscribeToTopic = async (topic: string): Promise<void> => {
-  try {
-    await messaging().subscribeToTopic(topic);
-    console.log(`[PushService] Subscribed to topic: ${topic}`);
-  } catch (error) {
-    console.error(
-      `[PushService] Failed to subscribe to topic ${topic}:`,
-      error,
-    );
-  }
+  await messaging().subscribeToTopic(topic);
+  console.log(`[PushService] Subscribed to topic: ${topic}`);
 };
 
 /**
  * 특정 토픽 구독 해제
+ * 에러 발생 시 호출자가 처리해야 합니다.
  */
 export const unsubscribeFromTopic = async (topic: string): Promise<void> => {
-  try {
-    await messaging().unsubscribeFromTopic(topic);
-    console.log(`[PushService] Unsubscribed from topic: ${topic}`);
-  } catch (error) {
-    console.error(
-      `[PushService] Failed to unsubscribe from topic ${topic}:`,
-      error,
-    );
-  }
+  await messaging().unsubscribeFromTopic(topic);
+  console.log(`[PushService] Unsubscribed from topic: ${topic}`);
 };

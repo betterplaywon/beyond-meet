@@ -89,6 +89,7 @@ export const useEndCall = () => {
 
 /**
  * 통화 이벤트 기록 Mutation Hook
+ * 백그라운드 이벤트 기록이므로 사용자에게 에러를 표시하지 않음
  */
 export const useRecordCallEvent = () => {
   return useMutation({
@@ -108,6 +109,9 @@ export const useRecordCallEvent = () => {
         timestamp,
         data,
       }),
+    onError: (error) => {
+      console.error('Failed to record call event:', error);
+    },
   });
 };
 

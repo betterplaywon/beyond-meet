@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as friendsApi from '../services/friendsApi';
 import { queryKeys } from '../constants/queryKeys';
+import { showErrorAlert } from '../utils/errorHandler';
 
 export const friendsKeys = queryKeys.friends;
 
@@ -35,6 +36,9 @@ export const useAddFriend = () => {
         queryKey: friendsKeys.list(variables.userId),
       });
     },
+    onError: error => {
+      showErrorAlert(error, '친구 추가 실패');
+    },
   });
 };
 
@@ -52,6 +56,9 @@ export const useRemoveFriend = () => {
       queryClient.invalidateQueries({
         queryKey: friendsKeys.list(variables.userId),
       });
+    },
+    onError: error => {
+      showErrorAlert(error, '친구 삭제 실패');
     },
   });
 };
@@ -76,6 +83,9 @@ export const useBlockUser = () => {
         queryKey: friendsKeys.list(variables.userId),
       });
     },
+    onError: error => {
+      showErrorAlert(error, '차단 실패');
+    },
   });
 };
 
@@ -98,6 +108,9 @@ export const useUnblockUser = () => {
       queryClient.invalidateQueries({
         queryKey: friendsKeys.list(variables.userId),
       });
+    },
+    onError: error => {
+      showErrorAlert(error, '차단 해제 실패');
     },
   });
 };

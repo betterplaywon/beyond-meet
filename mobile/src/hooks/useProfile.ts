@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as userApi from '../services/userApi';
 import { queryKeys } from '../constants/queryKeys';
+import { showErrorAlert } from '../utils/errorHandler';
 
 /**
  * 프로필 업데이트 데이터 타입
@@ -82,6 +83,9 @@ export const useUploadProfilePhoto = () => {
         queryKey: profileKeys.detail(variables.userId),
       });
     },
+    onError: (error) => {
+      showErrorAlert(error, '사진 업로드 실패');
+    },
   });
 };
 
@@ -100,6 +104,9 @@ export const useDeleteProfilePhoto = () => {
       queryClient.invalidateQueries({
         queryKey: profileKeys.detail(variables.userId),
       });
+    },
+    onError: (error) => {
+      showErrorAlert(error, '사진 삭제 실패');
     },
   });
 };
