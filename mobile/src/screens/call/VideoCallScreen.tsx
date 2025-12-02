@@ -9,12 +9,15 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Alert,
   Platform,
   PermissionsAndroid,
 } from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import {
@@ -50,7 +53,7 @@ interface Props {
 
 const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId, channelName, token } = route.params;
-  // uid는 백엔드에서 전달되지만 사용하지 않음 (Agora 자동 할당)
+  const insets = useSafeAreaInsets();
 
   if (!sessionId || !channelName || !token) {
     console.error('❌ Missing required params:', {
@@ -479,7 +482,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           {/* 내 영상 (PIP) */}
           {localUid !== 0 ? (
             <RtcSurfaceView
-              style={styles.localVideo}
+              style={[styles.localVideo, { top: insets.top + 10 }]}
               canvas={{
                 uid: 0,
                 renderMode: 1, // Hidden (fit mode)
@@ -489,14 +492,14 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
               zOrderOnTop={true}
             />
           ) : (
-            <View style={styles.localVideo}>
+            <View style={[styles.localVideo, { top: insets.top + 10 }]}>
               <Text style={styles.localPlaceholder}>연결 중...</Text>
             </View>
           )}
 
           {/* 타이머 */}
           {showControls && (
-            <View style={styles.timerContainer}>
+            <View style={[styles.timerContainer, { top: insets.top + 10 }]}>
               <CallTimer maxDuration={300} onTimeUp={handleTimeUp} />
             </View>
           )}
@@ -553,7 +556,6 @@ const styles = StyleSheet.create({
   },
   localVideo: {
     position: 'absolute',
-    top: 60,
     right: 20,
     width: 120,
     height: 160,
@@ -563,6 +565,7 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   localPlaceholder: {
     ...typography.caption,
@@ -570,7 +573,6 @@ const styles = StyleSheet.create({
   },
   timerContainer: {
     position: 'absolute',
-    top: 20,
     left: 20,
   },
   controlsContainer: {

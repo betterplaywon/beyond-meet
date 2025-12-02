@@ -7,10 +7,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -35,6 +38,7 @@ interface Props {
 const MatchingScreen: React.FC<Props> = ({ navigation }) => {
   const setCurrentSession = useCallStore(state => state.setCurrentSession);
   const socket = useSocket();
+  const insets = useSafeAreaInsets();
 
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
@@ -73,10 +77,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
       pulse.stop();
       clearTimeout(timeout);
     };
-    // 의존성 배열 비움 - 마운트 시 한 번만 실행
-    // scaleAnim은 ref이므로 의존성에 포함하면 안 됨
-    // navigation은 안정적인 참조이므로 생략 가능
-  }, []);
+  }, [navigation, scaleAnim]);
 
   // 매칭 대기 이벤트 리스너
   useSocketEvent('match:waiting', (data: any) => {
@@ -127,24 +128,24 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Socket 연결 상태 */}
-        <View style={styles.connectionStatus}>
-          <View
-            style={[
-              styles.connectionDot,
-              {
-                backgroundColor: socket.isConnected()
-                  ? colors.success
-                  : colors.error,
-              },
-            ]}
-          />
-          <Text style={styles.connectionText}>
-            {socket.isConnected() ? '서버 연결됨' : '연결 중...'}
-          </Text>
-        </View>
+      {/* Socket 연결 상태 - content 밖에 배치하여 z-index 문제 해결 */}
+      <View style={[styles.connectionStatus, { top: insets.top + spacing.sm }]}>
+        <View
+          style={[
+            styles.connectionDot,
+            {
+              backgroundColor: socket.isConnected()
+                ? colors.success
+                : colors.error,
+            },
+          ]}
+        />
+        <Text style={styles.connectionText}>
+          {socket.isConnected() ? '서버 연결됨' : '연결 중...'}
+        </Text>
+      </View>
 
+      <View style={styles.content}>
         {/* 애니메이션 아이콘 */}
         <Animated.View
           style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
   },
   connectionStatus: {
     position: 'absolute',
-    top: spacing.lg,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
@@ -206,6 +207,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    zIndex: 10,
   },
   connectionDot: {
     width: 8,
