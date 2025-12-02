@@ -2,7 +2,7 @@
  * 신고 내역 화면 (어드민)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../styles/theme';
 import { Report } from '../../services/adminApi';
 import { useReports } from '../../hooks/useAdmin';
+import { parseApiError } from '../../utils/errorHandler';
 
 const ReportsScreen: React.FC = () => {
   const [filter, setFilter] = useState<string | undefined>(undefined);
@@ -28,7 +30,15 @@ const ReportsScreen: React.FC = () => {
     fetchNextPage,
     isFetchingNextPage,
     refetch,
+    error,
   } = useReports(filter);
+
+  // 에러 발생 시 Alert 표시
+  useEffect(() => {
+    if (error) {
+      Alert.alert('오류', parseApiError(error));
+    }
+  }, [error]);
 
   // 모든 페이지의 reports를 flat하게 합침
   const reports = data?.pages.flatMap((page) => page.reports) ?? [];
