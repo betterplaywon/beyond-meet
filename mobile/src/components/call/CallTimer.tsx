@@ -9,20 +9,32 @@ import { colors, typography, spacing } from '../../styles/theme';
 interface Props {
   maxDuration?: number; // 초 단위 (기본: 300초 = 5분)
   onTimeUp?: () => void;
+  onElapsedChange?: (elapsed: number) => void;
 }
 
 export const CallTimer: React.FC<Props> = ({
   maxDuration = 300,
   onTimeUp,
+  onElapsedChange,
 }) => {
   const [elapsed, setElapsed] = useState(0);
-  // onTimeUp을 ref에 저장하여 의존성 배열에서 제거 (무한 루프 방지)
+  // 콜백을 ref에 저장하여 의존성 배열에서 제거 (무한 루프 방지)
   const onTimeUpRef = useRef(onTimeUp);
+  const onElapsedChangeRef = useRef(onElapsedChange);
 
-  // onTimeUp이 변경되면 ref 업데이트
+  // 콜백이 변경되면 ref 업데이트
   useEffect(() => {
     onTimeUpRef.current = onTimeUp;
   }, [onTimeUp]);
+
+  useEffect(() => {
+    onElapsedChangeRef.current = onElapsedChange;
+  }, [onElapsedChange]);
+
+  // elapsed 변경 시 콜백 호출 (렌더링 후 실행되어 setState-in-render 문제 방지)
+  useEffect(() => {
+    onElapsedChangeRef.current?.(elapsed);
+  }, [elapsed]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -41,7 +53,7 @@ export const CallTimer: React.FC<Props> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [maxDuration]); // onTimeUp 제거
+  }, [maxDuration]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);

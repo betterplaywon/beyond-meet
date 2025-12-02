@@ -66,9 +66,9 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     ]);
   }
 
-  const clearCallState = useCallStore(state => state.clearCallState);
   const isJoined = useCallStore(state => state.isJoined);
   const setIsJoined = useCallStore(state => state.setIsJoined);
+  const setCallDuration = useCallStore(state => state.setCallDuration);
 
   const agoraEngineRef = useRef<IRtcEngine | undefined>(undefined);
   const videoViewRef = useRef(null);
@@ -178,7 +178,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
             {
               text: '확인',
               onPress: () => {
-                clearCallState();
                 navigation.replace('CallEnd', { sessionId });
               },
             },
@@ -201,7 +200,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         console.warn('[MODERATION] Image too small, skipping this frame');
       }
     }
-  }, [sessionId, clearCallState, navigation]);
+  }, [sessionId, navigation]);
 
   // 모니터링 시작/중지
   useEffect(() => {
@@ -246,7 +245,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       {
         text: '확인',
         onPress: () => {
-          clearCallState();
           navigation.replace('CallEnd', { sessionId: data.sessionId });
         },
       },
@@ -281,7 +279,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         {
           text: '확인',
           onPress: () => {
-            clearCallState();
             navigation.replace('CallEnd', { sessionId: data.sessionId });
           },
         },
@@ -414,7 +411,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         onPress: () => {
           // Socket으로 종료 이벤트 전송
           socketService.endCall(sessionId);
-          clearCallState();
           navigation.replace('CallEnd', { sessionId });
         },
       },
@@ -425,7 +421,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     Alert.alert('시간 종료', '5분이 경과하여 통화가 종료됩니다.');
     // Socket으로 종료 이벤트 전송
     socketService.endCall(sessionId);
-    clearCallState();
     navigation.replace('CallEnd', { sessionId });
   };
 
@@ -497,12 +492,16 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           )}
 
-          {/* 타이머 */}
-          {showControls && (
-            <View style={[styles.timerContainer, { top: insets.top + 10 }]}>
-              <CallTimer maxDuration={300} onTimeUp={handleTimeUp} />
-            </View>
-          )}
+          {/* 타이머 - 항상 마운트, visibility만 제어 */}
+          <View
+            style={[
+              styles.timerContainer,
+              { top: insets.top + 10 },
+              !showControls && styles.hidden,
+            ]}
+          >
+            <CallTimer maxDuration={300} onTimeUp={handleTimeUp} onElapsedChange={setCallDuration} />
+          </View>
 
           {/* 컨트롤 */}
           {showControls && (
@@ -580,6 +579,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  hidden: {
+    opacity: 0,
   },
 });
 

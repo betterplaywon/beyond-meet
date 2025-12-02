@@ -44,6 +44,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
   const { sessionId } = route.params;
   const userId = useAuthStore(state => state.userId);
   const callDuration = useCallStore(state => state.callDuration);
+  const clearCallState = useCallStore(state => state.clearCallState);
 
   // React Query hooks
   const { data: sessionInfo, isLoading: isSessionLoading } = useSessionInfo(sessionId);
@@ -77,6 +78,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleGoHome = () => {
+    clearCallState();
     navigation.reset({
       index: 0,
       routes: [{ name: 'Main' }],
