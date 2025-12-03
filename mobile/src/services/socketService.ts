@@ -13,6 +13,36 @@ let socket: Socket | null = null;
 const listenerWrappers: WeakMap<Function, Function> = new WeakMap();
 // event별 등록된 callback 추적
 const listeners: Map<string, Set<Function>> = new Map();
+// socket 연결 전에 등록 요청된 리스너들 (pending)
+const pendingListeners: Map<string, Set<Function>> = new Map();
+
+/**
+ * 대기 중인 리스너들을 socket에 등록
+ */
+const registerPendingListeners = (): void => {
+  if (!socket) return;
+
+  pendingListeners.forEach((callbacks, event) => {
+    callbacks.forEach(callback => {
+      // on 함수 로직을 직접 실행 (재귀 방지)
+      const eventListeners = listeners.get(event) || new Set<Function>();
+
+      const wrapper = (...args: any[]) => {
+        console.log('[DEBUG] Event received:', event, args);
+        callback(...args);
+      };
+
+      listenerWrappers.set(callback, wrapper);
+      eventListeners.add(callback);
+      listeners.set(event, eventListeners);
+      socket!.on(event, wrapper);
+
+      console.log('[SOCKET] Registered pending listener for:', event);
+    });
+  });
+
+  pendingListeners.clear();
+};
 
 /**
  * 이벤트 핸들러 설정
@@ -22,6 +52,8 @@ const setupEventHandlers = (): void => {
 
   socket.on('connect', () => {
     console.log('[SOCKET] ✅ Connected! Socket ID:', socket?.id);
+    // 연결 성공 시 대기 중인 리스너들 등록
+    registerPendingListeners();
   });
 
   socket.on('disconnect', reason => {
@@ -83,6 +115,7 @@ export const disconnect = (): void => {
     socket.disconnect();
     socket = null;
     listeners.clear();
+    pendingListeners.clear();
   }
 };
 
@@ -109,8 +142,14 @@ export const emit = (event: string, data?: any): void => {
  * WeakMap을 사용하여 메모리 누수 방지
  */
 export const on = (event: string, callback: Function): void => {
-  if (!socket) {
-    console.warn('[SOCKET] Socket not initialized yet. Listener will be registered after connection.');
+  // socket이 없거나 연결되지 않은 경우 pending에 저장
+  if (!socket || !socket.connected) {
+    const pending = pendingListeners.get(event) || new Set<Function>();
+    if (!pending.has(callback)) {
+      pending.add(callback);
+      pendingListeners.set(event, pending);
+      console.log('[SOCKET] Listener queued for later registration:', event);
+    }
     return;
   }
 
@@ -142,9 +181,19 @@ export const on = (event: string, callback: Function): void => {
  * 이벤트 리스너 제거
  */
 export const off = (event: string, callback?: Function): void => {
-  if (!socket) return;
-
   if (callback) {
+    // pendingListeners에서도 제거
+    const pending = pendingListeners.get(event);
+    if (pending) {
+      pending.delete(callback);
+      if (pending.size === 0) {
+        pendingListeners.delete(event);
+      }
+    }
+
+    // socket이 없으면 여기서 종료
+    if (!socket) return;
+
     // wrapper 함수 가져오기
     const wrapper = listenerWrappers.get(callback);
 
@@ -168,7 +217,9 @@ export const off = (event: string, callback?: Function): void => {
     }
   } else {
     // 모든 리스너 제거
-    socket.off(event);
+    if (socket) {
+      socket.off(event);
+    }
     listeners.delete(event);
   }
 };
