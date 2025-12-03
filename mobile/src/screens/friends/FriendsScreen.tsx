@@ -20,6 +20,7 @@ import { User } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
+import { useFriendStatusSync } from '../../hooks/useFriendStatusSync';
 import { colors, typography, spacing } from '../../styles/theme';
 
 const FriendsScreen = () => {
@@ -34,6 +35,9 @@ const FriendsScreen = () => {
     error,
     refetch,
   } = useFriends(user?.id);
+
+  // 친구 온라인 상태 실시간 동기화
+  useFriendStatusSync(user?.id);
 
   // 네트워크 에러 등 실제 API 에러 발생 시에만 Alert 표시
   // 친구가 0명인 경우는 정상 응답(빈 배열)이므로 error가 null임
