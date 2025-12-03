@@ -5,12 +5,40 @@
 import { Server, Socket } from "socket.io";
 import { verifyAccessToken } from "../utils/jwt";
 import * as matchService from "../services/match-service";
+import * as userService from "../services/user-service";
 import prisma from "../config/database";
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   userEmail?: string;
 }
+
+/**
+ * 친구들에게 온라인 상태 브로드캐스트
+ */
+const broadcastStatusToFriends = async (
+  io: Server,
+  userId: string,
+  status: "ONLINE" | "OFFLINE"
+) => {
+  try {
+    const friendIds = await userService.getFriendIds(userId);
+
+    friendIds.forEach((friendId) => {
+      io.to(friendId).emit("friend:status-changed", {
+        friendId: userId,
+        status,
+        lastActive: new Date().toISOString(),
+      });
+    });
+
+    console.log(
+      `[STATUS] Broadcasted ${status} to ${friendIds.length} friends of ${userId}`
+    );
+  } catch (error) {
+    console.error("[STATUS] Failed to broadcast status:", error);
+  }
+};
 
 /**
  * Socket 인증 미들웨어
@@ -65,6 +93,9 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
 
   // Socket을 사용자 ID room에 join
   socket.join(userId);
+
+  // 친구들에게 온라인 상태 브로드캐스트
+  broadcastStatusToFriends(io, userId, "ONLINE");
 
   /**
    * 랜덤 매칭 요청
@@ -372,6 +403,9 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           lastActive: new Date(),
         },
       });
+
+      // 친구들에게 오프라인 상태 브로드캐스트
+      await broadcastStatusToFriends(io, userId, "OFFLINE");
     } catch (error) {
       console.error("[SOCKET] disconnect - failed to update user status:", error);
     }
