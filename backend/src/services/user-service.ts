@@ -305,6 +305,28 @@ export const updateOnlineStatus = async (
 };
 
 /**
+ * 사용자의 친구 ID 목록 조회 (양방향)
+ * - 내가 친구로 추가한 사용자
+ * - 나를 친구로 추가한 사용자
+ */
+export const getFriendIds = async (userId: string): Promise<string[]> => {
+  const friendships = await prisma.friendship.findMany({
+    where: {
+      OR: [{ userId: userId }, { friendId: userId }],
+    },
+    select: { userId: true, friendId: true },
+  });
+
+  const friendIds = new Set<string>();
+  friendships.forEach((f) => {
+    if (f.userId !== userId) friendIds.add(f.userId);
+    if (f.friendId !== userId) friendIds.add(f.friendId);
+  });
+
+  return Array.from(friendIds);
+};
+
+/**
  * 사용자 통계 조회
  */
 export const getUserStats = async (userId: string) => {
