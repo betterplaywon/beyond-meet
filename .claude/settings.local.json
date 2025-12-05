@@ -16,7 +16,10 @@
       "Bash(swift --version:*)",
       "Bash(rm:*)",
       "Bash(npm run ios:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
