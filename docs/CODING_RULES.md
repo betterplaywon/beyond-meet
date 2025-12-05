@@ -194,3 +194,101 @@ npm run prisma:generate
 ```
 
 **주의**: `prisma db push`나 `prisma migrate deploy` 직접 실행 금지
+
+---
+
+## useEffect 사용 가이드라인
+
+### 지양해야 할 패턴 (Anti-patterns)
+
+#### 1. 의존성 배열 없는 Effect
+
+```typescript
+// ❌ Bad: 매 렌더마다 실행됨
+useEffect(() => {
+  someRef.current = someValue;
+});
+
+// ✅ Good: 값 변경 시에만 실행
+useEffect(() => {
+  someRef.current = someValue;
+}, [someValue]);
+```
+
+#### 2. State를 Ref로 동기화하는 Effect
+
+```typescript
+// ❌ Bad: 불필요한 렌더 사이클 발생
+const [value, setValue] = useState(0);
+const valueRef = useRef(0);
+
+useEffect(() => {
+  valueRef.current = value;
+}, [value]);
+
+// ✅ Good: setState 호출 시점에 ref도 함께 업데이트
+const handleChange = (newValue: number) => {
+  valueRef.current = newValue;
+  setValue(newValue);
+};
+```
+
+#### 3. Error 상태를 감시하는 Effect (React Query)
+
+```typescript
+// ❌ Bad: useEffect로 에러 감시
+const { error } = useQuery({ ... });
+
+useEffect(() => {
+  if (error) Alert.alert('오류', message);
+}, [error]);
+
+// ✅ Good: Custom Hook에서 meta 활용
+// hooks/useXxx.ts
+export const useXxx = () => {
+  return useQuery({
+    queryKey: [...],
+    queryFn: ...,
+    meta: { errorMessage: '에러 메시지' },
+  });
+};
+
+// App.tsx - QueryClient 설정
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (_error, query) => {
+      const message = query.meta?.errorMessage as string;
+      if (message) Alert.alert('오류', message);
+    },
+  }),
+});
+```
+
+#### 4. 콜백 함수를 Ref로 동기화하는 복수의 Effect
+
+```typescript
+// ❌ Bad: 여러 개의 ref 동기화 effect
+useEffect(() => { onClickRef.current = onClick; }, [onClick]);
+useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
+// ✅ Good: 렌더 시점에 직접 할당 (React 18+)
+const callbacksRef = useRef({ onClick, onChange });
+callbacksRef.current = { onClick, onChange };
+```
+
+### Effect가 적절한 경우
+
+1. **외부 시스템과의 동기화**: Socket.io 이벤트 리스너, DOM API 등
+2. **타이머/인터벌 관리**: setInterval, setTimeout
+3. **구독 관리**: 이벤트 구독/해제
+4. **브라우저 API**: IntersectionObserver, ResizeObserver 등
+
+### Effect 대신 사용할 것
+
+| 시나리오 | 대안 |
+|---------|------|
+| Props 기반 state 업데이트 | 렌더링 중 직접 계산 또는 key prop 사용 |
+| 이벤트 핸들러 로직 | 이벤트 핸들러 함수 내에서 처리 |
+| 서버 데이터 fetching | React Query useQuery |
+| 에러 처리 | React Query onError 또는 Error Boundary |
+| 파생 상태 계산 | useMemo 또는 렌더링 중 계산 |
