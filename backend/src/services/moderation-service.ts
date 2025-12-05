@@ -21,6 +21,7 @@ type ReportStatus = 'PENDING' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED';
 
 /**
  * Hugging Face API 할당량 확인
+ * Redis 연결 실패 시에도 모더레이션 기능은 계속 동작 (graceful degradation)
  */
 export const checkApiQuota = async (): Promise<boolean> => {
   if (!redis) {
@@ -28,22 +29,29 @@ export const checkApiQuota = async (): Promise<boolean> => {
     return true;
   }
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // '2025-11'
-  const key = `moderation:quota:${currentMonth}`;
+  try {
+    const currentMonth = new Date().toISOString().slice(0, 7); // '2025-11'
+    const key = `moderation:quota:${currentMonth}`;
 
-  const count = await redis.get(key);
-  const currentCount = count ? parseInt(count as string) : 0;
+    const count = await redis.get(key);
+    const currentCount = count ? parseInt(count as string) : 0;
 
-  if (currentCount >= MONTHLY_QUOTA) {
-    console.warn('[MODERATION] Monthly quota exceeded:', currentCount);
-    return false;
+    if (currentCount >= MONTHLY_QUOTA) {
+      console.warn('[MODERATION] Monthly quota exceeded:', currentCount);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    // Redis 연결 실패 시에도 모더레이션 계속 진행
+    console.warn('[MODERATION] Redis connection failed, skipping quota check:', error);
+    return true;
   }
-
-  return true;
 };
 
 /**
  * 할당량 증가
+ * Redis 연결 실패 시에도 에러를 전파하지 않음 (graceful degradation)
  */
 export const incrementQuota = async (): Promise<void> => {
   if (!redis) {
@@ -51,11 +59,16 @@ export const incrementQuota = async (): Promise<void> => {
     return;
   }
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const key = `moderation:quota:${currentMonth}`;
+  try {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const key = `moderation:quota:${currentMonth}`;
 
-  await redis.incr(key);
-  await redis.expire(key, 60 * 60 * 24 * 31); // 31일 후 만료
+    await redis.incr(key);
+    await redis.expire(key, 60 * 60 * 24 * 31); // 31일 후 만료
+  } catch (error) {
+    // Redis 연결 실패 시에도 에러를 전파하지 않음
+    console.warn('[MODERATION] Redis connection failed, skipping quota increment:', error);
+  }
 };
 
 /**
