@@ -83,11 +83,10 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const [showControls, setShowControls] = useState(true);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
+  const maxDuration = 300; // 5분
 
-  // remoteUid ref 동기화
-  useEffect(() => {
-    remoteUidRef.current = remoteUid;
-  }, [remoteUid]);
+  // callStore에서 현재 통화 시간 읽기
+  const callDuration = useCallStore(state => state.callDuration);
 
   // 스냅샷 Promise resolver를 저장하는 ref
   // Agora의 onSnapshotTaken 콜백이 비동기적으로 호출되므로,
@@ -359,9 +358,11 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
             setIsJoined(true);
           },
           onUserJoined: (_connection, remoteUserUid) => {
+            remoteUidRef.current = remoteUserUid;
             setRemoteUid(remoteUserUid);
           },
           onUserOffline: () => {
+            remoteUidRef.current = 0;
             setRemoteUid(0);
           },
           onError: (err, msg) => {
@@ -419,6 +420,32 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       agoraEngineRef.current?.release();
     };
   }, [channelName, token, setIsJoined]);
+
+  // 타이머 로직 - callStore의 callDuration을 직접 업데이트
+  useEffect(() => {
+    // 초기화
+    setCallDuration(0);
+
+    const interval = setInterval(() => {
+      // 현재 값을 store에서 직접 읽어서 업데이트
+      const current = useCallStore.getState().callDuration;
+      if (current >= maxDuration) {
+        clearInterval(interval);
+        return;
+      }
+      setCallDuration(current + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [maxDuration, setCallDuration]);
+
+  // 시간 초과 처리
+  useEffect(() => {
+    if (callDuration >= maxDuration) {
+      handleTimeUp();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callDuration, maxDuration]);
 
   const handleToggleMute = () => {
     agoraEngineRef.current?.muteLocalAudioStream(!isMuted);
@@ -532,7 +559,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
               !showControls && styles.hidden,
             ]}
           >
-            <CallTimer maxDuration={300} onTimeUp={handleTimeUp} onElapsedChange={setCallDuration} />
+            <CallTimer elapsed={callDuration} maxDuration={maxDuration} />
           </View>
 
           {/* 컨트롤 */}
