@@ -31,6 +31,9 @@ export const useReports = (status?: string) => {
       return hasMore ? page + 1 : undefined;
     },
     initialPageParam: 1,
+    meta: {
+      errorMessage: '신고 내역을 불러오는데 실패했습니다.',
+    },
   });
 };
 
@@ -52,6 +55,9 @@ export const useModerationLogs = (actionTaken?: string) => {
       return hasMore ? page + 1 : undefined;
     },
     initialPageParam: 1,
+    meta: {
+      errorMessage: '모니터링 로그를 불러오는데 실패했습니다.',
+    },
   });
 };
 

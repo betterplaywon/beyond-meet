@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
 import RootNavigator from './src/navigation/RootNavigator';
 import { colors } from './src/styles/theme';
@@ -25,6 +25,15 @@ const queryClient = new QueryClient({
       retry: 0,
     },
   },
+  queryCache: new QueryCache({
+    onError: (_error, query) => {
+      // meta.errorMessage가 설정된 쿼리만 Alert 표시
+      const errorMessage = query.meta?.errorMessage as string | undefined;
+      if (errorMessage) {
+        Alert.alert('오류', errorMessage);
+      }
+    },
+  }),
 });
 
 function App(): React.JSX.Element {

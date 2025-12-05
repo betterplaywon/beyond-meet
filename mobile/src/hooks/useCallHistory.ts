@@ -27,6 +27,9 @@ export const useCallHistory = (params: {
         limit,
       }),
     enabled: !!userId,
+    meta: {
+      errorMessage: '통화 기록을 불러오는데 실패했습니다.',
+    },
   });
 };
 

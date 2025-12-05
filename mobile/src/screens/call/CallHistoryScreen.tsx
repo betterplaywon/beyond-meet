@@ -11,7 +11,6 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -42,13 +41,6 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
   });
 
   const callHistory: CallHistoryItem[] = data?.calls || [];
-
-  // 에러 발생 시 Alert 표시
-  React.useEffect(() => {
-    if (error) {
-      Alert.alert('오류', '통화 기록을 불러오는데 실패했습니다.');
-    }
-  }, [error]);
 
   const onRefresh = () => {
     refetch();
