@@ -154,9 +154,12 @@ export const register = async (
 
 ## Reference Documentation
 
-- [docs/PRD.md](docs/PRD.md) - Product requirements, beta strategy, invite code system
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture diagrams
-- [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md) - Complete API reference
-- [docs/UI_FLOW.md](docs/UI_FLOW.md) - Screen designs, user flows
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Production deployment guide
-- [TDD_HELP.md](docs/TDD_HELP.md) - Test-Driven Development guide
+- [docs/PRD.md](docs/PRD.md) - Product requirements, beta strategy, data models
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - System architecture, DB schema, auth flow
+- [docs/API_SPECIFICATION.md](docs/API_SPECIFICATION.md) - REST API endpoints
+- [docs/SOCKET_EVENTS.md](docs/SOCKET_EVENTS.md) - Socket.io events with payloads
+- [docs/CODING_RULES.md](docs/CODING_RULES.md) - Controller/Service patterns, error handling
+- [docs/UI_FLOW.md](docs/UI_FLOW.md) - Design system, screen flow
+- [docs/AI_CONTENT_MODERATION.md](docs/AI_CONTENT_MODERATION.md) - AI moderation settings
+- [docs/TODO.md](docs/TODO.md) - Remaining tasks and improvements
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide, environment variables
