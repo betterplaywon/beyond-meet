@@ -109,13 +109,6 @@ export const createManualReport = async (
       },
     });
 
-    console.log('[MODERATION] Manual report created:', {
-      id: report.id,
-      reporterId,
-      reportedUserId,
-      reason,
-    });
-
     res.status(201).json({
       success: true,
       data: {

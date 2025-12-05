@@ -27,7 +27,6 @@ import {
   ClientRoleType,
   RtcSurfaceView,
 } from 'react-native-agora';
-import { captureRef } from 'react-native-view-shot';
 import RNFS from 'react-native-fs';
 import { RootStackParamList } from '../../@types';
 import { CallControls } from '../../components/call/CallControls';
@@ -90,52 +89,85 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     remoteUidRef.current = remoteUid;
   }, [remoteUid]);
 
+  // 스냅샷 Promise resolver를 저장하는 ref
+  // Agora의 onSnapshotTaken 콜백이 비동기적으로 호출되므로,
+  // Promise 패턴을 사용하여 콜백 완료를 await할 수 있게 함
+  const snapshotResolverRef = useRef<{
+    resolve: (filePath: string) => void;
+    reject: (error: Error) => void;
+  } | null>(null);
+
   // 프레임 캡처 및 AI 분석
-  // remoteUidRef를 사용하여 의존성 최적화 (불필요한 함수 재생성 방지)
+  // Agora SDK의 takeSnapshot을 사용하여 원격 사용자의 비디오 스트림을 직접 캡처
+  // 이 방식이 react-native-view-shot보다 안정적인 이유:
+  // 1. 네이티브 레벨에서 비디오 스트림을 직접 캡처 (React Native 뷰 계층과 무관)
+  // 2. RtcSurfaceView의 네이티브 렌더링 문제 회피
+  // 3. 비디오 파이프라인에 최적화되어 성능 우수
   const captureAndAnalyzeFrame = useCallback(async () => {
     try {
       // 통화 종료 상태 체크
       if (isCallEndedRef.current) {
-        console.log('[MODERATION] Call ended, skipping frame capture');
         return;
       }
 
       // remoteUid가 없으면 캡처할 필요 없음
       if (remoteUidRef.current === 0) {
-        console.log('[MODERATION] No remote user, skipping frame capture');
         return;
       }
 
-      if (!videoViewRef.current) {
-        console.log('[MODERATION] Video view ref not available');
+      // Agora 엔진이 없으면 캡처 불가
+      if (!agoraEngineRef.current) {
         return;
       }
 
-      // 화면 캡처
-      const uri = await captureRef(videoViewRef, {
-        format: 'jpg',
-        quality: 0.8,
-        width: 640,
-        height: 480,
+      // 임시 파일 경로 생성 (타임스탬프로 파일명 충돌 방지)
+      const timestamp = Date.now();
+      const filePath = `${RNFS.CachesDirectoryPath}/moderation_snapshot_${timestamp}.jpg`;
+
+      // Promise를 생성하여 onSnapshotTaken 콜백 완료를 대기
+      const snapshotPromise = new Promise<string>((resolve, reject) => {
+        snapshotResolverRef.current = { resolve, reject };
+
+        // 5초 타임아웃 설정
+        setTimeout(() => {
+          if (snapshotResolverRef.current) {
+            snapshotResolverRef.current = null;
+            reject(new Error('Snapshot timeout'));
+          }
+        }, 5000);
       });
 
-      // 비동기 작업 후 다시 체크
-      if (isCallEndedRef.current) {
-        console.log('[MODERATION] Call ended during capture, aborting');
+      // Agora SDK의 takeSnapshot 호출
+      const result = agoraEngineRef.current.takeSnapshot(
+        remoteUidRef.current,
+        filePath,
+      );
+
+      if (result !== 0) {
+        snapshotResolverRef.current = null;
         return;
       }
 
-      // Base64 변환
-      const base64 = await RNFS.readFile(uri, 'base64');
+      // onSnapshotTaken 콜백이 호출될 때까지 대기
+      const capturedFilePath = await snapshotPromise;
+
+      // 비동기 작업 후 다시 체크
+      if (isCallEndedRef.current) {
+        await RNFS.unlink(capturedFilePath).catch(() => {});
+        return;
+      }
+
+      // 파일을 Base64로 변환
+      const base64 = await RNFS.readFile(capturedFilePath, 'base64');
       const imageBase64 = `data:image/jpeg;base64,${base64}`;
 
+      // 임시 파일 삭제 (디스크 공간 관리)
+      await RNFS.unlink(capturedFilePath).catch(() => {});
+
       // 비동기 작업 후 다시 체크
       if (isCallEndedRef.current) {
-        console.log('[MODERATION] Call ended during file read, aborting');
         return;
       }
-
-      console.log('[MODERATION] Frame captured, sending to API...');
 
       // API 호출
       const response = await api.post('/moderation/analyze', {
@@ -145,14 +177,10 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
 
       // API 응답 후 다시 체크
       if (isCallEndedRef.current) {
-        console.log(
-          '[MODERATION] Call ended during API call, ignoring response',
-        );
         return;
       }
 
-      const { confidence, action } = response.data.data;
-      console.log('[MODERATION] Analysis result:', { confidence, action });
+      const { action } = response.data.data;
 
       // 액션 처리
       if (action === 'WARNING_ISSUED') {
@@ -162,7 +190,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           remoteUidRef.current.toString(),
         );
       } else if (action === 'CALL_ENDED') {
-        // 즉시 플래그 설정 및 interval 정리 (Alert 대기 중 캡처 방지)
+        // 즉시 플래그 설정 및 interval 정리
         isCallEndedRef.current = true;
         if (moderationIntervalRef.current) {
           clearInterval(moderationIntervalRef.current);
@@ -184,21 +212,8 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           ],
         );
       }
-    } catch (error: any) {
-      // 통화 종료 상태면 에러 무시
-      if (isCallEndedRef.current) {
-        console.log('[MODERATION] Error ignored - call already ended');
-        return;
-      }
-      // reactTag 관련 에러는 뷰가 아직 준비되지 않은 상태이므로 무시
-      if (error.message?.includes('No view found with reactTag')) {
-        console.log('[MODERATION] View not ready, skipping this frame');
-        return;
-      }
-      console.error('[MODERATION] Frame analysis failed:', error);
-      if (error.response?.data?.error?.code === 'IMAGE_TOO_SMALL') {
-        console.warn('[MODERATION] Image too small, skipping this frame');
-      }
+    } catch {
+      // 모더레이션 에러는 조용히 무시 (다음 프레임에서 재시도)
     }
   }, [sessionId, navigation]);
 
@@ -207,14 +222,12 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     // 조건이 맞지 않으면 기존 interval 정리
     if (!isJoined || remoteUid === 0) {
       if (moderationIntervalRef.current) {
-        console.log('[MODERATION] Conditions not met, clearing interval');
         clearInterval(moderationIntervalRef.current);
         moderationIntervalRef.current = null;
       }
       return;
     }
 
-    console.log('[MODERATION] Starting monitoring interval (4 seconds)');
     const interval = setInterval(() => {
       captureAndAnalyzeFrame();
     }, 4000); // 4초마다
@@ -223,7 +236,6 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
 
     return () => {
       if (moderationIntervalRef.current) {
-        console.log('[MODERATION] Stopping monitoring interval');
         clearInterval(moderationIntervalRef.current);
         moderationIntervalRef.current = null;
       }
@@ -354,6 +366,26 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           },
           onError: (err, msg) => {
             Alert.alert('Agora 오류', `에러 코드: ${err}\n메시지: ${msg}`);
+          },
+          // 스냅샷 완료 콜백
+          onSnapshotTaken: (
+            _connection,
+            _uid,
+            filePath,
+            _width,
+            _height,
+            errCode,
+          ) => {
+            if (snapshotResolverRef.current) {
+              if (errCode === 0) {
+                snapshotResolverRef.current.resolve(filePath);
+              } else {
+                snapshotResolverRef.current.reject(
+                  new Error(`Snapshot failed with error code: ${errCode}`),
+                );
+              }
+              snapshotResolverRef.current = null;
+            }
           },
         });
 
