@@ -2,7 +2,7 @@
  * 친구 목록 화면
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,18 +14,29 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import Toast from 'react-native-toast-message';
 
-import { useIsFocused } from '@react-navigation/native';
-import { User } from '../../@types';
+import { User, RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
 import { useFriendStatusSync } from '../../hooks/useFriendStatusSync';
+import { useSocket, useSocketEvent } from '../../hooks/useSocket';
+import * as socketService from '../../services/socketService';
 import { colors, typography, spacing } from '../../styles/theme';
 
+type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
 const FriendsScreen = () => {
+  const navigation = useNavigation<FriendsScreenNavigationProp>();
   const { data: user } = useMyProfile();
   const isFocused = useIsFocused(); // 현재 탭이 포커스되어 있는지 확인
+  const socket = useSocket();
+
+  // 통화 요청 중인 친구 ID (로딩 상태 표시용)
+  const [callingFriendId, setCallingFriendId] = useState<string | null>(null);
 
   // React Query로 친구 목록 조회
   const {
@@ -38,6 +49,46 @@ const FriendsScreen = () => {
 
   // 친구 온라인 상태 실시간 동기화
   useFriendStatusSync(user?.id);
+
+  // 통화 요청이 전송됨 (대기 중)
+  useSocketEvent('call:requested', (data: { sessionId: string; receiverId: string }) => {
+    console.log('[FriendsScreen] Call requested:', data);
+    // 요청이 전송되었음을 확인 (이미 로딩 상태)
+  });
+
+  // 통화가 수락됨 - VideoCall 화면으로 이동
+  useSocketEvent('call:accepted', (data: { session: { id: string; channelName: string }; token: string; uid: number }) => {
+    console.log('[FriendsScreen] Call accepted:', data);
+    setCallingFriendId(null);
+    navigation.navigate('VideoCall', {
+      sessionId: data.session.id,
+      channelName: data.session.channelName,
+      token: data.token,
+      uid: data.uid,
+    });
+  });
+
+  // 통화가 거절됨
+  useSocketEvent('call:rejected', (data: { sessionId: string }) => {
+    console.log('[FriendsScreen] Call rejected:', data);
+    setCallingFriendId(null);
+    Toast.show({
+      type: 'info',
+      text1: '통화 거절',
+      text2: '상대방이 통화를 거절했습니다.',
+    });
+  });
+
+  // 매칭/통화 실패
+  useSocketEvent('match:failed', (data: { reason: string }) => {
+    console.log('[FriendsScreen] Match failed:', data);
+    setCallingFriendId(null);
+    Toast.show({
+      type: 'error',
+      text1: '통화 실패',
+      text2: data.reason || '통화 요청에 실패했습니다.',
+    });
+  });
 
   // 네트워크 에러 등 실제 API 에러 발생 시에만 Alert 표시
   // 친구가 0명인 경우는 정상 응답(빈 배열)이므로 error가 null임
@@ -53,8 +104,35 @@ const FriendsScreen = () => {
   };
 
   const handleCallFriend = (friend: User) => {
-    // TODO: 친구에게 통화 요청
-    console.log('Call friend:', friend.nickname);
+    // Socket 연결 상태 확인
+    if (!socket.isConnected()) {
+      Toast.show({
+        type: 'error',
+        text1: '연결 오류',
+        text2: '서버와 연결되지 않았습니다. 다시 시도해주세요.',
+      });
+      return;
+    }
+
+    // 이미 통화 요청 중인 경우
+    if (callingFriendId) {
+      Toast.show({
+        type: 'info',
+        text1: '통화 요청 중',
+        text2: '이미 통화 요청이 진행 중입니다.',
+      });
+      return;
+    }
+
+    // 로딩 상태 설정 및 통화 요청
+    setCallingFriendId(friend.id);
+    socketService.requestDirectCall(friend.id);
+
+    Toast.show({
+      type: 'info',
+      text1: '통화 요청',
+      text2: `${friend.nickname}님에게 통화를 요청했습니다.`,
+    });
   };
 
   const renderEmpty = () => (
@@ -67,32 +145,45 @@ const FriendsScreen = () => {
     </View>
   );
 
-  const renderFriend = ({ item }: { item: User }) => (
-    <View style={styles.friendCard}>
-      <Avatar
-        source={item.profilePhotos?.[0]}
-        name={item.nickname}
-        size="medium"
-        online={item.onlineStatus === 'ONLINE'}
-      />
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.nickname}</Text>
-        <Text style={styles.friendStatus}>
-          {item.onlineStatus === 'ONLINE' ? '🟢 온라인' : '⚪ 오프라인'}
-        </Text>
+  const renderFriend = ({ item }: { item: User }) => {
+    const isCalling = callingFriendId === item.id;
+    const isDisabled = item.onlineStatus !== 'ONLINE' || isCalling;
+
+    return (
+      <View style={styles.friendCard}>
+        <Avatar
+          source={item.profilePhotos?.[0]}
+          name={item.nickname}
+          size="medium"
+          online={item.onlineStatus === 'ONLINE'}
+        />
+        <View style={styles.friendInfo}>
+          <Text style={styles.friendName}>{item.nickname}</Text>
+          <Text style={styles.friendStatus}>
+            {isCalling
+              ? '📞 통화 요청 중...'
+              : item.onlineStatus === 'ONLINE'
+                ? '🟢 온라인'
+                : '⚪ 오프라인'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => handleCallFriend(item)}
+          disabled={isDisabled}
+          style={[
+            styles.callButtonContainer,
+            isDisabled && styles.callButtonDisabled,
+          ]}
+        >
+          {isCalling ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={styles.callButton}>📞</Text>
+          )}
+        </TouchableOpacity>
       </View>
-      <TouchableOpacity
-        onPress={() => handleCallFriend(item)}
-        disabled={item.onlineStatus !== 'ONLINE'}
-        style={[
-          styles.callButtonContainer,
-          item.onlineStatus !== 'ONLINE' && styles.callButtonDisabled,
-        ]}
-      >
-        <Text style={styles.callButton}>📞</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.container}>

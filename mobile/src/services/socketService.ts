@@ -251,10 +251,11 @@ export const cancelMatch = (): void => {
 };
 
 /**
- * 친구에게 통화 요청
+ * 친구에게 직접 통화 요청
+ * 백엔드 match:request 이벤트의 DIRECT 타입 사용
  */
-export const requestCall = (friendId: string): void => {
-  emit('call:request', { receiverId: friendId });
+export const requestDirectCall = (targetUserId: string): void => {
+  emit('match:request', { type: 'DIRECT', targetUserId });
 };
 
 /**
