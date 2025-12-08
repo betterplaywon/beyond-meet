@@ -258,8 +258,8 @@ model InviteCodeUsage {
 
 model Report {
   id              String       @id @default(uuid())
-  reporterId      String       @map("reporter_id")
-  reportedUserId  String       @map("reported_user_id")
+  reporterId      String?      @map("reporter_id")
+  reportedUserId  String?      @map("reported_user_id")
   sessionId       String?      @map("session_id")
   reason          ReportReason
   description     String?      @db.VarChar(500)
@@ -270,9 +270,9 @@ model Report {
   resolvedAt      DateTime?    @map("resolved_at")
   resolvedBy      String?      @map("resolved_by")
 
-  // Relations
-  reporter        User         @relation("ReporterReports", fields: [reporterId], references: [id])
-  reportedUser    User         @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
+  // Relations (nullable for user deletion anonymization)
+  reporter        User?        @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: SetNull)
+  reportedUser    User?        @relation("ReportedUserReports", fields: [reportedUserId], references: [id], onDelete: SetNull)
   session         MatchSession? @relation(fields: [sessionId], references: [id])
 
   // Performance: 관리자 리포트 조회 최적화
