@@ -49,4 +49,29 @@ export const authApi = {
   logout: async (): Promise<void> => {
     await apiClient.post('/auth/logout');
   },
+
+  /**
+   * 비밀번호 변경
+   */
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ message: string }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+      '/auth/change-password',
+      { currentPassword, newPassword }
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * 회원 탈퇴
+   */
+  deleteAccount: async (password: string): Promise<{ message: string }> => {
+    const response = await apiClient.delete<ApiResponse<{ message: string }>>(
+      '/auth/account',
+      { data: { password } }
+    );
+    return response.data.data!;
+  },
 };
