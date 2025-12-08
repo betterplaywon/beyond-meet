@@ -1,8 +1,13 @@
 /**
  * 인증 서비스 (함수형)
+ *
+ * 보안 수정 내역:
+ * - Race Condition 수정: 초대 코드 검증을 트랜잭션 내부로 이동
+ * - Serializable isolation level 사용으로 동시성 문제 방지
  */
 
 import prisma from '../config/database';
+import { Prisma } from '@prisma/client';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { AppError } from '../middlewares/errorHandler';
@@ -44,103 +49,114 @@ export interface LoginInput {
 }
 
 /**
- * 초대 코드 검증
- */
-const validateInviteCode = async (code: string) => {
-  const inviteCode = await prisma.inviteCode.findUnique({
-    where: { code },
-  });
-
-  if (!inviteCode) {
-    throw new AppError(400, 'INVALID_INVITE_CODE', '유효하지 않은 초대 코드입니다');
-  }
-
-  if (!inviteCode.isActive) {
-    throw new AppError(400, 'INVITE_CODE_INACTIVE', '비활성화된 초대 코드입니다');
-  }
-
-  if (inviteCode.expiresAt && inviteCode.expiresAt < new Date()) {
-    throw new AppError(400, 'INVITE_CODE_EXPIRED', '만료된 초대 코드입니다');
-  }
-
-  if (inviteCode.usedCount >= inviteCode.maxUses) {
-    throw new AppError(400, 'INVITE_CODE_EXHAUSTED', '사용 횟수가 초과된 초대 코드입니다');
-  }
-
-  return inviteCode;
-};
-
-/**
  * 회원가입
+ *
+ * Race Condition 방지:
+ * - 모든 검증 및 생성 로직을 단일 트랜잭션 내에서 수행
+ * - Serializable isolation level로 동시 요청 시 데이터 정합성 보장
  */
 export const register = async (data: RegisterInput): Promise<RegisterOutput> => {
-  const userCount = await prisma.user.count();
-  const betaLimit = parseInt(process.env.BETA_USER_LIMIT || '20', 10);
-
-  if (userCount >= betaLimit) {
-    throw new AppError(403, 'BETA_LIMIT_REACHED', 'Beta 테스트 사용자 수가 가득 찼습니다');
-  }
-
-  const inviteCode = await validateInviteCode(data.inviteCode);
-
-  const existingUser = await prisma.user.findUnique({
-    where: { email: data.email },
-  });
-
-  if (existingUser) {
-    throw new AppError(400, 'EMAIL_EXISTS', '이미 사용 중인 이메일입니다');
-  }
-
+  // 비밀번호는 트랜잭션 전에 해싱 (CPU 바운드 작업)
   const hashedPassword = await hashPassword(data.password);
 
-  const user = await prisma.$transaction(async (tx) => {
-    const newUser = await tx.user.create({
-      data: {
-        email: data.email,
-        passwordHash: hashedPassword,
-        nickname: data.nickname,
-        birthDate: new Date(data.birthDate),
-        gender: data.gender,
-        country: data.country,
-        bio: data.bio || null,
-        interests: data.interests || [],
-        profilePhotos: [],
-        // 매칭 필터 기본값 설정 (더 많은 매칭 기회 제공)
-        preferredGender: data.preferredGender || 'ANYONE', // 기본: 모든 성별 매칭 가능
-        minAge: data.minAge || 18,
-        maxAge: data.maxAge || 99,
-        preferredCountries: data.preferredCountries || [], // 빈 배열 = 모든 국가 매칭 가능
-        onlineStatus: 'OFFLINE',
-      },
-      select: {
-        id: true,
-        email: true,
-        nickname: true,
-        birthDate: true,
-        gender: true,
-        country: true,
-        bio: true,
-        interests: true,
-        role: true,
-      },
-    });
+  const user = await prisma.$transaction(
+    async (tx) => {
+      // 1. Beta 사용자 수 제한 확인 (트랜잭션 내부에서 검증)
+      const userCount = await tx.user.count();
+      const betaLimit = parseInt(process.env.BETA_USER_LIMIT || '20', 10);
 
-    await tx.inviteCodeUsage.create({
-      data: {
-        inviteCodeId: inviteCode.id,
-        userId: newUser.id,
-      },
-    });
+      if (userCount >= betaLimit) {
+        throw new AppError(403, 'BETA_LIMIT_REACHED', 'Beta 테스트 사용자 수가 가득 찼습니다');
+      }
 
-    await tx.inviteCode.update({
-      where: { id: inviteCode.id },
-      data: {
-        usedCount: { increment: 1 },
-      },
-    });
+      // 2. 초대 코드 검증 (트랜잭션 내부 - Race Condition 방지)
+      const inviteCode = await tx.inviteCode.findUnique({
+        where: { code: data.inviteCode },
+      });
 
-    return newUser;
-  });
+      if (!inviteCode) {
+        throw new AppError(400, 'INVALID_INVITE_CODE', '유효하지 않은 초대 코드입니다');
+      }
+
+      if (!inviteCode.isActive) {
+        throw new AppError(400, 'INVITE_CODE_INACTIVE', '비활성화된 초대 코드입니다');
+      }
+
+      if (inviteCode.expiresAt && inviteCode.expiresAt < new Date()) {
+        throw new AppError(400, 'INVITE_CODE_EXPIRED', '만료된 초대 코드입니다');
+      }
+
+      // Critical: usedCount 검증이 트랜잭션 내부에 있어야 race condition 방지
+      if (inviteCode.usedCount >= inviteCode.maxUses) {
+        throw new AppError(400, 'INVITE_CODE_EXHAUSTED', '사용 횟수가 초과된 초대 코드입니다');
+      }
+
+      // 3. 이메일 중복 확인 (트랜잭션 내부)
+      const existingUser = await tx.user.findUnique({
+        where: { email: data.email },
+      });
+
+      if (existingUser) {
+        throw new AppError(400, 'EMAIL_EXISTS', '이미 사용 중인 이메일입니다');
+      }
+
+      // 4. 사용자 생성
+      const newUser = await tx.user.create({
+        data: {
+          email: data.email,
+          passwordHash: hashedPassword,
+          nickname: data.nickname,
+          birthDate: new Date(data.birthDate),
+          gender: data.gender,
+          country: data.country,
+          bio: data.bio || null,
+          interests: data.interests || [],
+          profilePhotos: [],
+          preferredGender: data.preferredGender || 'ANYONE',
+          minAge: data.minAge || 18,
+          maxAge: data.maxAge || 99,
+          preferredCountries: data.preferredCountries || [],
+          onlineStatus: 'OFFLINE',
+        },
+        select: {
+          id: true,
+          email: true,
+          nickname: true,
+          birthDate: true,
+          gender: true,
+          country: true,
+          bio: true,
+          interests: true,
+          role: true,
+        },
+      });
+
+      // 5. 초대 코드 사용 기록
+      await tx.inviteCodeUsage.create({
+        data: {
+          inviteCodeId: inviteCode.id,
+          userId: newUser.id,
+        },
+      });
+
+      // 6. 초대 코드 사용 횟수 증가
+      await tx.inviteCode.update({
+        where: { id: inviteCode.id },
+        data: {
+          usedCount: { increment: 1 },
+        },
+      });
+
+      return newUser;
+    },
+    {
+      // Serializable: 가장 높은 격리 수준으로 race condition 완전 방지
+      // 동시 요청 시 하나만 성공하고 나머지는 재시도 또는 실패
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      // 타임아웃 설정 (5초)
+      timeout: 5000,
+    }
+  );
 
   const accessToken = generateAccessToken({
     id: user.id,

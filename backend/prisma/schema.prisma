@@ -53,6 +53,9 @@ model User {
   reportsAsSender  Report[]       @relation("ReporterReports")
   reportsAsReceiver Report[]      @relation("ReportedUserReports")
 
+  // Performance: 매칭 쿼리 최적화
+  @@index([onlineStatus, gender, country])
+  @@index([lastActive(sort: Desc)])
   @@map("users")
 }
 
@@ -95,6 +98,8 @@ model MatchSession {
   moderationLogs  ContentModerationLog[]
   reports         Report[]
 
+  // Performance: 세션 조회 최적화
+  @@index([status, createdAt(sort: Desc)])
   @@map("match_sessions")
 }
 
@@ -129,6 +134,9 @@ model CallRecord {
   caller          User      @relation("CallerCalls", fields: [callerId], references: [id])
   receiver        User      @relation("ReceiverCalls", fields: [receiverId], references: [id])
 
+  // Performance: 통화 기록 조회 최적화
+  @@index([callerId, createdAt(sort: Desc)])
+  @@index([receiverId, createdAt(sort: Desc)])
   @@map("call_records")
 }
 
@@ -182,6 +190,8 @@ model Friendship {
   friend          User      @relation("FriendOf", fields: [friendId], references: [id])
 
   @@unique([userId, friendId])
+  // Performance: 친구 목록 조회 최적화
+  @@index([userId, createdAt(sort: Desc)])
   @@map("friendships")
 }
 
@@ -265,6 +275,8 @@ model Report {
   reportedUser    User         @relation("ReportedUserReports", fields: [reportedUserId], references: [id])
   session         MatchSession? @relation(fields: [sessionId], references: [id])
 
+  // Performance: 관리자 리포트 조회 최적화
+  @@index([status, createdAt(sort: Desc)])
   @@map("reports")
 }
 

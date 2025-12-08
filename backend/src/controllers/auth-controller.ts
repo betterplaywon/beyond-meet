@@ -6,6 +6,12 @@ import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/auth-service';
 import { verifyRefreshToken } from '../utils/jwt';
 import { AppError } from '../middlewares/errorHandler';
+import {
+  registerSchema,
+  loginSchema,
+  resetPasswordSchema,
+  formatZodError,
+} from '../utils/validation';
 
 /**
  * 회원가입
@@ -13,48 +19,28 @@ import { AppError } from '../middlewares/errorHandler';
  */
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const {
-      inviteCode,
-      email,
-      password,
-      nickname,
-      birthDate,
-      gender,
-      country,
-      bio,
-      interests,
-      preferredGender,
-      minAge,
-      maxAge,
-      preferredCountries,
-    } = req.body;
-
-    if (!inviteCode || !email || !password || !nickname || !birthDate || !gender || !country) {
-      throw new AppError(400, 'MISSING_FIELDS', '필수 필드가 누락되었습니다');
+    // Zod 스키마로 입력 검증
+    const parseResult = registerSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      throw new AppError(400, 'VALIDATION_ERROR', formatZodError(parseResult.error));
     }
 
-    if (!preferredGender || minAge === undefined || maxAge === undefined) {
-      throw new AppError(400, 'MISSING_FILTER_FIELDS', '매칭 필터 필드가 누락되었습니다');
-    }
-
-    if (minAge < 18 || maxAge > 100 || minAge > maxAge) {
-      throw new AppError(400, 'INVALID_AGE_RANGE', '유효하지 않은 나이 범위입니다');
-    }
+    const validatedData = parseResult.data;
 
     const result = await authService.register({
-      inviteCode,
-      email,
-      password,
-      nickname,
-      birthDate,
-      gender,
-      country,
-      bio,
-      interests,
-      preferredGender,
-      minAge,
-      maxAge,
-      preferredCountries,
+      inviteCode: validatedData.inviteCode,
+      email: validatedData.email,
+      password: validatedData.password,
+      nickname: validatedData.nickname,
+      birthDate: validatedData.birthDate,
+      gender: validatedData.gender,
+      country: validatedData.country,
+      bio: validatedData.bio,
+      interests: validatedData.interests,
+      preferredGender: validatedData.preferredGender,
+      minAge: validatedData.minAge,
+      maxAge: validatedData.maxAge,
+      preferredCountries: validatedData.preferredCountries,
     });
 
     res.status(201).json({
@@ -72,11 +58,13 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      throw new AppError(400, 'MISSING_FIELDS', '이메일과 비밀번호를 입력해주세요');
+    // Zod 스키마로 입력 검증
+    const parseResult = loginSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      throw new AppError(400, 'VALIDATION_ERROR', formatZodError(parseResult.error));
     }
+
+    const { email, password } = parseResult.data;
 
     const result = await authService.login({
       email,
@@ -203,15 +191,13 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
  */
 export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, newPassword } = req.body;
-
-    if (!email || !newPassword) {
-      throw new AppError(400, 'MISSING_FIELDS', '이메일과 새 비밀번호를 입력해주세요');
+    // Zod 스키마로 입력 검증 (비밀번호 강도 포함)
+    const parseResult = resetPasswordSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      throw new AppError(400, 'VALIDATION_ERROR', formatZodError(parseResult.error));
     }
 
-    if (newPassword.length < 8) {
-      throw new AppError(400, 'WEAK_PASSWORD', '비밀번호는 최소 8자 이상이어야 합니다');
-    }
+    const { email, newPassword } = parseResult.data;
 
     await authService.resetPassword(email, newPassword);
 
