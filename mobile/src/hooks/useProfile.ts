@@ -4,8 +4,10 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as userApi from '../services/userApi';
+import { authApi } from '../api/auth.api';
 import { queryKeys } from '../constants/queryKeys';
-import { showErrorAlert } from '../utils/errorHandler';
+import { useAuthStore } from '../store/authStore';
+import * as socketService from '../services/socketService';
 
 /**
  * 프로필 업데이트 데이터 타입
@@ -69,22 +71,11 @@ export const useUploadProfilePhoto = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      userId,
-      photo,
-    }: {
-      userId: string;
-      photo: { uri: string; type: string; name: string };
-    }) => userApi.uploadProfilePhoto(userId, photo),
-    onSuccess: (_, variables) => {
+    mutationFn: (photo: { uri: string; type: string; name: string }) =>
+      userApi.uploadProfilePhoto(photo),
+    onSuccess: () => {
       // 서버에서 최신 프로필 데이터를 다시 가져옴
       queryClient.invalidateQueries({ queryKey: profileKeys.me() });
-      queryClient.invalidateQueries({
-        queryKey: profileKeys.detail(variables.userId),
-      });
-    },
-    onError: (error) => {
-      showErrorAlert(error, '사진 업로드 실패');
     },
   });
 };
@@ -96,17 +87,10 @@ export const useDeleteProfilePhoto = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, photoId }: { userId: string; photoId: string }) =>
-      userApi.deleteProfilePhoto(userId, photoId),
-    onSuccess: (_, variables) => {
+    mutationFn: (photoUrl: string) => userApi.deleteProfilePhoto(photoUrl),
+    onSuccess: () => {
       // 프로필 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: profileKeys.me() });
-      queryClient.invalidateQueries({
-        queryKey: profileKeys.detail(variables.userId),
-      });
-    },
-    onError: (error) => {
-      showErrorAlert(error, '사진 삭제 실패');
     },
   });
 };
@@ -137,6 +121,28 @@ export const useUpdateSettings = () => {
       queryClient.invalidateQueries({
         queryKey: profileKeys.detail(variables.userId),
       });
+    },
+  });
+};
+
+/**
+ * 회원 탈퇴 Mutation Hook
+ */
+export const useDeleteAccount = () => {
+  const queryClient = useQueryClient();
+  const logout = useAuthStore(state => state.logout);
+
+  return useMutation({
+    mutationFn: (password: string) => authApi.deleteAccount(password),
+    onSuccess: () => {
+      // 소켓 연결 해제
+      socketService.disconnect();
+
+      // 모든 쿼리 캐시 초기화
+      queryClient.clear();
+
+      // 로그아웃 처리 (AsyncStorage 정리, 인증 상태 초기화)
+      logout();
     },
   });
 };
