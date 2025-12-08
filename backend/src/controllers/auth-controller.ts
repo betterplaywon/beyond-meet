@@ -209,3 +209,68 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+/**
+ * 비밀번호 변경 (로그인된 사용자)
+ * POST /api/auth/change-password
+ */
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw new AppError(400, 'MISSING_FIELDS', '현재 비밀번호와 새 비밀번호를 모두 입력해주세요');
+    }
+
+    // 비밀번호 최소 길이 검증
+    if (newPassword.length < 8) {
+      throw new AppError(400, 'WEAK_PASSWORD', '비밀번호는 최소 8자 이상이어야 합니다');
+    }
+
+    await authService.changePassword(userId, currentPassword, newPassword);
+
+    res.status(200).json({
+      success: true,
+      message: '비밀번호가 성공적으로 변경되었습니다.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 회원 탈퇴
+ * DELETE /api/auth/account
+ */
+export const deleteAccount = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+    }
+
+    const { password } = req.body;
+
+    if (!password) {
+      throw new AppError(400, 'MISSING_PASSWORD', '비밀번호를 입력해주세요');
+    }
+
+    await authService.deleteAccount(userId, password);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: '회원 탈퇴가 완료되었습니다.',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
