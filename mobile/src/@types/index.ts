@@ -134,6 +134,8 @@ export type RootStackParamList = {
   CallHistory: undefined;
   ProfileEdit: undefined;
   Settings: undefined;
+  LegalContent: { type: 'privacy' | 'terms'; title: string };
+  ChangePassword: undefined;
 };
 
 export type AuthStackParamList = {
