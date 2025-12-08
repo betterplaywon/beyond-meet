@@ -81,7 +81,8 @@ export const createBucket = async (): Promise<void> => {
     }
   );
 
-  if (error && error.message !== 'Bucket already exists') {
+  // 버킷이 이미 존재하는 경우는 정상 처리
+  if (error && !error.message.toLowerCase().includes('already exists')) {
     throw new Error(`Failed to create bucket: ${error.message}`);
   }
 };

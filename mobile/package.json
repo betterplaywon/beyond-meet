@@ -28,6 +28,7 @@
     "react-native-config": "^1.6.0",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.29.1",
+    "react-native-image-picker": "^8.2.1",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.18.0",
     "react-native-toast-message": "^2.3.3",

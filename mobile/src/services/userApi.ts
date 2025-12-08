@@ -48,16 +48,13 @@ export const updateProfile = async (
 
 /**
  * 프로필 사진 업로드
- * POST /api/users/:id/photos
+ * POST /api/users/me/photos
  */
-export const uploadProfilePhoto = async (
-  userId: string,
-  photo: {
-    uri: string;
-    type: string;
-    name: string;
-  }
-): Promise<{
+export const uploadProfilePhoto = async (photo: {
+  uri: string;
+  type: string;
+  name: string;
+}): Promise<{
   photoUrl: string;
   profilePhotos: string[];
 }> => {
@@ -71,7 +68,7 @@ export const uploadProfilePhoto = async (
   const response = await api.post<ApiResponse<{
     photoUrl: string;
     profilePhotos: string[];
-  }>>(`/users/${userId}/photos`, formData, {
+  }>>('/users/me/photos', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -82,13 +79,10 @@ export const uploadProfilePhoto = async (
 
 /**
  * 프로필 사진 삭제
- * DELETE /api/users/:id/photos/:photoId
+ * DELETE /api/users/me/photos/:photoUrl
  */
-export const deleteProfilePhoto = async (
-  userId: string,
-  photoId: string
-): Promise<void> => {
-  await api.delete(`/users/${userId}/photos/${photoId}`);
+export const deleteProfilePhoto = async (photoUrl: string): Promise<void> => {
+  await api.delete(`/users/me/photos/${encodeURIComponent(photoUrl)}`);
 };
 
 /**

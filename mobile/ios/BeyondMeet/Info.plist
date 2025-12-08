@@ -59,6 +59,8 @@
 	<string>BeyondMeet needs camera access for video calls</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>BeyondMeet needs microphone access for video calls</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BeyondMeet needs photo library access to upload profile photos</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
