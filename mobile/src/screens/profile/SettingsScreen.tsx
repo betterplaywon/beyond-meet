@@ -3,7 +3,7 @@
  * UI_FLOW.md 3.10 참고
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,14 @@ import {
   Alert,
   Platform,
   ActionSheetIOS,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
 import { useAuthStore } from '../../store/authStore';
-import { useMyProfile, useUpdateSettings } from '../../hooks/useProfile';
+import { useMyProfile, useUpdateSettings, useDeleteAccount } from '../../hooks/useProfile';
 import { parseApiError } from '../../services/api';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -37,7 +39,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const logout = useAuthStore(state => state.logout);
 
   // React Query mutation hook
-  const { mutate: updateSettings } = useUpdateSettings();
+  const { mutate: updateSettings, isPending: isUpdating } = useUpdateSettings();
 
   // 서버 상태를 source of truth로 사용
   const pushEnabled = user?.pushEnabled ?? true;
@@ -45,9 +47,20 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const genderFilter = user?.preferredGender || 'ANYONE';
   const ageRange = { min: user?.minAge || 20, max: user?.maxAge || 30 };
 
+  // 나이 범위 모달 상태
+  const [showAgeModal, setShowAgeModal] = useState(false);
+  const [tempMinAge, setTempMinAge] = useState(String(ageRange.min));
+  const [tempMaxAge, setTempMaxAge] = useState(String(ageRange.max));
+
+  // 회원 탈퇴 모달 상태
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+
+  // 회원 탈퇴 mutation
+  const { mutate: deleteAccount, isPending: isDeleting } = useDeleteAccount();
+
   const handleChangePassword = () => {
-    // TODO: 비밀번호 변경 화면으로 이동
-    Alert.alert('준비 중', '비밀번호 변경 기능은 추후 구현 예정입니다.');
+    navigation.navigate('ChangePassword');
   };
 
   const handleEditGenderFilter = () => {
@@ -109,8 +122,53 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleEditAgeRange = () => {
-    // TODO: 나이 범위 선택 모달 구현
-    Alert.alert('준비 중', '나이 범위 설정 기능은 추후 구현 예정입니다.');
+    // 모달 열기 전 현재 값으로 초기화
+    setTempMinAge(String(ageRange.min));
+    setTempMaxAge(String(ageRange.max));
+    setShowAgeModal(true);
+  };
+
+  const handleSaveAgeRange = () => {
+    const minAge = parseInt(tempMinAge, 10);
+    const maxAge = parseInt(tempMaxAge, 10);
+
+    // 유효성 검사
+    if (isNaN(minAge) || isNaN(maxAge)) {
+      Alert.alert('오류', '유효한 숫자를 입력해주세요.');
+      return;
+    }
+
+    if (minAge < 18 || maxAge > 100) {
+      Alert.alert('오류', '나이는 18세 이상 100세 이하로 설정해주세요.');
+      return;
+    }
+
+    if (minAge > maxAge) {
+      Alert.alert('오류', '최소 나이는 최대 나이보다 작아야 합니다.');
+      return;
+    }
+
+    if (!user?.id) return;
+
+    updateSettings(
+      {
+        userId: user.id,
+        settings: {
+          minAge,
+          maxAge,
+        },
+      },
+      {
+        onSuccess: () => {
+          setShowAgeModal(false);
+          Alert.alert('성공', '나이 범위가 업데이트되었습니다.');
+        },
+        onError: err => {
+          console.error('Failed to update age range:', err);
+          Alert.alert('오류', parseApiError(err));
+        },
+      },
+    );
   };
 
   const handleBlockList = () => {
@@ -119,13 +177,17 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handlePrivacyPolicy = () => {
-    // TODO: 개인정보 처리방침 웹뷰로 이동
-    Alert.alert('준비 중', '개인정보 처리방침은 추후 추가 예정입니다.');
+    navigation.navigate('LegalContent', {
+      type: 'privacy',
+      title: '개인정보처리방침',
+    });
   };
 
   const handleTermsOfService = () => {
-    // TODO: 이용약관 웹뷰로 이동
-    Alert.alert('준비 중', '이용약관은 추후 추가 예정입니다.');
+    navigation.navigate('LegalContent', {
+      type: 'terms',
+      title: '이용약관',
+    });
   };
 
   const handleLogout = () => {
@@ -136,10 +198,6 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         style: 'destructive',
         onPress: () => {
           logout();
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Auth' }],
-          });
         },
       },
     ]);
@@ -155,12 +213,30 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           text: '탈퇴',
           style: 'destructive',
           onPress: () => {
-            // TODO: 회원 탈퇴 API 호출
-            Alert.alert('준비 중', '회원 탈퇴 기능은 추후 구현 예정입니다.');
+            setShowDeleteModal(true);
           },
         },
       ],
     );
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletePassword) {
+      Alert.alert('오류', '비밀번호를 입력해주세요.');
+      return;
+    }
+
+    deleteAccount(deletePassword, {
+      onSuccess: () => {
+        setShowDeleteModal(false);
+        setDeletePassword('');
+        // logout이 mutation.onSuccess에서 호출되어 자동으로 로그인 화면으로 이동
+      },
+      onError: err => {
+        console.error('Failed to delete account:', err);
+        Alert.alert('오류', parseApiError(err));
+      },
+    });
   };
 
   const getGenderFilterText = () => {
@@ -178,6 +254,128 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* 나이 범위 설정 모달 */}
+      <Modal
+        visible={showAgeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAgeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>나이 범위 설정</Text>
+            <Text style={styles.modalSubtitle}>
+              매칭하고 싶은 나이 범위를 설정하세요 (18-100세)
+            </Text>
+
+            <View style={styles.ageInputContainer}>
+              <View style={styles.ageInputWrapper}>
+                <Text style={styles.ageInputLabel}>최소 나이</Text>
+                <TextInput
+                  style={styles.ageInput}
+                  value={tempMinAge}
+                  onChangeText={setTempMinAge}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  placeholder="18"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              <Text style={styles.ageSeparator}>~</Text>
+
+              <View style={styles.ageInputWrapper}>
+                <Text style={styles.ageInputLabel}>최대 나이</Text>
+                <TextInput
+                  style={styles.ageInput}
+                  value={tempMaxAge}
+                  onChangeText={setTempMaxAge}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  placeholder="100"
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowAgeModal(false)}
+              >
+                <Text style={styles.modalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmButton,
+                  isUpdating && styles.modalButtonDisabled,
+                ]}
+                onPress={handleSaveAgeRange}
+                disabled={isUpdating}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {isUpdating ? '저장 중...' : '저장'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 회원 탈퇴 비밀번호 확인 모달 */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDeleteModal(false);
+          setDeletePassword('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>비밀번호 확인</Text>
+            <Text style={styles.modalSubtitle}>
+              회원 탈퇴를 진행하려면 비밀번호를 입력해주세요
+            </Text>
+
+            <TextInput
+              style={styles.passwordInput}
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              placeholder="비밀번호"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalDeleteButton,
+                  isDeleting && styles.modalButtonDisabled,
+                ]}
+                onPress={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                <Text style={styles.modalDeleteText}>
+                  {isDeleting ? '처리 중...' : '탈퇴'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -429,6 +627,116 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     height: spacing.xl,
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: spacing.xl,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  modalSubtitle: {
+    ...typography.body2,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  ageInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xl,
+  },
+  ageInputWrapper: {
+    alignItems: 'center',
+  },
+  ageInputLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  ageInput: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    textAlign: 'center',
+    minWidth: 80,
+  },
+  ageSeparator: {
+    ...typography.h3,
+    color: colors.textSecondary,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    ...typography.body1,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  modalConfirmButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    ...typography.body1,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  modalButtonDisabled: {
+    opacity: 0.6,
+  },
+  // 회원 탈퇴 모달 스타일
+  passwordInput: {
+    ...typography.body1,
+    color: colors.textPrimary,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  modalDeleteButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+  },
+  modalDeleteText: {
+    ...typography.body1,
+    fontWeight: '600',
+    color: colors.white,
   },
 });
 

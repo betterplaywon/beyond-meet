@@ -58,4 +58,18 @@ router.post('/forgot-password', passwordResetLimiter, authController.forgotPassw
  */
 router.post('/reset-password', passwordResetLimiter, authController.resetPassword);
 
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    비밀번호 변경 (로그인된 사용자)
+ * @access  Private
+ */
+router.post('/change-password', authenticate, authController.changePassword);
+
+/**
+ * @route   DELETE /api/auth/account
+ * @desc    회원 탈퇴
+ * @access  Private
+ */
+router.delete('/account', authenticate, authLimiter, authController.deleteAccount);
+
 export default router;

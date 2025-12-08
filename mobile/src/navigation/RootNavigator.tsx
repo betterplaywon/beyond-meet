@@ -22,6 +22,8 @@ import CallEndScreen from '../screens/call/CallEndScreen';
 import CallHistoryScreen from '../screens/call/CallHistoryScreen';
 import ProfileEditScreen from '../screens/profile/ProfileEditScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
+import LegalContentScreen from '../screens/profile/LegalContentScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -63,6 +65,8 @@ const AppContent: React.FC = () => {
           <Stack.Screen name="CallHistory" component={CallHistoryScreen} />
           <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="LegalContent" component={LegalContentScreen} />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         </>
       )}
     </Stack.Navigator>

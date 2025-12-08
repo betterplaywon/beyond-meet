@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { AppError } from '../middlewares/errorHandler';
+import { deleteMultipleProfilePhotos } from './storage-service';
 
 export interface RegisterInput {
   inviteCode: string;
@@ -339,6 +340,52 @@ export const resetPassword = async (email: string, newPassword: string): Promise
 };
 
 /**
+ * 비밀번호 변경 (로그인된 사용자)
+ */
+export const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+  }
+
+  // 현재 비밀번호 확인
+  const isValidPassword = await comparePassword(currentPassword, user.passwordHash);
+
+  if (!isValidPassword) {
+    throw new AppError(400, 'INVALID_CURRENT_PASSWORD', '현재 비밀번호가 올바르지 않습니다');
+  }
+
+  // 새 비밀번호가 현재 비밀번호와 같은지 확인
+  const isSamePassword = await comparePassword(newPassword, user.passwordHash);
+
+  if (isSamePassword) {
+    throw new AppError(400, 'SAME_PASSWORD', '새 비밀번호는 현재 비밀번호와 달라야 합니다');
+  }
+
+  // 새 비밀번호 해싱
+  const hashedPassword = await hashPassword(newPassword);
+
+  // 비밀번호 업데이트
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash: hashedPassword,
+    },
+  });
+};
+
+/**
  * 현재 사용자 정보 조회
  */
 export const getCurrentUser = async (userId: string) => {
@@ -370,4 +417,143 @@ export const getCurrentUser = async (userId: string) => {
   }
 
   return user;
+};
+
+/**
+ * 회원 탈퇴
+ *
+ * - 비밀번호 확인 후 계정 삭제
+ * - 진행 중인 통화가 있으면 거부
+ * - 관련 데이터를 외래키 의존성 역순으로 삭제
+ * - Report는 익명화 (userId를 null로 설정)
+ * - 프로필 이미지는 트랜잭션 외부에서 삭제 (실패해도 계정 삭제는 완료)
+ */
+export const deleteAccount = async (userId: string, password: string): Promise<void> => {
+  // 1. 사용자 조회 및 비밀번호 확인
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      passwordHash: true,
+      profilePhotos: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+  }
+
+  const isValidPassword = await comparePassword(password, user.passwordHash);
+  if (!isValidPassword) {
+    throw new AppError(400, 'INVALID_PASSWORD', '비밀번호가 올바르지 않습니다');
+  }
+
+  // 2. 진행 중인 통화 확인
+  const activeSession = await prisma.matchSession.findFirst({
+    where: {
+      OR: [{ userId1: userId }, { userId2: userId }],
+      status: { in: ['PENDING', 'ACTIVE'] },
+    },
+  });
+
+  if (activeSession) {
+    throw new AppError(
+      409,
+      'ACTIVE_CALL_IN_PROGRESS',
+      '진행 중인 통화가 있습니다. 통화 종료 후 다시 시도해주세요.'
+    );
+  }
+
+  // 3. 트랜잭션으로 모든 관련 데이터 삭제
+  await prisma.$transaction(
+    async (tx) => {
+      // 3.1 ContentModerationLog 삭제
+      await tx.contentModerationLog.deleteMany({
+        where: { userId },
+      });
+
+      // 3.2 Report 익명화 (reporterId, reportedUserId를 null로 설정)
+      await tx.report.updateMany({
+        where: { reporterId: userId },
+        data: { reporterId: null },
+      });
+      await tx.report.updateMany({
+        where: { reportedUserId: userId },
+        data: { reportedUserId: null },
+      });
+
+      // 3.3 사용자 관련 MatchSession ID 수집
+      const userSessions = await tx.matchSession.findMany({
+        where: {
+          OR: [{ userId1: userId }, { userId2: userId }],
+        },
+        select: { id: true },
+      });
+      const sessionIds = userSessions.map((s) => s.id);
+
+      // 3.4 CallEvent 삭제
+      if (sessionIds.length > 0) {
+        await tx.callEvent.deleteMany({
+          where: { sessionId: { in: sessionIds } },
+        });
+      }
+
+      // 3.5 CallRecord 삭제
+      await tx.callRecord.deleteMany({
+        where: {
+          OR: [{ callerId: userId }, { receiverId: userId }],
+        },
+      });
+
+      // 3.6 MatchSession 삭제
+      await tx.matchSession.deleteMany({
+        where: {
+          OR: [{ userId1: userId }, { userId2: userId }],
+        },
+      });
+
+      // 3.7 Friendship 삭제 (양방향)
+      await tx.friendship.deleteMany({
+        where: {
+          OR: [{ userId }, { friendId: userId }],
+        },
+      });
+
+      // 3.8 BlockList 삭제 (양방향)
+      await tx.blockList.deleteMany({
+        where: {
+          OR: [{ userId }, { blockedUserId: userId }],
+        },
+      });
+
+      // 3.9 DeviceToken 삭제
+      await tx.deviceToken.deleteMany({
+        where: { userId },
+      });
+
+      // 3.10 User 삭제
+      await tx.user.delete({
+        where: { id: userId },
+      });
+    },
+    {
+      timeout: 30000, // 30초 타임아웃
+    }
+  );
+
+  // 4. Storage에서 프로필 사진 삭제 (트랜잭션 외부 - 실패해도 계정 삭제는 완료)
+  if (user.profilePhotos && user.profilePhotos.length > 0) {
+    try {
+      // URL에서 파일 경로 추출 (형식: userId/timestamp_filename.jpg)
+      const filePaths = user.profilePhotos.map((url) => {
+        const urlParts = url.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        return `${userId}/${filename}`;
+      });
+      await deleteMultipleProfilePhotos(filePaths);
+    } catch (error) {
+      // Storage 삭제 실패는 로그만 남기고 진행
+      console.error('[DELETE_ACCOUNT] Failed to delete profile photos:', error);
+    }
+  }
 };
