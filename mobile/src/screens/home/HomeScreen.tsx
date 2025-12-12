@@ -26,8 +26,8 @@ const HomeScreen: React.FC = () => {
   const { data: friends = [] } = useFriends(user?.id);
   const socket = useSocket();
 
-  const incomingCall = useCallStore((state) => state.incomingCall);
-  const setIncomingCall = useCallStore((state) => state.setIncomingCall);
+  const incomingCall = useCallStore(state => state.incomingCall);
+  const setIncomingCall = useCallStore(state => state.setIncomingCall);
   const [showIncomingCall, setShowIncomingCall] = useState(false);
 
   // 통화 수신 이벤트
@@ -112,7 +112,7 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.matchIcon}>💕</Text>
           <Text style={styles.matchTitle}>새로운 사람을{'\n'}만나보세요</Text>
           <Text style={styles.matchDescription}>
-            랜덤 매칭을 통해 새로운 친구를 만나보세요
+            랜덤 매칭을 통해 새로운 인연을 찾아보세요
           </Text>
 
           <Button
