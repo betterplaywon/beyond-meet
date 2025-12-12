@@ -392,10 +392,6 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         {/* 계정 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>계정</Text>
-          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <Text style={styles.menuLabel}>계정 정보</Text>
-            <Text style={styles.menuArrow}>›</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={handleChangePassword}
