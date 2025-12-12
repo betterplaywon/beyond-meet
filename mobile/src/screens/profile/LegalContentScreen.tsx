@@ -16,7 +16,10 @@ type LegalContentScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'LegalContent'
 >;
-type LegalContentScreenRouteProp = RouteProp<RootStackParamList, 'LegalContent'>;
+type LegalContentScreenRouteProp = RouteProp<
+  RootStackParamList,
+  'LegalContent'
+>;
 
 interface Props {
   navigation: LegalContentScreenNavigationProp;
@@ -380,7 +383,7 @@ const LegalContentScreen: React.FC<Props> = ({ navigation, route }) => {
           {
             heading: '부칙',
             content:
-              '1. 이 약관은 [시행일 추후 확정]부터 시행됩니다.\n\n' +
+              '1. 이 약관은 2025년 1월 1일부터 시행됩니다.\n\n' +
               '2. 이 약관에 명시되지 않은 사항은 관련 법령 및 상관례에 따릅니다.',
           },
         ],
@@ -408,7 +411,9 @@ const LegalContentScreen: React.FC<Props> = ({ navigation, route }) => {
         {/* Content Sections */}
         {content.sections.map((section, index) => (
           <View key={index} style={styles.section}>
-            {section.heading.startsWith('제') && section.heading.includes('장') && !section.content ? (
+            {section.heading.startsWith('제') &&
+            section.heading.includes('장') &&
+            !section.content ? (
               <Text style={styles.chapterHeading}>{section.heading}</Text>
             ) : (
               <>
@@ -423,12 +428,8 @@ const LegalContentScreen: React.FC<Props> = ({ navigation, route }) => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            최종 수정일: 2025년 1월
-          </Text>
-          <Text style={styles.footerText}>
-            문의: beyondmeet92@gmail.com
-          </Text>
+          <Text style={styles.footerText}>최종 수정일: 2025년 1월</Text>
+          <Text style={styles.footerText}>문의: beyondmeet92@gmail.com</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
