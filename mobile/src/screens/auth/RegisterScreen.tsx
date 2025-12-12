@@ -1,5 +1,6 @@
 /**
- * 회원가입 화면 (완성 버전)
+ * 회원가입 화면
+ * Figma: Simple Login - Sign-up Screen 디자인 적용
  */
 
 import React, { useState } from 'react';
@@ -11,6 +12,8 @@ import {
   Platform,
   ScrollView,
   Alert,
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -19,7 +22,10 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Picker, PickerOption } from '../../components/common/Picker';
 import { useRegister } from '../../hooks/useAuth';
-import { colors, typography, spacing } from '../../styles/theme';
+import { colors, spacing } from '../../styles/theme';
+import Svg, { Path } from 'react-native-svg';
+
+const { width, height } = Dimensions.get('window');
 
 type RegisterScreenNavigationProp = StackNavigationProp<
   AuthStackParamList,
@@ -76,21 +82,18 @@ const DAY_OPTIONS: PickerOption[] = Array.from({ length: 31 }, (_, i) => {
 });
 
 const RegisterScreen: React.FC<Props> = ({ navigation }) => {
-  const [step, setStep] = useState(1); // 1: 기본 정보, 2: 프로필 정보, 3: 매칭 필터
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Step 1: 기본 정보
     inviteCode: '',
     email: '',
     password: '',
     passwordConfirm: '',
-    // Step 2: 프로필 정보
     nickname: '',
     birthYear: '',
     birthMonth: '',
     birthDay: '',
     gender: '' as 'MALE' | 'FEMALE' | 'OTHER' | '',
     country: 'KR',
-    // Step 3: 매칭 필터
     preferredGender: '' as 'MALE' | 'FEMALE' | 'ANYONE' | '',
     minAge: 18,
     maxAge: 40,
@@ -100,7 +103,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleNextStep = () => {
     if (step === 1) {
-      // 기본 정보 검증
       if (!formData.inviteCode.trim()) {
         Alert.alert('오류', '초대 코드를 입력해주세요');
         return;
@@ -119,7 +121,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       }
       setStep(2);
     } else if (step === 2) {
-      // 프로필 정보 검증
       if (!formData.nickname.trim()) {
         Alert.alert('오류', '닉네임을 입력해주세요');
         return;
@@ -134,7 +135,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       }
       setStep(3);
     } else if (step === 3) {
-      // 매칭 필터 검증 및 회원가입
       if (!formData.preferredGender) {
         Alert.alert('오류', '선호 성별을 선택해주세요');
         return;
@@ -161,12 +161,21 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       preferredGender: formData.preferredGender as 'MALE' | 'FEMALE' | 'ANYONE',
       minAge: formData.minAge,
       maxAge: formData.maxAge,
-      preferredCountries: [formData.country], // 기본값: 본인 국가
+      preferredCountries: [formData.country],
     });
   };
 
+  const getStepTitle = () => {
+    switch (step) {
+      case 1: return '계정 만들기';
+      case 2: return '프로필 정보';
+      case 3: return '매칭 설정';
+      default: return 'Sign up';
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -174,18 +183,24 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Button
-              title={step > 1 ? '← 이전' : '← 뒤로'}
-              variant="text"
-              onPress={() => (step > 1 ? setStep(step - 1) : navigation.goBack())}
-            />
+          {/* 상단 곡선 장식 */}
+          <View style={styles.curveContainer}>
+            <Svg
+              width={width}
+              height={height * 0.22}
+              viewBox={`0 0 ${width} ${height * 0.22}`}
+            >
+              <Path
+                d={`M0,0 L${width},0 L${width},${height * 0.14} Q${width * 0.5},${height * 0.26} 0,${height * 0.14} Z`}
+                fill={colors.primary}
+              />
+            </Svg>
           </View>
 
           <View style={styles.content}>
-            {/* Progress Indicator */}
+            {/* 진행 표시 */}
             <View style={styles.progressContainer}>
               <View style={[styles.progressDot, step >= 1 && styles.progressDotActive]} />
               <View style={[styles.progressLine, step >= 2 && styles.progressLineActive]} />
@@ -194,202 +209,173 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.progressDot, step >= 3 && styles.progressDotActive]} />
             </View>
 
+            {/* 타이틀 */}
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>{getStepTitle()}</Text>
+              <View style={styles.titleUnderline} />
+            </View>
+
             {/* Step 1: 기본 정보 */}
             {step === 1 && (
-              <>
-                <Text style={styles.title}>계정 만들기</Text>
-                <Text style={styles.subtitle}>기본 정보를 입력해주세요</Text>
+              <View style={styles.form}>
+                <Input
+                  label="초대 코드"
+                  placeholder="BETA2025-001"
+                  value={formData.inviteCode}
+                  onChangeText={(value) => setFormData({ ...formData, inviteCode: value })}
+                  leftIcon={<Text>🎫</Text>}
+                />
 
-                <View style={styles.form}>
-                  <Input
-                    label="초대 코드"
-                    placeholder="BETA2025-001"
-                    value={formData.inviteCode}
-                    onChangeText={(value) =>
-                      setFormData({ ...formData, inviteCode: value })
-                    }
-                    leftIcon={<Text>🎫</Text>}
-                  />
+                <Input
+                  label="이메일"
+                  placeholder="example@email.com"
+                  value={formData.email}
+                  onChangeText={(value) => setFormData({ ...formData, email: value })}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  leftIcon={<Text>✉️</Text>}
+                />
 
-                  <Input
-                    label="이메일"
-                    placeholder="example@email.com"
-                    value={formData.email}
-                    onChangeText={(value) =>
-                      setFormData({ ...formData, email: value })
-                    }
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    leftIcon={<Text>📧</Text>}
-                  />
+                <Input
+                  label="비밀번호"
+                  placeholder="8자 이상 입력"
+                  value={formData.password}
+                  onChangeText={(value) => setFormData({ ...formData, password: value })}
+                  secureTextEntry
+                  leftIcon={<Text>🔒</Text>}
+                />
 
-                  <Input
-                    label="비밀번호"
-                    placeholder="8자 이상 입력"
-                    value={formData.password}
-                    onChangeText={(value) =>
-                      setFormData({ ...formData, password: value })
-                    }
-                    secureTextEntry
-                    leftIcon={<Text>🔒</Text>}
-                  />
-
-                  <Input
-                    label="비밀번호 확인"
-                    placeholder="비밀번호를 다시 입력"
-                    value={formData.passwordConfirm}
-                    onChangeText={(value) =>
-                      setFormData({ ...formData, passwordConfirm: value })
-                    }
-                    secureTextEntry
-                    leftIcon={<Text>🔒</Text>}
-                  />
-                </View>
-              </>
+                <Input
+                  label="비밀번호 확인"
+                  placeholder="비밀번호를 다시 입력"
+                  value={formData.passwordConfirm}
+                  onChangeText={(value) => setFormData({ ...formData, passwordConfirm: value })}
+                  secureTextEntry
+                  leftIcon={<Text>🔒</Text>}
+                />
+              </View>
             )}
 
             {/* Step 2: 프로필 정보 */}
             {step === 2 && (
-              <>
-                <Text style={styles.title}>프로필 정보</Text>
-                <Text style={styles.subtitle}>당신에 대해 알려주세요</Text>
+              <View style={styles.form}>
+                <Input
+                  label="닉네임"
+                  placeholder="닉네임 (2-10자)"
+                  value={formData.nickname}
+                  onChangeText={(value) => setFormData({ ...formData, nickname: value })}
+                  leftIcon={<Text>👤</Text>}
+                />
 
-                <View style={styles.form}>
-                  <Input
-                    label="닉네임"
-                    placeholder="닉네임 (2-10자)"
-                    value={formData.nickname}
-                    onChangeText={(value) =>
-                      setFormData({ ...formData, nickname: value })
-                    }
-                    leftIcon={<Text>👤</Text>}
-                  />
-
-                  <Text style={styles.sectionLabel}>생년월일</Text>
-                  <View style={styles.dateRow}>
-                    <View style={styles.dateField}>
-                      <Picker
-                        value={formData.birthYear}
-                        options={YEAR_OPTIONS}
-                        onChange={(value) =>
-                          setFormData({ ...formData, birthYear: value })
-                        }
-                        placeholder="년"
-                      />
-                    </View>
-                    <View style={styles.dateField}>
-                      <Picker
-                        value={formData.birthMonth}
-                        options={MONTH_OPTIONS}
-                        onChange={(value) =>
-                          setFormData({ ...formData, birthMonth: value })
-                        }
-                        placeholder="월"
-                      />
-                    </View>
-                    <View style={styles.dateField}>
-                      <Picker
-                        value={formData.birthDay}
-                        options={DAY_OPTIONS}
-                        onChange={(value) =>
-                          setFormData({ ...formData, birthDay: value })
-                        }
-                        placeholder="일"
-                      />
-                    </View>
+                <Text style={styles.sectionLabel}>생년월일</Text>
+                <View style={styles.dateRow}>
+                  <View style={styles.dateField}>
+                    <Picker
+                      value={formData.birthYear}
+                      options={YEAR_OPTIONS}
+                      onChange={(value) => setFormData({ ...formData, birthYear: value })}
+                      placeholder="년"
+                    />
                   </View>
-
-                  <Picker
-                    label="성별"
-                    value={formData.gender}
-                    options={GENDER_OPTIONS}
-                    onChange={(value) =>
-                      setFormData({ ...formData, gender: value as 'MALE' | 'FEMALE' | 'OTHER' })
-                    }
-                    placeholder="성별을 선택하세요"
-                  />
-
-                  <Picker
-                    label="국가"
-                    value={formData.country}
-                    options={COUNTRY_OPTIONS}
-                    onChange={(value) =>
-                      setFormData({ ...formData, country: value })
-                    }
-                    placeholder="국가를 선택하세요"
-                  />
+                  <View style={styles.dateField}>
+                    <Picker
+                      value={formData.birthMonth}
+                      options={MONTH_OPTIONS}
+                      onChange={(value) => setFormData({ ...formData, birthMonth: value })}
+                      placeholder="월"
+                    />
+                  </View>
+                  <View style={styles.dateField}>
+                    <Picker
+                      value={formData.birthDay}
+                      options={DAY_OPTIONS}
+                      onChange={(value) => setFormData({ ...formData, birthDay: value })}
+                      placeholder="일"
+                    />
+                  </View>
                 </View>
-              </>
+
+                <Picker
+                  label="성별"
+                  value={formData.gender}
+                  options={GENDER_OPTIONS}
+                  onChange={(value) => setFormData({ ...formData, gender: value as 'MALE' | 'FEMALE' | 'OTHER' })}
+                  placeholder="성별을 선택하세요"
+                />
+
+                <Picker
+                  label="국가"
+                  value={formData.country}
+                  options={COUNTRY_OPTIONS}
+                  onChange={(value) => setFormData({ ...formData, country: value })}
+                  placeholder="국가를 선택하세요"
+                />
+              </View>
             )}
 
             {/* Step 3: 매칭 필터 */}
             {step === 3 && (
-              <>
-                <Text style={styles.title}>매칭 설정</Text>
-                <Text style={styles.subtitle}>선호하는 상대를 설정하세요</Text>
+              <View style={styles.form}>
+                <Picker
+                  label="선호 성별"
+                  value={formData.preferredGender}
+                  options={PREFERRED_GENDER_OPTIONS}
+                  onChange={(value) => setFormData({ ...formData, preferredGender: value as 'MALE' | 'FEMALE' | 'ANYONE' })}
+                  placeholder="선호 성별을 선택하세요"
+                />
 
-                <View style={styles.form}>
-                  <Picker
-                    label="선호 성별"
-                    value={formData.preferredGender}
-                    options={PREFERRED_GENDER_OPTIONS}
-                    onChange={(value) =>
-                      setFormData({ ...formData, preferredGender: value as 'MALE' | 'FEMALE' | 'ANYONE' })
-                    }
-                    placeholder="선호 성별을 선택하세요"
-                  />
-
-                  <Text style={styles.sectionLabel}>선호 나이 범위</Text>
-                  <View style={styles.ageRow}>
-                    <View style={styles.ageField}>
-                      <Input
-                        label="최소 나이"
-                        placeholder="18"
-                        value={formData.minAge.toString()}
-                        onChangeText={(value) =>
-                          setFormData({ ...formData, minAge: parseInt(value) || 18 })
-                        }
-                        keyboardType="number-pad"
-                      />
-                    </View>
-                    <Text style={styles.ageSeparator}>~</Text>
-                    <View style={styles.ageField}>
-                      <Input
-                        label="최대 나이"
-                        placeholder="40"
-                        value={formData.maxAge.toString()}
-                        onChangeText={(value) =>
-                          setFormData({ ...formData, maxAge: parseInt(value) || 40 })
-                        }
-                        keyboardType="number-pad"
-                      />
-                    </View>
+                <Text style={styles.sectionLabel}>선호 나이 범위</Text>
+                <View style={styles.ageRow}>
+                  <View style={styles.ageField}>
+                    <Input
+                      label="최소"
+                      placeholder="18"
+                      value={formData.minAge.toString()}
+                      onChangeText={(value) => setFormData({ ...formData, minAge: parseInt(value) || 18 })}
+                      keyboardType="number-pad"
+                    />
                   </View>
-
-                  <Text style={styles.infoText}>
-                    💡 나중에 프로필 설정에서 변경할 수 있습니다
-                  </Text>
+                  <Text style={styles.ageSeparator}>~</Text>
+                  <View style={styles.ageField}>
+                    <Input
+                      label="최대"
+                      placeholder="40"
+                      value={formData.maxAge.toString()}
+                      onChangeText={(value) => setFormData({ ...formData, maxAge: parseInt(value) || 40 })}
+                      keyboardType="number-pad"
+                    />
+                  </View>
                 </View>
-              </>
+              </View>
             )}
 
-            <Button
-              title={step === 3 ? '회원가입 완료' : '다음'}
-              variant="primary"
-              fullWidth
-              onPress={handleNextStep}
-              loading={registerMutation.isPending}
-              style={styles.nextButton}
-            />
+            {/* 버튼 영역 */}
+            <View style={styles.buttonContainer}>
+              {step > 1 && (
+                <Button
+                  title="← 이전"
+                  variant="text"
+                  onPress={() => setStep(step - 1)}
+                  style={styles.backButton}
+                />
+              )}
 
+              <Button
+                title={step === 3 ? '회원가입 완료' : '다음'}
+                variant="primary"
+                size="large"
+                fullWidth
+                onPress={handleNextStep}
+                loading={registerMutation.isPending}
+              />
+            </View>
+
+            {/* Login link */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>이미 계정이 있으신가요?</Text>
-              <Button
-                title="로그인"
-                variant="text"
-                size="small"
-                onPress={() => navigation.navigate('Login')}
-              />
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={styles.loginLink}>로그인</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -409,57 +395,67 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+  curveContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: height * 0.18,
   },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   progressDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.textSecondary + '40',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.textTertiary,
   },
   progressDotActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   progressLine: {
-    flex: 1,
+    width: 40,
     height: 2,
-    backgroundColor: colors.textSecondary + '40',
+    backgroundColor: colors.textTertiary,
     marginHorizontal: spacing.xs,
   },
   progressLineActive: {
     backgroundColor: colors.primary,
   },
+  titleContainer: {
+    marginBottom: spacing.lg,
+  },
   title: {
-    ...typography.h1,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    ...typography.body1,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
-  },
-  form: {
-    marginBottom: spacing.xl,
-  },
-  sectionLabel: {
-    ...typography.body2,
+    fontSize: 32,
+    fontWeight: '500',
     color: colors.textPrimary,
     marginBottom: spacing.xs,
+  },
+  titleUnderline: {
+    width: 60,
+    height: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
+  },
+  form: {
+    marginBottom: spacing.md,
+  },
+  sectionLabel: {
+    fontSize: 14,
     fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   dateRow: {
     flexDirection: 'row',
@@ -479,29 +475,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ageSeparator: {
-    ...typography.h3,
+    fontSize: 20,
     color: colors.textSecondary,
     marginTop: spacing.lg,
   },
-  infoText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.md,
-  },
-  nextButton: {
+  buttonContainer: {
     marginBottom: spacing.md,
+  },
+  backButton: {
+    marginBottom: spacing.sm,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    marginTop: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   footerText: {
-    ...typography.body2,
+    fontSize: 14,
     color: colors.textSecondary,
+  },
+  loginLink: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.primary,
   },
 });
 

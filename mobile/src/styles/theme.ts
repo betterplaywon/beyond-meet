@@ -4,21 +4,21 @@
  */
 
 export const colors = {
-  // Primary Colors
-  primary: '#FF6B6B',
-  primaryLight: '#FF9999',
+  // Primary Colors (Figma: Simple Login design)
+  primary: '#FF8383',
+  primaryLight: '#FFCCCC',
   secondary: '#4ECDC4',
   accent: '#FFE66D',
 
-  // Background
-  background: '#F7F7F7',
+  // Background (Figma: 연한 핑크 배경)
+  background: '#FFFCFC',
   surface: '#FFFFFF',
 
-  // Text
-  text: '#2D3436',
-  textPrimary: '#2D3436',
-  textSecondary: '#636E72',
-  textTertiary: '#95A5A6',
+  // Text (Figma: 다크 그레이 계열)
+  text: '#424242',
+  textPrimary: '#424242',
+  textSecondary: '#616161',
+  textTertiary: '#9E9E9E',
 
   // Status
   success: '#00B894',
