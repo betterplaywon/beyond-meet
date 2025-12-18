@@ -12,6 +12,7 @@ import { Button } from '../../components/common/Button';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useLogout } from '../../hooks/useAuth';
 import { colors, typography, spacing, borderRadius } from '../../styles/theme';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
@@ -73,9 +74,9 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('CallHistory')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>📞</Text>
+            <Icon name="phone" size={24} color={colors.textSecondary} style={styles.menuIcon} />
             <Text style={styles.menuLabel}>통화 기록</Text>
-            <Text style={styles.menuArrow}>›</Text>
+            <Icon name="chevron-right" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
@@ -85,9 +86,9 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('Settings')}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>⚙️</Text>
+            <Icon name="settings" size={24} color={colors.textSecondary} style={styles.menuIcon} />
             <Text style={styles.menuLabel}>설정</Text>
-            <Text style={styles.menuArrow}>›</Text>
+            <Icon name="chevron-right" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           <View style={styles.menuDivider} />
@@ -97,9 +98,9 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => {}}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuIcon}>❓</Text>
+            <Icon name="help" size={24} color={colors.textSecondary} style={styles.menuIcon} />
             <Text style={styles.menuLabel}>도움말</Text>
-            <Text style={styles.menuArrow}>›</Text>
+            <Icon name="chevron-right" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
         </View>
 
@@ -195,17 +196,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   menuIcon: {
-    fontSize: 24,
     marginRight: spacing.md,
   },
   menuLabel: {
     ...typography.body1,
     color: colors.textPrimary,
     flex: 1,
-  },
-  menuArrow: {
-    ...typography.h3,
-    color: colors.textSecondary,
   },
   menuDivider: {
     height: 1,

@@ -1,11 +1,13 @@
 /**
  * 메인 탭 네비게이터
+ * Figma: Cupid Arrow - Bottom Navigation 디자인 적용
  */
 
 import React from 'react';
-import { Text } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { MainTabParamList } from '../@types';
 import { colors } from '../styles/theme';
 import { useAuthStore } from '../store/authStore';
@@ -15,6 +17,28 @@ import HomeScreen from '../screens/home/HomeScreen';
 import FriendsScreen from '../screens/friends/FriendsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import AdminNavigator from './AdminNavigator';
+
+// Tab Icon Component
+interface TabIconProps {
+  name: string;
+  color: string;
+  focused: boolean;
+}
+
+const TabIcon = ({ name, color, focused }: TabIconProps) => (
+  <View style={focused ? styles.activeIconContainer : undefined}>
+    <Icon name={name} size={24} color={color} />
+  </View>
+);
+
+const styles = StyleSheet.create({
+  activeIconContainer: {
+    backgroundColor: colors.primary + '15',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+});
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -27,17 +51,26 @@ const MainNavigator: React.FC = () => {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
           backgroundColor: colors.white,
-          borderTopColor: colors.textSecondary + '20',
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
           paddingBottom: Math.max(insets.bottom, 8),
-          paddingTop: 8,
-          height: 60 + insets.bottom,
+          paddingTop: 12,
+          height: 70 + insets.bottom,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: 11,
+          fontWeight: '500',
+          marginTop: 4,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
         },
       }}
     >
@@ -46,7 +79,9 @@ const MainNavigator: React.FC = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: '홈',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>🏠</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="home" color={color} focused={focused} />
+          ),
         }}
       />
       <Tab.Screen
@@ -54,7 +89,9 @@ const MainNavigator: React.FC = () => {
         component={FriendsScreen}
         options={{
           tabBarLabel: '친구',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>👥</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="people" color={color} focused={focused} />
+          ),
         }}
       />
       <Tab.Screen
@@ -62,7 +99,9 @@ const MainNavigator: React.FC = () => {
         component={ProfileScreen}
         options={{
           tabBarLabel: '프로필',
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="person" color={color} focused={focused} />
+          ),
         }}
       />
       {/* 관리자에게만 Admin 탭 표시 */}
@@ -72,7 +111,9 @@ const MainNavigator: React.FC = () => {
           component={AdminNavigator}
           options={{
             tabBarLabel: '관리자',
-            tabBarIcon: () => <Text style={{ fontSize: 24 }}>⚙️</Text>,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name="settings" color={color} focused={focused} />
+            ),
           }}
         />
       )}

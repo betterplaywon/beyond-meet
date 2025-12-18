@@ -5,6 +5,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../styles/theme';
 
@@ -28,7 +29,7 @@ const AdminNavigator: React.FC = () => {
   if (!isAdmin) {
     return (
       <View style={styles.unauthorized}>
-        <Text style={styles.emoji}>🔒</Text>
+        <Icon name="lock" size={64} color={colors.textTertiary} />
         <Text style={styles.title}>접근 권한이 없습니다</Text>
         <Text style={styles.message}>관리자만 접근할 수 있는 페이지입니다</Text>
       </View>
@@ -56,11 +57,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: 24,
   },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
   title: {
+    marginTop: 16,
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.text,

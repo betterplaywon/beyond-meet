@@ -23,6 +23,7 @@ import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import { useCallStore } from '../../store/callStore';
 import * as socketService from '../../services/socketService';
 import { colors, typography, spacing } from '../../styles/theme';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type MatchingScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -150,7 +151,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
         <Animated.View
           style={[styles.iconContainer, { transform: [{ scale: scaleAnim }] }]}
         >
-          <Text style={styles.icon}>💕</Text>
+          <Icon name="favorite" size={100} color={colors.primary} />
         </Animated.View>
 
         <Text style={styles.title}>매칭 중입니다...</Text>
@@ -163,7 +164,15 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
         />
 
         <View style={styles.tipsContainer}>
-          <Text style={styles.tipsTitle}>💡 매칭 팁</Text>
+          <View style={styles.tipsTitleContainer}>
+            <Icon
+              name="lightbulb"
+              size={20}
+              color={colors.primary}
+              style={styles.tipsTitleIcon}
+            />
+            <Text style={styles.tipsTitle}>매칭 팁</Text>
+          </View>
           <Text style={styles.tip}>• 밝은 곳에서 통화하세요</Text>
           <Text style={styles.tip}>• 예의 바른 대화를 나눠요</Text>
           <Text style={styles.tip}>• 5분간 즐거운 대화를!</Text>
@@ -222,9 +231,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: spacing.xl,
   },
-  icon: {
-    fontSize: 100,
-  },
   title: {
     ...typography.h2,
     color: colors.textPrimary,
@@ -251,10 +257,18 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     width: '100%',
   },
+  tipsTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  tipsTitleIcon: {
+    color: colors.primaryLight,
+    marginRight: spacing.xs,
+  },
   tipsTitle: {
     ...typography.h3,
     color: colors.textPrimary,
-    marginBottom: spacing.md,
   },
   tip: {
     ...typography.body2,

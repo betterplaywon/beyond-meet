@@ -26,6 +26,7 @@ import { useFriendStatusSync } from '../../hooks/useFriendStatusSync';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import * as socketService from '../../services/socketService';
 import { colors, typography, spacing } from '../../styles/theme';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -51,22 +52,32 @@ const FriendsScreen = () => {
   useFriendStatusSync(user?.id);
 
   // 통화 요청이 전송됨 (대기 중)
-  useSocketEvent('call:requested', (data: { sessionId: string; receiverId: string }) => {
-    console.log('[FriendsScreen] Call requested:', data);
-    // 요청이 전송되었음을 확인 (이미 로딩 상태)
-  });
+  useSocketEvent(
+    'call:requested',
+    (data: { sessionId: string; receiverId: string }) => {
+      console.log('[FriendsScreen] Call requested:', data);
+      // 요청이 전송되었음을 확인 (이미 로딩 상태)
+    },
+  );
 
   // 통화가 수락됨 - VideoCall 화면으로 이동
-  useSocketEvent('call:accepted', (data: { session: { id: string; channelName: string }; token: string; uid: number }) => {
-    console.log('[FriendsScreen] Call accepted:', data);
-    setCallingFriendId(null);
-    navigation.navigate('VideoCall', {
-      sessionId: data.session.id,
-      channelName: data.session.channelName,
-      token: data.token,
-      uid: data.uid,
-    });
-  });
+  useSocketEvent(
+    'call:accepted',
+    (data: {
+      session: { id: string; channelName: string };
+      token: string;
+      uid: number;
+    }) => {
+      console.log('[FriendsScreen] Call accepted:', data);
+      setCallingFriendId(null);
+      navigation.navigate('VideoCall', {
+        sessionId: data.session.id,
+        channelName: data.session.channelName,
+        token: data.token,
+        uid: data.uid,
+      });
+    },
+  );
 
   // 통화가 거절됨
   useSocketEvent('call:rejected', (data: { sessionId: string }) => {
@@ -137,7 +148,7 @@ const FriendsScreen = () => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>👥</Text>
+      <Icon name="people" size={80} color={colors.textTertiary} />
       <Text style={styles.emptyTitle}>아직 친구가 없어요</Text>
       <Text style={styles.emptyDescription}>
         영상 통화 후 친구를 추가해보세요
@@ -159,13 +170,27 @@ const FriendsScreen = () => {
         />
         <View style={styles.friendInfo}>
           <Text style={styles.friendName}>{item.nickname}</Text>
-          <Text style={styles.friendStatus}>
-            {isCalling
-              ? '📞 통화 요청 중...'
-              : item.onlineStatus === 'ONLINE'
-                ? '🟢 온라인'
-                : '⚪ 오프라인'}
-          </Text>
+          <View style={styles.friendStatusContainer}>
+            <Icon
+              name={isCalling ? 'phone' : 'circle'}
+              size={10}
+              color={
+                isCalling
+                  ? colors.text
+                  : item.onlineStatus === 'ONLINE'
+                  ? colors.online
+                  : colors.textTertiary
+              }
+              style={styles.statusIcon}
+            />
+            <Text style={styles.friendStatus}>
+              {isCalling
+                ? '통화 요청 중...'
+                : item.onlineStatus === 'ONLINE'
+                ? '온라인'
+                : '오프라인'}
+            </Text>
+          </View>
         </View>
         <TouchableOpacity
           onPress={() => handleCallFriend(item)}
@@ -176,9 +201,9 @@ const FriendsScreen = () => {
           ]}
         >
           {isCalling ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={colors.success} />
           ) : (
-            <Text style={styles.callButton}>📞</Text>
+            <Icon name="phone" size={24} color={colors.success} />
           )}
         </TouchableOpacity>
       </View>
@@ -270,15 +295,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.xs,
   },
+  friendStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusIcon: {
+    marginRight: spacing.xs,
+  },
   friendStatus: {
     ...typography.body2,
     color: colors.textSecondary,
   },
   callButtonContainer: {
     padding: spacing.sm,
-  },
-  callButton: {
-    fontSize: 24,
   },
   callButtonDisabled: {
     opacity: 0.3,
@@ -299,10 +328,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 100,
-  },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: spacing.lg,
   },
   emptyTitle: {
     ...typography.h3,

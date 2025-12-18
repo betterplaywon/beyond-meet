@@ -1,14 +1,21 @@
 /**
  * 홈 화면
+ * Figma: Cupid Arrow - Home Screen 디자인 적용
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
-import { Button } from '../../components/common/Button';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { IncomingCallModal } from '../../components/call/IncomingCallModal';
 import { useCallStore } from '../../store/callStore';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
@@ -17,6 +24,8 @@ import { useFriends } from '../../hooks/useFriends';
 import * as socketService from '../../services/socketService';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
+
+const { width, height } = Dimensions.get('window');
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -89,8 +98,23 @@ const HomeScreen: React.FC = () => {
     setIncomingCall(null);
   };
 
+  // 하트 아이콘
+  const HeartIcon = () => (
+    <Icon name="favorite" size={60} color={colors.primary} />
+  );
+
+  // 비디오 아이콘
+  const VideoIcon = () => (
+    <Icon name="videocam" size={24} color={colors.primary} />
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* 하단 blur 배경 효과 */}
+      <View style={styles.blurBackground}>
+        <View style={styles.blurCircle} />
+      </View>
+
       {/* 통화 수신 모달 */}
       <IncomingCallModal
         visible={showIncomingCall}
@@ -100,7 +124,10 @@ const HomeScreen: React.FC = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Beyond Meet</Text>
+        <View style={styles.logoContainer}>
+          <Icon name="favorite" size={32} color={colors.primary} />
+          <Text style={styles.headerTitle}>Beyond Meet</Text>
+        </View>
         <Text style={styles.headerSubtitle}>
           {user?.nickname}님, 환영합니다!
         </Text>
@@ -108,20 +135,24 @@ const HomeScreen: React.FC = () => {
 
       {/* Content */}
       <View style={styles.content}>
-        <View style={styles.matchContainer}>
-          <Text style={styles.matchIcon}>💕</Text>
-          <Text style={styles.matchTitle}>새로운 사람을{'\n'}만나보세요</Text>
+        <View style={styles.matchCard}>
+          <HeartIcon />
+          <Text style={styles.matchTitle}>새로운 인연을{'\n'}만나보세요</Text>
           <Text style={styles.matchDescription}>
-            랜덤 매칭을 통해 새로운 인연을 찾아보세요
+            랜덤 매칭을 통해 새로운 사람과{'\n'}영상 통화를 시작해보세요
           </Text>
 
-          <Button
-            title="랜덤 매칭 시작하기"
-            variant="primary"
-            size="large"
-            onPress={handleRandomMatch}
+          {/* 랜덤 매칭 버튼 (Pill + 아이콘) */}
+          <TouchableOpacity
             style={styles.matchButton}
-          />
+            activeOpacity={0.8}
+            onPress={handleRandomMatch}
+          >
+            <View style={styles.buttonIconCircle}>
+              <VideoIcon />
+            </View>
+            <Text style={styles.matchButtonText}>랜덤 매칭 시작</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -138,7 +169,7 @@ const HomeScreen: React.FC = () => {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>0</Text>
+          <Text style={styles.statValue}>0분</Text>
           <Text style={styles.statLabel}>총 통화 시간</Text>
         </View>
       </View>
@@ -149,71 +180,124 @@ const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
+  },
+  blurBackground: {
+    position: 'absolute',
+    bottom: -height * 0.1,
+    left: -width * 0.15,
+    right: -width * 0.15,
+    height: height * 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blurCircle: {
+    width: width * 1.3,
+    height: width * 1.3,
+    borderRadius: width * 0.65,
+    backgroundColor: colors.primary,
+    opacity: 0.1,
   },
   header: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   headerTitle: {
-    ...typography.h2,
-    color: colors.primary,
-    marginBottom: spacing.xs,
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginLeft: spacing.sm,
   },
   headerSubtitle: {
     ...typography.body1,
     color: colors.textSecondary,
+    marginLeft: 40,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
     justifyContent: 'center',
   },
-  matchContainer: {
+  matchCard: {
     backgroundColor: colors.white,
-    borderRadius: 16,
+    borderRadius: 24,
     padding: spacing.xl,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
     elevation: 4,
   },
-  matchIcon: {
-    fontSize: 80,
-    marginBottom: spacing.lg,
-  },
   matchTitle: {
-    ...typography.h2,
+    fontSize: 24,
+    fontWeight: '600',
     color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    lineHeight: 32,
   },
   matchDescription: {
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
+    lineHeight: 22,
   },
   matchButton: {
-    minWidth: 200,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.xl,
+    paddingLeft: 8,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  buttonIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    left: 8,
+  },
+  matchButtonText: {
+    ...typography.button,
+    color: colors.white,
+    fontSize: 18,
   },
   statsContainer: {
     flexDirection: 'row',
     backgroundColor: colors.white,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.textSecondary + '20',
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
   },
   statValue: {
-    ...typography.h2,
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.primary,
     marginBottom: spacing.xs,
   },
@@ -223,7 +307,7 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: colors.textSecondary + '20',
+    backgroundColor: colors.textTertiary + '30',
   },
 });
 

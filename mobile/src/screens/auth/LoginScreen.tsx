@@ -1,6 +1,6 @@
 /**
  * 로그인 화면
- * Figma: Simple Login - Login Screen 디자인 적용
+ * Figma: Cupid Arrow - Login Screen 디자인 적용
  */
 
 import React, { useState } from 'react';
@@ -12,15 +12,15 @@ import {
   Platform,
   TouchableOpacity,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../@types';
-import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { useLogin } from '../../hooks/useAuth';
-import { colors, spacing } from '../../styles/theme';
-import Svg, { Path } from 'react-native-svg';
+import { colors, typography, spacing } from '../../styles/theme';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -47,29 +47,26 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* 하단 blur 배경 효과 - top 기준으로 고정 */}
+      <View style={styles.blurBackground} pointerEvents="none">
+        <View style={styles.blurCircle} />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* 상단 곡선 장식 */}
-        <View style={styles.curveContainer}>
-          <Svg
-            width={width}
-            height={height * 0.32}
-            viewBox={`0 0 ${width} ${height * 0.32}`}
-          >
-            <Path
-              d={`M0,0 L${width},0 L${width},${height * 0.22} Q${width * 0.5},${height * 0.38} 0,${height * 0.22} Z`}
-              fill={colors.primary}
-            />
-          </Svg>
-        </View>
-
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {/* 타이틀 */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Sign in</Text>
-            <View style={styles.titleUnderline} />
+            <Text style={styles.title}>로그인</Text>
+            <Text style={styles.subtitle}>
+              계정에 로그인하고{'\n'}새로운 인연을 만나보세요
+            </Text>
           </View>
 
           {/* 폼 */}
@@ -81,7 +78,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              leftIcon={<Text>✉️</Text>}
+              leftIcon={
+                <Icon name="mail" size={20} color={colors.textTertiary} />
+              }
             />
 
             <Input
@@ -90,28 +89,36 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              leftIcon={<Text>🔒</Text>}
+              leftIcon={
+                <Icon name="lock" size={20} color={colors.textTertiary} />
+              }
             />
           </View>
 
-          {/* Login Button */}
-          <Button
-            title="로그인"
-            variant="primary"
-            size="large"
-            fullWidth
+          {/* 로그인 버튼 (Pill 형태) */}
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              (!email || !password || loginMutation.isPending) &&
+                styles.loginButtonDisabled,
+            ]}
+            activeOpacity={0.8}
             onPress={handleLogin}
-            loading={loginMutation.isPending}
-          />
+            disabled={!email || !password || loginMutation.isPending}
+          >
+            <Text style={styles.loginButtonText}>
+              {loginMutation.isPending ? '로그인 중...' : '로그인'}
+            </Text>
+          </TouchableOpacity>
 
-          {/* Sign up link */}
+          {/* 회원가입 링크 */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>계정이 없으신가요?</Text>
+            <Text style={styles.footerText}>계정이 없으신가요? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
               <Text style={styles.signupLink}>회원가입</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -120,55 +127,80 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
   },
   keyboardView: {
     flex: 1,
   },
-  curveContainer: {
+  blurBackground: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: height * 0.75,
+    left: -width * 0.15,
+    right: -width * 0.15,
+    height: height * 0.6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  content: {
-    flex: 1,
+  blurCircle: {
+    width: width * 1.3,
+    height: width * 1.3,
+    borderRadius: width * 0.65,
+    backgroundColor: colors.primary,
+    opacity: 0.12,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: height * 0.30,
-    justifyContent: 'flex-start',
+    paddingTop: height * 0.1,
+    paddingBottom: spacing.xl,
   },
   titleContainer: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '500',
+    fontSize: 28,
+    fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
-  titleUnderline: {
-    width: 70,
-    height: 3,
-    backgroundColor: colors.primary,
-    borderRadius: 2,
+  subtitle: {
+    ...typography.body1,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   form: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  loginButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonText: {
+    ...typography.button,
+    color: colors.white,
+    fontSize: 18,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
     marginTop: spacing.xl,
   },
   footerText: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
   },
   signupLink: {
-    fontSize: 14,
-    fontWeight: '500',
+    ...typography.body2,
+    fontWeight: '600',
     color: colors.primary,
   },
 });

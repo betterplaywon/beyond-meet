@@ -3,8 +3,9 @@
  */
 
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing } from '../../styles/theme';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface Props {
   isMuted: boolean;
@@ -32,7 +33,7 @@ export const CallControls: React.FC<Props> = ({
         style={[styles.button, isMuted && styles.buttonActive]}
         onPress={onToggleMute}
       >
-        <Text style={styles.icon}>{isMuted ? '🔇' : '🎤'}</Text>
+        <Icon name={isMuted ? 'mic-off' : 'mic'} size={28} color={colors.white} />
       </TouchableOpacity>
 
       {/* 비디오 */}
@@ -40,24 +41,24 @@ export const CallControls: React.FC<Props> = ({
         style={[styles.button, isVideoOff && styles.buttonActive]}
         onPress={onToggleVideo}
       >
-        <Text style={styles.icon}>{isVideoOff ? '📹' : '📷'}</Text>
+        <Icon name={isVideoOff ? 'videocam-off' : 'videocam'} size={28} color={colors.white} />
       </TouchableOpacity>
 
       {/* 카메라 전환 */}
       <TouchableOpacity style={styles.button} onPress={onSwitchCamera}>
-        <Text style={styles.icon}>🔄</Text>
+        <Icon name="flip-camera-ios" size={28} color={colors.white} />
       </TouchableOpacity>
 
       {/* 신고 버튼 */}
       {onReport && (
         <TouchableOpacity style={styles.reportButton} onPress={onReport}>
-          <Text style={styles.icon}>🚩</Text>
+          <Icon name="flag" size={28} color={colors.white} />
         </TouchableOpacity>
       )}
 
       {/* 통화 종료 */}
       <TouchableOpacity style={styles.endButton} onPress={onEndCall}>
-        <Text style={styles.icon}>❌</Text>
+        <Icon name="call-end" size={28} color={colors.white} />
       </TouchableOpacity>
     </View>
   );
@@ -99,8 +100,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 28,
   },
 });
