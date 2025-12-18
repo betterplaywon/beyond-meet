@@ -15,6 +15,7 @@ interface CallState {
   isInCall: boolean;
   isJoined: boolean; // Agora 채널 참가 여부
   callDuration: number;
+  showIncomingCallModal: boolean; // 전역 incoming call 모달 표시 여부
 
   // Actions
   setCurrentSession: (session: MatchSession | null) => void;
@@ -22,6 +23,7 @@ interface CallState {
   setIsInCall: (isInCall: boolean) => void;
   setIsJoined: (isJoined: boolean) => void;
   setCallDuration: (duration: number) => void;
+  setShowIncomingCallModal: (show: boolean) => void;
   clearCallState: () => void;
 }
 
@@ -32,6 +34,7 @@ export const useCallStore = create<CallState>((set) => ({
   isInCall: false,
   isJoined: false,
   callDuration: 0,
+  showIncomingCallModal: false,
 
   // Actions
   setCurrentSession: (session) => set({ currentSession: session }),
@@ -44,6 +47,8 @@ export const useCallStore = create<CallState>((set) => ({
 
   setCallDuration: (duration) => set({ callDuration: duration }),
 
+  setShowIncomingCallModal: (show) => set({ showIncomingCallModal: show }),
+
   clearCallState: () =>
     set({
       currentSession: null,
@@ -51,5 +56,6 @@ export const useCallStore = create<CallState>((set) => ({
       isInCall: false,
       isJoined: false,
       callDuration: 0,
+      showIncomingCallModal: false,
     }),
 }));

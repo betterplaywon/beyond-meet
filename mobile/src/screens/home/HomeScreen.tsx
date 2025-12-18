@@ -3,7 +3,7 @@
  * Figma: Cupid Arrow - Home Screen 디자인 적용
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { IncomingCallModal } from '../../components/call/IncomingCallModal';
-import { useCallStore } from '../../store/callStore';
-import { useSocket, useSocketEvent } from '../../hooks/useSocket';
+import { useSocket } from '../../hooks/useSocket';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
-import * as socketService from '../../services/socketService';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -34,35 +31,6 @@ const HomeScreen: React.FC = () => {
   const { data: user } = useMyProfile();
   const { data: friends = [] } = useFriends(user?.id);
   const socket = useSocket();
-
-  const incomingCall = useCallStore(state => state.incomingCall);
-  const setIncomingCall = useCallStore(state => state.setIncomingCall);
-  const [showIncomingCall, setShowIncomingCall] = useState(false);
-
-  // 통화 수신 이벤트
-  useSocketEvent('call:incoming', (data: any) => {
-    console.log('Incoming call:', data);
-    setIncomingCall({
-      session: data.session,
-      caller: data.caller,
-    });
-    setShowIncomingCall(true);
-  });
-
-  // 통화 수락 완료 이벤트 (토큰 및 UID 받기)
-  useSocketEvent('call:accepted', (data: any) => {
-    if (data.token && data.uid) {
-      console.log('Call accepted, received token and UID:', data.uid);
-      // 토큰과 UID를 받았으니 VideoCall 화면으로 이동
-      navigation.navigate('VideoCall', {
-        sessionId: data.session.id,
-        channelName: data.session.channelName,
-        token: data.token,
-        uid: data.uid,
-      });
-      setIncomingCall(null);
-    }
-  });
 
   const handleRandomMatch = () => {
     // Socket 연결 상태 확인
@@ -82,22 +50,6 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('Matching');
   };
 
-  const handleAcceptCall = () => {
-    if (!incomingCall) return;
-
-    setShowIncomingCall(false);
-    // Socket으로 수락 이벤트 전송 (call:accepted 이벤트로 토큰 받음)
-    socketService.acceptCall(incomingCall.session.id);
-  };
-
-  const handleRejectCall = () => {
-    if (!incomingCall) return;
-
-    setShowIncomingCall(false);
-    socketService.rejectCall(incomingCall.session.id);
-    setIncomingCall(null);
-  };
-
   // 하트 아이콘
   const HeartIcon = () => (
     <Icon name="favorite" size={60} color={colors.primary} />
@@ -114,13 +66,6 @@ const HomeScreen: React.FC = () => {
       <View style={styles.blurBackground}>
         <View style={styles.blurCircle} />
       </View>
-
-      {/* 통화 수신 모달 */}
-      <IncomingCallModal
-        visible={showIncomingCall}
-        onAccept={handleAcceptCall}
-        onReject={handleRejectCall}
-      />
 
       {/* Header */}
       <View style={styles.header}>

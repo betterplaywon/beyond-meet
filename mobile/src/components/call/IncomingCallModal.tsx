@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Animated,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Avatar } from '../common/Avatar';
 import { useCallStore } from '../../store/callStore';
 import { colors, typography, spacing } from '../../styles/theme';
@@ -89,7 +90,7 @@ export const IncomingCallModal: React.FC<Props> = ({
               style={[styles.actionButton, styles.rejectButton]}
               onPress={onReject}
             >
-              <Text style={styles.actionIcon}>❌</Text>
+              <Icon name="call-end" size={40} color={colors.white} style={styles.actionIcon} />
               <Text style={styles.actionLabel}>거절</Text>
             </TouchableOpacity>
 
@@ -97,7 +98,7 @@ export const IncomingCallModal: React.FC<Props> = ({
               style={[styles.actionButton, styles.acceptButton]}
               onPress={onAccept}
             >
-              <Text style={styles.actionIcon}>✅</Text>
+              <Icon name="call" size={40} color={colors.white} style={styles.actionIcon} />
               <Text style={styles.actionLabel}>수락</Text>
             </TouchableOpacity>
           </View>
@@ -164,7 +165,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
   actionIcon: {
-    fontSize: 40,
     marginBottom: spacing.xs,
   },
   actionLabel: {
