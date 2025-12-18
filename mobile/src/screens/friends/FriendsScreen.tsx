@@ -12,6 +12,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -21,7 +22,7 @@ import Toast from 'react-native-toast-message';
 import { User, RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
-import { useFriends } from '../../hooks/useFriends';
+import { useFriends, useRemoveFriend } from '../../hooks/useFriends';
 import { useFriendStatusSync } from '../../hooks/useFriendStatusSync';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import * as socketService from '../../services/socketService';
@@ -38,6 +39,13 @@ const FriendsScreen = () => {
 
   // 통화 요청 중인 친구 ID (로딩 상태 표시용)
   const [callingFriendId, setCallingFriendId] = useState<string | null>(null);
+
+  // 삭제 확인 모달 상태
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [friendToDelete, setFriendToDelete] = useState<User | null>(null);
+
+  // 친구 삭제 mutation
+  const removeFriendMutation = useRemoveFriend();
 
   // React Query로 친구 목록 조회
   const {
@@ -146,6 +154,38 @@ const FriendsScreen = () => {
     });
   };
 
+  // 삭제 버튼 클릭 시 모달 표시
+  const handleDeletePress = (friend: User) => {
+    setFriendToDelete(friend);
+    setDeleteModalVisible(true);
+  };
+
+  // 삭제 확인
+  const handleConfirmDelete = () => {
+    if (!friendToDelete || !user?.id) return;
+
+    removeFriendMutation.mutate(
+      { userId: user.id, friendId: friendToDelete.id },
+      {
+        onSuccess: () => {
+          Toast.show({
+            type: 'success',
+            text1: '친구 삭제',
+            text2: `${friendToDelete.nickname}님을 친구 목록에서 삭제했습니다.`,
+          });
+          setDeleteModalVisible(false);
+          setFriendToDelete(null);
+        },
+      },
+    );
+  };
+
+  // 삭제 취소
+  const handleCancelDelete = () => {
+    setDeleteModalVisible(false);
+    setFriendToDelete(null);
+  };
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Icon name="people" size={80} color={colors.textTertiary} />
@@ -192,20 +232,28 @@ const FriendsScreen = () => {
             </Text>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => handleCallFriend(item)}
-          disabled={isDisabled}
-          style={[
-            styles.callButtonContainer,
-            isDisabled && styles.callButtonDisabled,
-          ]}
-        >
-          {isCalling ? (
-            <ActivityIndicator size="small" color={colors.success} />
-          ) : (
-            <Icon name="phone" size={24} color={colors.success} />
-          )}
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            onPress={() => handleCallFriend(item)}
+            disabled={isDisabled}
+            style={[
+              styles.callButtonContainer,
+              isDisabled && styles.callButtonDisabled,
+            ]}
+          >
+            {isCalling ? (
+              <ActivityIndicator size="small" color={colors.success} />
+            ) : (
+              <Icon name="phone" size={24} color={colors.success} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleDeletePress(item)}
+            style={styles.deleteButtonContainer}
+          >
+            <Icon name="delete" size={24} color={colors.error} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -242,6 +290,42 @@ const FriendsScreen = () => {
           }
         />
       )}
+
+      {/* 친구 삭제 확인 모달 */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>친구 삭제</Text>
+            <Text style={styles.modalMessage}>
+              {friendToDelete?.nickname}님을 친구 목록에서{'\n'}삭제하시겠습니까?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={handleCancelDelete}
+              >
+                <Text style={styles.modalButtonCancelText}>아니오</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleConfirmDelete}
+                disabled={removeFriendMutation.isPending}
+              >
+                {removeFriendMutation.isPending ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.modalButtonConfirmText}>예</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -338,6 +422,66 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  deleteButtonContainer: {
+    padding: spacing.sm,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: spacing.xl,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    ...typography.h3,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    ...typography.body1,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.textTertiary,
+  },
+  modalButtonConfirm: {
+    backgroundColor: colors.error,
+  },
+  modalButtonCancelText: {
+    ...typography.button,
+    color: colors.textPrimary,
+  },
+  modalButtonConfirmText: {
+    ...typography.button,
+    color: colors.white,
   },
 });
 

@@ -388,6 +388,18 @@ export const requestDirectMatch = async (callerId: string, receiverId: string): 
     throw new AppError(403, 'USER_BLOCKED', '차단된 사용자입니다');
   }
 
+  // 친구 관계 확인: 수신자가 발신자를 친구로 추가했는지 확인
+  const friendship = await prisma.friendship.findFirst({
+    where: {
+      userId: receiverId,    // 수신자가
+      friendId: callerId,    // 발신자를 친구로 추가했는지
+    },
+  });
+
+  if (!friendship) {
+    throw new AppError(403, 'NOT_IN_FRIEND_LIST', '상대방이 회원님을 친구로 추가하지 않았습니다');
+  }
+
   // 매칭 세션 생성
   return await createMatchSession(callerId, receiverId, 'DIRECT');
 };
