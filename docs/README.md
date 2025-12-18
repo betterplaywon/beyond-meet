@@ -171,6 +171,156 @@
 
 ---
 
+### 6. [SOCKET_EVENTS.md](SOCKET_EVENTS.md) - Socket.io 이벤트 명세서
+
+**필독 우선순위: ⭐⭐⭐⭐**
+
+Socket.io 기반 실시간 이벤트의 모든 페이로드 구조를 정의한 문서입니다.
+
+**주요 내용:**
+
+- 연결 및 인증 플로우
+- 이벤트 요약 테이블
+- Client → Server 이벤트
+  - match:request, match:cancel
+  - call:accept, call:reject, call:end
+  - moderation 이벤트
+- Server → Client 이벤트
+  - match:waiting, match:found, match:failed
+  - call:incoming, call:accepted, call:rejected, call:ended
+  - friend:status-changed
+- 주기적 재매칭 시스템
+
+**읽어야 하는 사람:**
+
+- 백엔드 개발자 (필수)
+- 프론트엔드 개발자 (필수)
+
+---
+
+### 7. [CODING_RULES.md](CODING_RULES.md) - 코딩 규칙 및 패턴
+
+**필독 우선순위: ⭐⭐⭐⭐**
+
+프로젝트에서 사용하는 코딩 패턴과 규칙을 정의한 문서입니다.
+
+**주요 내용:**
+
+- Controller/Service 아키텍처 패턴
+- 에러 처리 패턴
+- 입력값 검증 (Zod 스키마)
+- 파일 업로드 패턴 (Multer + Supabase Storage)
+- React Query 키 관리 패턴
+- 네이밍 규칙
+
+**읽어야 하는 사람:**
+
+- 백엔드 개발자 (필수)
+- 프론트엔드 개발자 (필수)
+
+---
+
+### 8. [AI_CONTENT_MODERATION.md](AI_CONTENT_MODERATION.md) - AI 콘텐츠 모더레이션
+
+**필독 우선순위: ⭐⭐⭐**
+
+영상 통화 중 AI 기반 콘텐츠 모더레이션 시스템을 설명한 문서입니다.
+
+**주요 내용:**
+
+- NSFW 콘텐츠 감지 시스템
+- 경고 및 자동 신고 프로세스
+- Redis 기반 할당량 관리
+- 모더레이션 이벤트
+
+**읽어야 하는 사람:**
+
+- 백엔드 개발자
+- 프론트엔드 개발자
+
+---
+
+### 9. [TODO.md](TODO.md) - 남은 작업 및 개선사항
+
+**필독 우선순위: ⭐⭐⭐**
+
+완료된 기능과 남은 작업을 추적하는 문서입니다.
+
+**주요 내용:**
+
+- 완료된 기능 목록
+- 미완료 기능 (이메일 발송, 법률 문서 등)
+- 향후 개선사항
+
+**읽어야 하는 사람:**
+
+- 모든 개발자
+
+---
+
+### 10. [BUILD_DEPLOYMENT_GUIDE.md](BUILD_DEPLOYMENT_GUIDE.md) - 빌드 및 배포 가이드
+
+**필독 우선순위: ⭐⭐⭐⭐**
+
+iOS/Android 앱 빌드 및 스토어 배포 방법을 설명한 문서입니다.
+
+**주요 내용:**
+
+- iOS Archive 빌드 및 TestFlight 배포
+- Android AAB 빌드 및 Play Console 배포
+- 서명 키(Keystore) 생성 및 설정
+- 버전 관리 팁
+- 트러블슈팅
+
+**읽어야 하는 사람:**
+
+- 모바일 개발자 (필수)
+- DevOps
+
+---
+
+### 11. [MARKETING_ASSETS.md](MARKETING_ASSETS.md) - 마케팅 에셋 가이드
+
+**필독 우선순위: ⭐⭐⭐**
+
+Play Store 출시를 위한 마케팅 에셋 준비 가이드입니다.
+
+**주요 내용:**
+
+- 스크린샷 촬영 가이드 (사이즈, 내용)
+- 앱 설명문 (짧은 설명, 상세 설명)
+- 앱 아이콘 체크리스트
+- 그래픽 이미지 (Feature Graphic)
+- 스토어 메타데이터 체크리스트
+- 브랜드 컬러 가이드
+
+**읽어야 하는 사람:**
+
+- PM
+- 디자이너
+- 마케팅 담당자
+
+---
+
+### 12. [INTERVIEW_QUESTIONS.md](INTERVIEW_QUESTIONS.md) - 기술 면접 준비
+
+**필독 우선순위: ⭐⭐**
+
+Beyond Meet 프로젝트 기반 기술 면접 질문 및 답변 자료입니다.
+
+**주요 내용:**
+
+- 프로젝트 개요 질문
+- 기술 스택 관련 질문
+- 아키텍처 관련 질문
+- 문제 해결 경험
+
+**읽어야 하는 사람:**
+
+- 프로젝트 참여 개발자
+
+---
+
 ## 📖 문서 읽는 순서
 
 ### 신규 팀원 온보딩
@@ -249,5 +399,5 @@
 
 ---
 
-**최종 업데이트**: 2025-11-06
-**문서 버전**: 1.0.0
+**최종 업데이트**: 2025-12-18
+**문서 버전**: 2.0.0

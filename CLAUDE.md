@@ -39,25 +39,27 @@ cd ios && pod install && cd ..
 ```
 backend/src/
 ├── controllers/    # Request handlers (thin, delegate to services)
-├── services/       # Business logic (auth, match, call, push, admin)
-├── routes/         # Express route definitions
-├── middlewares/    # auth.ts, errorHandler.ts, rateLimiter.ts, admin.ts
+├── services/       # Business logic (auth, match, call, push, admin, storage, moderation, user)
+├── routes/         # Express route definitions (auth, user, friends, call, agora, push, admin, moderation)
+├── middlewares/    # auth.ts, errorHandler.ts, rateLimiter.ts, admin.ts, upload.ts
 ├── sockets/        # Socket.io handlers (match-handler.ts)
 ├── config/         # database.ts (Prisma), redis.ts, firebase.ts, supabase.ts
-└── utils/          # jwt.ts, password.ts
+└── utils/          # jwt.ts, password.ts, validation.ts, image-validator.ts
 ```
 
 ### Mobile Structure
 
 ```
 mobile/src/
-├── screens/        # Screen components by feature (auth/, home/, call/, profile/, admin/)
+├── screens/        # Screen components by feature (auth/, home/, match/, call/, profile/, friends/, admin/)
 ├── components/     # Reusable UI (common/, call/, moderation/)
 ├── navigation/     # RootNavigator, AuthNavigator, MainNavigator, AdminNavigator
-├── services/       # API clients (api.ts, socketService.ts, pushService.ts)
-├── hooks/          # Custom hooks (useAuth, useSocket, useFriends, useProfile, useCallHistory)
+├── services/       # API clients (api.ts, socketService.ts, pushService.ts, notificationService.ts)
+├── hooks/          # Custom hooks (useAuth, useSocket, useFriends, useProfile, useCallHistory, useAdmin, usePushNotifications, useNotificationSetup, useFriendStatusSync)
 ├── store/          # Zustand stores (authStore.ts, callStore.ts, index.ts)
-├── api/            # API endpoint functions
+├── api/            # API endpoint functions (auth.api.ts, agora.api.ts, client.ts)
+├── constants/      # Query keys (queryKeys.ts)
+├── styles/         # Design system (theme.ts)
 └── config/         # env.ts (centralized environment variables)
 ```
 
@@ -67,23 +69,31 @@ mobile/src/
 2. **Real-time**: Socket.io for matching/calls, HTTP REST for CRUD operations
 3. **Auth Flow**: JWT with access/refresh tokens, invite code validation on registration
 4. **Database**: Prisma ORM with PostgreSQL (Supabase)
+5. **File Storage**: Supabase Storage for profile photos (via storage-service.ts)
+6. **Input Validation**: Zod schemas for request validation (via validation.ts)
 
 ## Socket.io vs HTTP REST
 
 **Use Socket.io** (real-time bidirectional):
 
 - Random matching request/response, match cancel/accept/reject
-- Call signaling (start, end, incoming notifications)
+- Call signaling (incoming, accept, reject, end)
+- Direct call request (DIRECT match type)
+- Friend status broadcasts (online/offline)
+- Moderation warnings and force-end
 
 **Use HTTP REST** (request-response):
 
-- Direct/friend matching (needs DB persistence even if socket disconnects)
 - User CRUD, file uploads, non-real-time operations
+- Call history, session info retrieval
+- Friends and block list management
+- Admin operations
 
 ### Socket Events
 
-Client → Server: `match:request`, `match:cancel`, `call:accept`, `call:reject`, `call:end`
-Server → Client: `match:waiting`, `match:found`, `match:failed`, `match:cancelled`, `call:incoming`, `call:accepted`, `call:rejected`, `call:ended`
+Client → Server: `match:request`, `match:cancel`, `call:accept`, `call:reject`, `call:end`, `moderation:warning`, `moderation:force-end`
+
+Server → Client: `match:waiting`, `match:found`, `match:failed`, `match:cancelled`, `call:incoming`, `call:requested`, `call:accepted`, `call:rejected`, `call:ended`, `call:failed`, `friend:status-changed`, `moderation:warning-received`, `moderation:call-force-ended`
 
 ## Database Migration (Supabase)
 
@@ -143,14 +153,40 @@ export const register = async (
 };
 ```
 
+### Input Validation Pattern
+
+Use Zod schemas from `utils/validation.ts`:
+
+```typescript
+import { registerSchema, formatZodError } from '../utils/validation';
+
+const result = registerSchema.safeParse(req.body);
+if (!result.success) {
+  throw new AppError(400, 'VALIDATION_ERROR', formatZodError(result.error));
+}
+```
+
+### File Upload Pattern
+
+Use Multer middleware with Supabase Storage:
+
+```typescript
+// Route with upload middleware
+router.post('/me/photos', uploadLimiter, upload.single('photo'), userController.uploadProfilePhoto);
+
+// Service handles Supabase upload
+import { uploadProfilePhoto, deleteProfilePhoto } from '../services/storage-service';
+```
+
 ## External Services
 
 | Service  | Purpose                          | Config Location                                 |
 | -------- | -------------------------------- | ----------------------------------------------- |
-| Supabase | PostgreSQL + Storage             | `backend/src/config/database.ts`, `supabase.ts` |
+| Supabase | PostgreSQL + Storage             | `backend/src/config/database.ts`, `supabase.ts`, `services/storage-service.ts` |
 | Agora    | Video calls (10,000 min/mo free) | `backend/src/controllers/agora-controller.ts`   |
 | Firebase | FCM push notifications           | `backend/src/config/firebase.ts`                |
 | Upstash  | Redis cache                      | `backend/src/config/redis.ts`                   |
+| Hugging Face | AI content moderation        | `backend/src/services/moderation-service.ts`    |
 
 ## Reference Documentation
 
@@ -162,4 +198,5 @@ export const register = async (
 - [docs/UI_FLOW.md](docs/UI_FLOW.md) - Design system, screen flow
 - [docs/AI_CONTENT_MODERATION.md](docs/AI_CONTENT_MODERATION.md) - AI moderation settings
 - [docs/TODO.md](docs/TODO.md) - Remaining tasks and improvements
+- [docs/BUILD_DEPLOYMENT_GUIDE.md](docs/BUILD_DEPLOYMENT_GUIDE.md) - iOS/Android build and deployment
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide, environment variables

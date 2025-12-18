@@ -292,3 +292,201 @@ callbacksRef.current = { onClick, onChange };
 | 서버 데이터 fetching | React Query useQuery |
 | 에러 처리 | React Query onError 또는 Error Boundary |
 | 파생 상태 계산 | useMemo 또는 렌더링 중 계산 |
+
+---
+
+## Zod 입력 검증 패턴
+
+### 스키마 파일 위치
+`backend/src/utils/validation.ts`
+
+### 주요 스키마
+
+| 스키마 | 용도 |
+|-------|------|
+| `registerSchema` | 회원가입 입력 검증 |
+| `loginSchema` | 로그인 입력 검증 |
+| `resetPasswordSchema` | 비밀번호 재설정 검증 |
+| `updateProfileSchema` | 프로필 업데이트 검증 |
+
+### 비밀번호 규칙
+
+- 최소 8자
+- 대문자 1개 이상
+- 숫자 1개 이상
+- 특수문자 1개 이상
+
+### 사용 예시
+
+```typescript
+import { registerSchema, formatZodError } from '../utils/validation';
+import { AppError } from './errors';
+
+export const register = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // 1. Zod 스키마로 입력 검증
+    const result = registerSchema.safeParse(req.body);
+
+    if (!result.success) {
+      throw new AppError(400, 'VALIDATION_ERROR', formatZodError(result.error));
+    }
+
+    // 2. 검증된 데이터 사용 (타입 추론됨)
+    const validatedData = result.data;
+
+    // 3. 서비스 호출
+    const response = await registerUser(validatedData);
+
+    res.status(201).json({ success: true, data: response });
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+### XSS 방지
+
+모든 문자열 필드는 `sanitizeHtml` 변환이 적용됨:
+
+```typescript
+const sanitizeHtml = (str: string): string => {
+  return str.replace(/<[^>]*>/g, '').trim();
+};
+```
+
+### 커스텀 스키마 정의
+
+```typescript
+// 닉네임 스키마 예시
+const nicknameSchema = z
+  .string()
+  .min(2, '닉네임은 최소 2자 이상이어야 합니다')
+  .max(20, '닉네임은 20자를 초과할 수 없습니다')
+  .regex(/^[a-zA-Z0-9가-힣_]+$/, '닉네임은 영문, 한글, 숫자, 언더스코어만 사용 가능합니다')
+  .transform(sanitizeHtml);
+```
+
+---
+
+## 파일 업로드 패턴
+
+### Multer 미들웨어 설정
+
+위치: `backend/src/middlewares/upload.ts`
+
+```typescript
+import multer from 'multer';
+
+// 메모리 스토리지 (Supabase로 업로드하므로 디스크 저장 불필요)
+const storage = multer.memoryStorage();
+
+// 파일 필터 (이미지만 허용)
+const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('허용되지 않는 파일 형식입니다'));
+  }
+};
+
+export const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+```
+
+### Storage Service
+
+위치: `backend/src/services/storage-service.ts`
+
+```typescript
+import { supabase } from '../config/supabase';
+
+export const uploadProfilePhoto = async (
+  userId: string,
+  file: Express.Multer.File
+): Promise<string> => {
+  const fileName = `${userId}/${Date.now()}_${file.originalname}`;
+
+  const { data, error } = await supabase.storage
+    .from('profile-photos')
+    .upload(fileName, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) throw new AppError(500, 'UPLOAD_FAILED', '파일 업로드에 실패했습니다');
+
+  // Public URL 생성
+  const { data: { publicUrl } } = supabase.storage
+    .from('profile-photos')
+    .getPublicUrl(data.path);
+
+  return publicUrl;
+};
+```
+
+### 라우트에서 사용
+
+```typescript
+import { upload } from '../middlewares/upload';
+import { uploadLimiter } from '../middlewares/rateLimiter';
+
+// Rate limiting + Multer + Controller
+router.post(
+  '/me/photos',
+  uploadLimiter,           // 1분당 3회 제한
+  upload.single('photo'),  // 'photo' 필드의 단일 파일
+  userController.uploadProfilePhoto
+);
+```
+
+---
+
+## React Query 키 패턴
+
+위치: `mobile/src/constants/queryKeys.ts`
+
+```typescript
+export const queryKeys = {
+  // 프로필
+  profile: {
+    all: ['profile'] as const,
+    me: () => [...queryKeys.profile.all, 'me'] as const,
+    detail: (userId: string) => [...queryKeys.profile.all, 'detail', userId] as const,
+  },
+
+  // 친구
+  friends: {
+    all: ['friends'] as const,
+    list: () => [...queryKeys.friends.all, 'list'] as const,
+    blocked: () => [...queryKeys.friends.all, 'blocked'] as const,
+  },
+
+  // 통화 기록
+  callHistory: {
+    all: ['callHistory'] as const,
+    list: () => [...queryKeys.callHistory.all, 'list'] as const,
+    session: (sessionId: string) => [...queryKeys.callHistory.all, 'session', sessionId] as const,
+  },
+};
+```
+
+### 캐시 무효화 예시
+
+```typescript
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../constants/queryKeys';
+
+// 친구 추가 후 목록 무효화
+const queryClient = useQueryClient();
+
+const addFriendMutation = useMutation({
+  mutationFn: (friendId: string) => friendsApi.addFriend(friendId),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.friends.list() });
+  },
+});

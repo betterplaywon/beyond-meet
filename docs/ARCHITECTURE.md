@@ -17,7 +17,8 @@
 │  Node.js + Express + TypeScript                                      │
 │  ┌────────────────────────────────────────────────────────────────┐ │
 │  │ Controllers: Auth, User, Match, Call, Admin, Moderation, Agora │ │
-│  │ Services:    Auth, User, Match, Call, Admin, Moderation, Push  │ │
+│  │ Services:    Auth, User, Match, Call, Admin, Moderation, Push, │ │
+│  │              Storage                                            │ │
 │  │ Socket.io:   실시간 매칭/통화 이벤트                             │ │
 │  │ Hugging Face API: AI 콘텐츠 모더레이션                          │ │
 │  └────────────────────────────────────────────────────────────────┘ │
@@ -39,25 +40,100 @@
 ### Backend
 ```
 backend/src/
-├── controllers/    # auth, user, match, call, admin, moderation, agora
-├── services/       # 비즈니스 로직
-├── routes/         # API 라우트
-├── middlewares/    # auth, error, rateLimit
-├── sockets/        # Socket.io 핸들러
-├── config/         # database, redis, firebase, supabase
-└── utils/          # jwt, password, logger
+├── controllers/        # Request handlers (auth, user, friends, call, admin, moderation, agora, push)
+├── services/           # Business logic
+│   ├── auth-service.ts
+│   ├── user-service.ts
+│   ├── match-service.ts
+│   ├── call-service.ts
+│   ├── admin-service.ts
+│   ├── moderation-service.ts
+│   ├── push-service.ts
+│   └── storage-service.ts    # Supabase Storage 파일 업로드/삭제
+├── routes/             # API routes
+│   ├── auth-routes.ts
+│   ├── user-routes.ts
+│   ├── friends-routes.ts
+│   ├── call-routes.ts
+│   ├── agora-routes.ts
+│   ├── push-routes.ts
+│   ├── admin-routes.ts
+│   └── moderation-routes.ts
+├── middlewares/
+│   ├── auth.ts             # JWT 인증
+│   ├── errorHandler.ts     # 글로벌 에러 핸들러
+│   ├── rateLimiter.ts      # Rate limiting
+│   ├── admin.ts            # 관리자 권한 체크
+│   └── upload.ts           # Multer 파일 업로드
+├── sockets/
+│   └── match-handler.ts    # Socket.io 매칭/통화 이벤트
+├── config/
+│   ├── database.ts         # Prisma client
+│   ├── redis.ts            # Upstash Redis
+│   ├── firebase.ts         # FCM
+│   └── supabase.ts         # Supabase client
+└── utils/
+    ├── jwt.ts              # JWT 생성/검증
+    ├── password.ts         # bcrypt 해싱
+    ├── validation.ts       # Zod 스키마
+    └── image-validator.ts  # AI 모더레이션 이미지 검증
 ```
 
 ### Mobile
 ```
 mobile/src/
-├── screens/        # auth/, home/, call/, profile/, admin/
-├── components/     # common/, call/, moderation/
-├── navigation/     # RootNavigator, AuthNavigator, MainNavigator
-├── services/       # api, socket, push, agora
-├── hooks/          # useAuth, useSocket, useFriends, useProfile
-├── store/          # Zustand (authStore, callStore)
-└── config/         # env.ts
+├── screens/            # Screen components by feature
+│   ├── auth/           # LoginScreen, RegisterScreen, SplashScreen, WelcomeScreen
+│   ├── home/           # HomeScreen
+│   ├── match/          # MatchingScreen
+│   ├── call/           # VideoCallScreen, CallHistoryScreen, CallEndScreen
+│   ├── profile/        # ProfileScreen, ProfileEditScreen, SettingsScreen, ChangePasswordScreen, LegalContentScreen
+│   ├── friends/        # FriendsScreen
+│   └── admin/          # AdminScreen, ModerationLogsScreen, ReportsScreen
+├── components/
+│   ├── common/         # Avatar, Button, Input, NotificationPermissionModal, Picker
+│   ├── call/           # CallControls, CallTimer, IncomingCallModal
+│   └── moderation/     # ModerationWarningModal
+├── navigation/
+│   ├── RootNavigator.tsx
+│   ├── AuthNavigator.tsx
+│   ├── MainNavigator.tsx
+│   └── AdminNavigator.tsx
+├── services/
+│   ├── api.ts              # Axios instance with interceptors
+│   ├── socketService.ts    # Socket.io client
+│   ├── pushService.ts      # FCM registration
+│   ├── notificationService.ts
+│   ├── userApi.ts
+│   ├── callApi.ts
+│   ├── friendsApi.ts
+│   └── adminApi.ts
+├── hooks/
+│   ├── useAuth.ts
+│   ├── useSocket.ts
+│   ├── useFriends.ts
+│   ├── useProfile.ts
+│   ├── useCallHistory.ts
+│   ├── useAdmin.ts
+│   ├── usePushNotifications.ts
+│   ├── useNotificationSetup.ts
+│   └── useFriendStatusSync.ts
+├── store/
+│   ├── authStore.ts        # 인증 상태 (Zustand)
+│   ├── callStore.ts        # 통화 상태 (Zustand)
+│   └── index.ts
+├── api/
+│   ├── auth.api.ts
+│   ├── agora.api.ts
+│   └── client.ts
+├── constants/
+│   └── queryKeys.ts        # React Query 키 팩토리
+├── styles/
+│   └── theme.ts            # 디자인 시스템 (색상, 간격, 타이포그래피)
+├── config/
+│   └── env.ts              # 환경변수 (API_BASE_URL, AGORA_APP_ID)
+└── @types/
+    └── index.ts            # TypeScript 타입 정의
 ```
 
 ---
@@ -66,12 +142,13 @@ mobile/src/
 
 | 영역 | 기술 |
 |------|------|
-| Frontend | React Native, TypeScript, Zustand, React Query |
-| Backend | Node.js, Express, TypeScript, Prisma |
+| Frontend | React Native, TypeScript, Zustand, React Query (@tanstack/react-query) |
+| Backend | Node.js, Express, TypeScript, Prisma, Zod |
 | Database | PostgreSQL (Supabase), Redis (Upstash) |
+| Storage | Supabase Storage (프로필 사진) |
 | Video | Agora SDK |
 | Push | Firebase Cloud Messaging |
-| AI | Hugging Face API (NSFW 감지) |
+| AI | Hugging Face API (NSFW 감지: Falconsai/nsfw_image_detection) |
 
 ---
 
@@ -83,6 +160,7 @@ user:{userId}:socketId            → Socket ID
 matching:queue                    → 매칭 대기열 (Set)
 session:{sessionId}:caller        → 세션 caller ID
 recent:call:{userId1}:{userId2}   → 최근 통화 (TTL: 30분)
+moderation:quota:{year}-{month}   → AI 모더레이션 월간 사용량
 ```
 
 ---
@@ -118,6 +196,35 @@ recent:call:{userId1}:{userId2}   → 최근 통화 (TTL: 30분)
 
 - **Access Token**: 1시간 유효, 요청마다 포함
 - **Refresh Token**: 7일 유효, 토큰 갱신용
+
+---
+
+## Socket.io 연결 플로우
+
+```
+┌─────────────┐                    ┌─────────────┐
+│   Client    │                    │   Server    │
+└──────┬──────┘                    └──────┬──────┘
+       │                                  │
+       │─── Connect ─────────────────────►│
+       │    auth: { token: accessToken }  │
+       │                                  │
+       │                    authenticateSocket()
+       │                    - 토큰 검증
+       │                    - userId를 socket에 저장
+       │                    - user.onlineStatus = ONLINE
+       │                                  │
+       │◄── 'connect' ────────────────────│
+       │                                  │
+       │                    setupMatchHandlers()
+       │                    - socket.join(userId)
+       │                    - broadcastStatusToFriends(ONLINE)
+       │                                  │
+       │                    [On Disconnect]
+       │                    - removeFromMatchQueue(userId)
+       │                    - user.onlineStatus = OFFLINE
+       │                    - broadcastStatusToFriends(OFFLINE)
+```
 
 ---
 
@@ -175,6 +282,7 @@ recent:call:{userId1}:{userId2}   → 최근 통화 (TTL: 30분)
 
 ## 상세 문서 참조
 
-- [CODING_RULES.md](CODING_RULES.md) - Controller/Service 패턴, 에러 핸들링
+- [CODING_RULES.md](CODING_RULES.md) - Controller/Service 패턴, 에러 핸들링, Zod 검증
 - [SOCKET_EVENTS.md](SOCKET_EVENTS.md) - Socket.io 이벤트 상세 페이로드
 - [API_SPECIFICATION.md](API_SPECIFICATION.md) - REST API 엔드포인트
+- [BUILD_DEPLOYMENT_GUIDE.md](BUILD_DEPLOYMENT_GUIDE.md) - iOS/Android 빌드 및 배포

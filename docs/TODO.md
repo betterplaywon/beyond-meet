@@ -18,6 +18,22 @@
   - 나이 범위 설정 모달
   - 개인정보처리방침/이용약관 화면 (`LegalContentScreen.tsx` - placeholder)
 
+### 4. 친구 삭제 기능 ✅
+- 위치: `mobile/src/screens/friends/FriendsScreen.tsx`, `backend/src/routes/friends-routes.ts`
+- 완료: DELETE /friends/:friendId API 연동, 삭제 확인 다이얼로그
+
+### 5. 글로벌 수신 통화 처리 ✅
+- 위치: `mobile/src/navigation/RootNavigator.tsx`, `mobile/src/hooks/useGlobalCallReceiver.ts`
+- 완료: 어떤 스크린에서든 친구에게 직접 통화 요청 수신 가능
+
+### 6. 앱 아이콘 업데이트 ✅
+- 위치: `mobile/ios/BeyondMeet/Images.xcassets/AppIcon.appiconset/`, `mobile/android/app/src/main/res/mipmap-*/`
+- 완료: iOS/Android 앱 아이콘 적용
+
+### 7. 로그아웃 로직 개선 ✅
+- 위치: `mobile/src/screens/profile/SettingsScreen.tsx`, `mobile/src/store/authStore.ts`
+- 완료: mutation 대신 함수 직접 사용, requestAnimationFrame 적용으로 안정성 개선
+
 ## 미완료 기능
 
 ### 1. 이메일 발송 (비밀번호 재설정) - 보류
