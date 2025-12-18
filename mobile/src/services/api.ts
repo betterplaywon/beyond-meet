@@ -84,8 +84,11 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        // 토큰 갱신 실패 - 로그아웃
-        useAuthStore.getState().logout();
+        // 토큰 갱신 실패 - 로그아웃 (중복 호출 방지)
+        const { isAuthenticated } = useAuthStore.getState();
+        if (isAuthenticated) {
+          useAuthStore.getState().logout();
+        }
         return Promise.reject(refreshError);
       }
     }

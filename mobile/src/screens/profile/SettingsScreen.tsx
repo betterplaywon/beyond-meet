@@ -20,8 +20,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
-import { useAuthStore } from '../../store/authStore';
 import { useMyProfile, useUpdateSettings, useDeleteAccount } from '../../hooks/useProfile';
+import { useLogout } from '../../hooks/useAuth';
 import { parseApiError } from '../../services/api';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -36,7 +36,7 @@ interface Props {
 
 const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { data: user } = useMyProfile();
-  const logout = useAuthStore(state => state.logout);
+  const { mutate: logout } = useLogout();
 
   // React Query mutation hook
   const { mutate: updateSettings, isPending: isUpdating } = useUpdateSettings();
