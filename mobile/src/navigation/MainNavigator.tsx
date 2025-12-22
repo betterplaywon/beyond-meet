@@ -44,7 +44,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainNavigator: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const userRole = useAuthStore((state) => state.userRole);
+  const isAdmin = userRole === 'ADMIN';
 
   return (
     <Tab.Navigator

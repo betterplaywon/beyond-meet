@@ -19,10 +19,13 @@ interface AuthState {
   refreshToken: string | null;
   userId: string | null;
   userRole: 'USER' | 'ADMIN' | null;
+  emailVerified: boolean;
+  userEmail: string | null;
 
   // Actions
-  setAuth: (accessToken: string, refreshToken: string, userId: string, userRole: 'USER' | 'ADMIN') => void;
+  setAuth: (accessToken: string, refreshToken: string, userId: string, userRole: 'USER' | 'ADMIN', emailVerified: boolean, email: string) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
+  setEmailVerified: (verified: boolean) => void;
   logout: () => void;
   isAdmin: () => boolean;
 }
@@ -36,21 +39,30 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       userId: null,
       userRole: null,
+      emailVerified: false,
+      userEmail: null,
 
       // Actions
-      setAuth: (accessToken, refreshToken, userId, userRole) =>
+      setAuth: (accessToken, refreshToken, userId, userRole, emailVerified, email) =>
         set({
           isAuthenticated: true,
           accessToken,
           refreshToken,
           userId,
           userRole,
+          emailVerified,
+          userEmail: email,
         }),
 
       setTokens: (accessToken, refreshToken) =>
         set({
           accessToken,
           refreshToken,
+        }),
+
+      setEmailVerified: (verified) =>
+        set({
+          emailVerified: verified,
         }),
 
       logout: () =>
@@ -60,6 +72,8 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           userId: null,
           userRole: null,
+          emailVerified: false,
+          userEmail: null,
         }),
 
       isAdmin: () => get().userRole === 'ADMIN',

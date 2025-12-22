@@ -27,6 +27,7 @@ import ProfileEditScreen from '../screens/profile/ProfileEditScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import LegalContentScreen from '../screens/profile/LegalContentScreen';
 import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
+import EmailVerificationScreen from '../screens/auth/EmailVerificationScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -36,13 +37,14 @@ const Stack = createStackNavigator<RootStackParamList>();
  */
 const AppContent: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  // Call Store
+  // Auth Store - 상태만 구독
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const emailVerified = useAuthStore((state) => state.emailVerified);
+
+  // Call Store - 상태만 구독
   const incomingCall = useCallStore((state) => state.incomingCall);
-  const setIncomingCall = useCallStore((state) => state.setIncomingCall);
   const showIncomingCallModal = useCallStore((state) => state.showIncomingCallModal);
-  const setShowIncomingCallModal = useCallStore((state) => state.setShowIncomingCallModal);
 
   // 푸시 알림 초기화 (로그인 시에만 실행됨)
   useNotificationSetup();
@@ -65,11 +67,11 @@ const AppContent: React.FC = () => {
   // 통화 수신 이벤트 (앱 전역)
   useSocketEvent('call:incoming', (data: any) => {
     console.log('[ROOT] Incoming call:', data);
-    setIncomingCall({
+    useCallStore.getState().setIncomingCall({
       session: data.session,
       caller: data.caller,
     });
-    setShowIncomingCallModal(true);
+    useCallStore.getState().setShowIncomingCallModal(true);
   });
 
   // 통화 수락 완료 이벤트 (토큰 및 UID 받기)
@@ -82,31 +84,36 @@ const AppContent: React.FC = () => {
         token: data.token,
         uid: data.uid,
       });
-      setIncomingCall(null);
+      useCallStore.getState().setIncomingCall(null);
     }
   });
 
   // 통화 수락 핸들러
   const handleAcceptCall = () => {
     if (!incomingCall) return;
-    setShowIncomingCallModal(false);
+    useCallStore.getState().setShowIncomingCallModal(false);
     socketService.acceptCall(incomingCall.session.id);
   };
 
   // 통화 거절 핸들러
   const handleRejectCall = () => {
     if (!incomingCall) return;
-    setShowIncomingCallModal(false);
+    useCallStore.getState().setShowIncomingCallModal(false);
     socketService.rejectCall(incomingCall.session.id);
-    setIncomingCall(null);
+    useCallStore.getState().setIncomingCall(null);
   };
 
   return (
     <>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
+          // 미로그인 → 인증 플로우 (Splash → Welcome → Login/Register)
           <Stack.Screen name="Auth" component={AuthNavigator} />
+        ) : !emailVerified ? (
+          // 로그인됨 but 이메일 미인증 → 이메일 인증 화면
+          <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
         ) : (
+          // 로그인됨 + 이메일 인증됨 → 메인 앱
           <>
             <Stack.Screen name="Main" component={MainNavigator} />
             <Stack.Screen name="Matching" component={MatchingScreen} />
@@ -121,8 +128,8 @@ const AppContent: React.FC = () => {
         )}
       </Stack.Navigator>
 
-      {/* 전역 통화 수신 모달 - 인증된 상태에서만 표시 */}
-      {isAuthenticated && (
+      {/* 전역 통화 수신 모달 - 인증 완료된 상태에서만 표시 */}
+      {isAuthenticated && emailVerified && (
         <IncomingCallModal
           visible={showIncomingCallModal}
           onAccept={handleAcceptCall}

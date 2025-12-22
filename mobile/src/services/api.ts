@@ -72,10 +72,10 @@ api.interceptors.response.use(
           { refreshToken }
         );
 
-        const { accessToken, refreshToken: newRefreshToken, user } = response.data.data!;
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data!;
 
-        // 새 토큰과 role 저장
-        useAuthStore.getState().setAuth(accessToken, newRefreshToken, user.id, user.role);
+        // 새 토큰 저장 (emailVerified 및 기타 상태는 유지)
+        useAuthStore.getState().setTokens(accessToken, newRefreshToken);
 
         // 원래 요청 재시도
         if (originalRequest.headers) {
