@@ -74,4 +74,47 @@ export const authApi = {
     );
     return response.data.data!;
   },
+
+  /**
+   * 회원가입 전 이메일 인증 코드 발송 (비인증)
+   */
+  sendVerificationCode: async (email: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+      '/auth/send-verification-code',
+      { email }
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * 회원가입 전 이메일 인증 코드 확인 (비인증)
+   */
+  verifyCode: async (email: string, code: string): Promise<{ message: string; emailVerified: boolean }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string; emailVerified: boolean }>>(
+      '/auth/verify-code',
+      { email, code }
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * 이메일 인증 코드 확인 (로그인된 사용자)
+   */
+  verifyEmail: async (code: string): Promise<{ message: string; emailVerified: boolean }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string; emailVerified: boolean }>>(
+      '/auth/verify-email',
+      { code }
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * 이메일 인증 코드 재발송 (로그인된 사용자)
+   */
+  resendVerification: async (): Promise<{ message: string }> => {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+      '/auth/resend-verification'
+    );
+    return response.data.data!;
+  },
 };
