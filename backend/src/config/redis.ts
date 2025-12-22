@@ -1,13 +1,17 @@
 import { Redis } from '@upstash/redis';
 
-if (!process.env.UPSTASH_REDIS_URL || !process.env.UPSTASH_REDIS_TOKEN) {
+// Support both naming conventions for backwards compatibility
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.UPSTASH_REDIS_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.UPSTASH_REDIS_TOKEN;
+
+if (!redisUrl || !redisToken) {
   console.warn('⚠️  Upstash Redis credentials not configured. Redis functionality will be disabled.');
 }
 
-const redis = process.env.UPSTASH_REDIS_URL && process.env.UPSTASH_REDIS_TOKEN
+const redis = redisUrl && redisToken
   ? new Redis({
-      url: process.env.UPSTASH_REDIS_URL,
-      token: process.env.UPSTASH_REDIS_TOKEN,
+      url: redisUrl,
+      token: redisToken,
     })
   : null;
 
