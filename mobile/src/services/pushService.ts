@@ -42,6 +42,7 @@ interface NotificationData {
 
 // Private 상태 변수
 let navigationRef: NavigationContainerRef<RootStackParamList> | null = null;
+let isInitialized = false;
 
 /**
  * Navigation 참조 설정
@@ -229,6 +230,12 @@ const setupBackgroundMessageHandler = (): void => {
  * 푸시 알림 초기화
  */
 export const initialize = async (): Promise<void> => {
+  // 이미 초기화된 경우 중복 실행 방지
+  if (isInitialized) {
+    console.log('[PushService] Already initialized, skipping');
+    return;
+  }
+
   // 0. 백그라운드 메시지 핸들러 등록 (먼저 설정)
   setupBackgroundMessageHandler();
 
@@ -248,6 +255,7 @@ export const initialize = async (): Promise<void> => {
   // 4. 초기 알림 확인 (앱이 종료 상태에서 알림으로 열린 경우)
   await handleInitialNotification();
 
+  isInitialized = true;
   console.log('[PushService] Initialized successfully');
 };
 
@@ -292,19 +300,24 @@ export const getDeviceToken = async (): Promise<string | null> => {
     console.log('[PushService] FCM Token:', token);
     return token;
   } catch (error: any) {
-    console.error('[PushService] Failed to get FCM token:', error);
-
-    // iOS APNS 설정 관련 에러 처리
-    if (Platform.OS === 'ios' && error?.code === 'messaging/unregistered') {
-      console.error(
-        '[PushService] iOS APNS not configured. Please ensure:',
-        '\n1. BeyondMeet.entitlements file exists with aps-environment',
-        '\n2. Push Notifications capability is enabled in Xcode',
-        '\n3. APNs Key or Certificate is configured in Firebase Console',
-        '\n4. Testing on a real device (not simulator)',
-      );
+    // iOS APNs 설정 관련 에러 처리 (시뮬레이터 포함)
+    if (Platform.OS === 'ios') {
+      const errorCode = error?.code || '';
+      if (
+        errorCode === 'messaging/unregistered' ||
+        errorCode === 'messaging/unknown' ||
+        error?.message?.includes('aps-environment')
+      ) {
+        // 시뮬레이터에서는 경고만 출력 (에러가 아님)
+        console.warn(
+          '[PushService] iOS APNs not available.',
+          'This is expected on simulators. Push notifications require a real device.',
+        );
+        return null;
+      }
     }
 
+    console.error('[PushService] Failed to get FCM token:', error);
     return null;
   }
 };
