@@ -2,7 +2,7 @@
  * Rate Limiting 미들웨어
  */
 
-import rateLimit from 'express-rate-limit';
+import rateLimit from "express-rate-limit";
 
 /**
  * 일반 API Rate Limiter
@@ -14,8 +14,8 @@ export const apiLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'TOO_MANY_REQUESTS',
-      message: '너무 많은 요청을 보냈습니다. 잠시 후 다시 시도해주세요.',
+      code: "TOO_MANY_REQUESTS",
+      message: "너무 많은 요청을 보냈습니다. 잠시 후 다시 시도해주세요.",
     },
   },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
@@ -32,8 +32,8 @@ export const authLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'TOO_MANY_AUTH_ATTEMPTS',
-      message: '로그인 시도 횟수가 초과되었습니다. 15분 후 다시 시도해주세요.',
+      code: "TOO_MANY_AUTH_ATTEMPTS",
+      message: "로그인 시도 횟수가 초과되었습니다. 15분 후 다시 시도해주세요.",
     },
   },
   standardHeaders: true,
@@ -52,8 +52,9 @@ export const passwordResetLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'TOO_MANY_PASSWORD_RESET_ATTEMPTS',
-      message: '비밀번호 재설정 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.',
+      code: "TOO_MANY_PASSWORD_RESET_ATTEMPTS",
+      message:
+        "비밀번호 재설정 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.",
     },
   },
   standardHeaders: true,
@@ -70,8 +71,8 @@ export const uploadLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'TOO_MANY_UPLOAD_ATTEMPTS',
-      message: '파일 업로드 횟수가 초과되었습니다. 1시간 후 다시 시도해주세요.',
+      code: "TOO_MANY_UPLOAD_ATTEMPTS",
+      message: "파일 업로드 횟수가 초과되었습니다. 1시간 후 다시 시도해주세요.",
     },
   },
   standardHeaders: true,
@@ -88,8 +89,27 @@ export const adminLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'TOO_MANY_ADMIN_REQUESTS',
-      message: '관리자 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+      code: "TOO_MANY_ADMIN_REQUESTS",
+      message: "관리자 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * 이메일 인증 재발송 Rate Limiter
+ * - 5분 동안 최대 3번 요청
+ */
+export const verificationResendLimiter = rateLimit({
+  windowMs: 10 * 30 * 1000, // 5분
+  max: 10, // 최대 10번 요청
+  message: {
+    success: false,
+    error: {
+      code: "TOO_MANY_RESEND_ATTEMPTS",
+      message:
+        "인증 코드 재발송 요청이 너무 많습니다. 5분 후 다시 시도해주세요.",
     },
   },
   standardHeaders: true,
