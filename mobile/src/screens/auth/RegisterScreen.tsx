@@ -1,9 +1,11 @@
 /**
  * 회원가입 화면
  * Figma: Cupid Arrow - Sign-up Screen 디자인 적용
+ *
+ * 플로우: Step 1 (계정 정보) → 이메일 인증 → Step 2 (프로필) → Step 3 (매칭) → 회원가입 완료
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,10 +19,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { AuthStackParamList } from '../../@types';
+import { RouteProp } from '@react-navigation/native';
+import { AuthStackParamList, RegisterFormData } from '../../@types';
 import { Input } from '../../components/common/Input';
 import { Picker, PickerOption } from '../../components/common/Picker';
 import { useRegister } from '../../hooks/useAuth';
+import { useSendVerificationCode } from '../../hooks/useEmailVerification';
 import { colors, typography, spacing } from '../../styles/theme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -31,8 +35,11 @@ type RegisterScreenNavigationProp = StackNavigationProp<
   'Register'
 >;
 
+type RegisterScreenRouteProp = RouteProp<AuthStackParamList, 'Register'>;
+
 interface Props {
   navigation: RegisterScreenNavigationProp;
+  route: RegisterScreenRouteProp;
 }
 
 // 성별 옵션
@@ -80,34 +87,69 @@ const DAY_OPTIONS: PickerOption[] = Array.from({ length: 31 }, (_, i) => {
   return { label: `${day}일`, value: day.toString().padStart(2, '0') };
 });
 
-const RegisterScreen: React.FC<Props> = ({ navigation }) => {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    inviteCode: '',
-    email: '',
-    password: '',
-    passwordConfirm: '',
-    nickname: '',
-    birthYear: '',
-    birthMonth: '',
-    birthDay: '',
-    gender: '' as 'MALE' | 'FEMALE' | 'OTHER' | '',
-    country: 'KR',
-    preferredGender: '' as 'MALE' | 'FEMALE' | 'ANYONE' | '',
-    minAge: 18,
-    maxAge: 40,
-  });
+const DEFAULT_FORM_DATA: RegisterFormData = {
+  inviteCode: '',
+  email: '',
+  password: '',
+  passwordConfirm: '',
+  nickname: '',
+  birthYear: '',
+  birthMonth: '',
+  birthDay: '',
+  gender: '',
+  country: 'KR',
+  preferredGender: '',
+  minAge: 18,
+  maxAge: 40,
+};
+
+const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
+  // 이메일 인증 완료 후 돌아온 경우 Step 2부터 시작
+  const initialStep = route.params?.emailVerified ? 2 : 1;
+  const initialFormData = route.params?.formData || DEFAULT_FORM_DATA;
+
+  const [step, setStep] = useState(initialStep);
+  const [formData, setFormData] = useState<RegisterFormData>(initialFormData);
+  const [emailVerified, setEmailVerified] = useState(route.params?.emailVerified || false);
+  const [verifiedEmail, setVerifiedEmail] = useState<string>(route.params?.formData?.email || '');
 
   const registerMutation = useRegister();
+  const sendCodeMutation = useSendVerificationCode();
+
+  // 이메일 인증 완료 후 돌아온 경우 처리
+  useEffect(() => {
+    if (route.params?.emailVerified && route.params?.formData) {
+      setStep(2);
+      setFormData(route.params.formData);
+      setEmailVerified(true);
+      setVerifiedEmail(route.params.formData.email);
+    }
+  }, [route.params]);
+
+  // 이메일이 변경되면 인증 상태 초기화
+  const handleEmailChange = (value: string) => {
+    setFormData({ ...formData, email: value });
+    // 인증된 이메일과 다르면 인증 상태 초기화
+    if (emailVerified && value !== verifiedEmail) {
+      setEmailVerified(false);
+    }
+  };
 
   const handleNextStep = () => {
     if (step === 1) {
+      // Step 1 검증
       if (!formData.inviteCode.trim()) {
         Alert.alert('오류', '초대 코드를 입력해주세요');
         return;
       }
       if (!formData.email.trim()) {
         Alert.alert('오류', '이메일을 입력해주세요');
+        return;
+      }
+      // 이메일 형식 검증
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        Alert.alert('오류', '올바른 이메일 형식을 입력해주세요');
         return;
       }
       if (!formData.password || formData.password.length < 8) {
@@ -118,7 +160,16 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         Alert.alert('오류', '비밀번호가 일치하지 않습니다');
         return;
       }
-      setStep(2);
+
+      // 이메일 인증 코드 발송 후 인증 화면으로 이동
+      sendCodeMutation.mutate(formData.email, {
+        onSuccess: () => {
+          navigation.navigate('EmailVerification', {
+            email: formData.email,
+            formData: formData,
+          });
+        },
+      });
     } else if (step === 2) {
       if (!formData.nickname.trim()) {
         Alert.alert('오류', '닉네임을 입력해주세요');
@@ -207,6 +258,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     <Icon name="person" size={20} color={colors.textTertiary} />
   );
 
+  const isLoading = registerMutation.isPending || sendCodeMutation.isPending;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* 하단 blur 배경 효과 - top 기준으로 고정 */}
@@ -281,9 +334,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   label="이메일"
                   placeholder="example@email.com"
                   value={formData.email}
-                  onChangeText={value =>
-                    setFormData({ ...formData, email: value })
-                  }
+                  onChangeText={handleEmailChange}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   leftIcon={<EmailIcon />}
@@ -443,22 +494,28 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   style={styles.backButton}
                   onPress={() => setStep(step - 1)}
                 >
-                  <Text style={styles.backButtonText}>← 이전</Text>
+                  <Text style={styles.backButtonText}>
+                    ← 이전
+                  </Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity
                 style={[
                   styles.nextButton,
-                  registerMutation.isPending && styles.nextButtonDisabled,
+                  isLoading && styles.nextButtonDisabled,
                 ]}
                 activeOpacity={0.8}
                 onPress={handleNextStep}
-                disabled={registerMutation.isPending}
+                disabled={isLoading}
               >
                 <Text style={styles.nextButtonText}>
-                  {registerMutation.isPending
-                    ? '처리 중...'
+                  {sendCodeMutation.isPending
+                    ? '인증 코드 발송 중...'
+                    : registerMutation.isPending
+                    ? '회원가입 중...'
+                    : step === 1
+                    ? '이메일 인증'
                     : step === 3
                     ? '회원가입 완료'
                     : '다음'}
