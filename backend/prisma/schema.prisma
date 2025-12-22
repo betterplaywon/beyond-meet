@@ -36,6 +36,10 @@ model User {
   // 알림 설정
   pushEnabled     Boolean   @default(true) @map("push_enabled")
 
+  // 이메일 인증
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -52,6 +56,7 @@ model User {
   moderationLogs   ContentModerationLog[]
   reportsAsSender  Report[]       @relation("ReporterReports")
   reportsAsReceiver Report[]      @relation("ReportedUserReports")
+  emailVerifications EmailVerification[]
 
   // Performance: 매칭 쿼리 최적화
   @@index([onlineStatus, gender, country])
@@ -317,4 +322,20 @@ enum ModerationAction {
   NONE
   WARNING_ISSUED
   CALL_ENDED
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  code      String   @db.VarChar(6)
+  expiresAt DateTime @map("expires_at")
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("email_verifications")
 }
