@@ -50,16 +50,6 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('Matching');
   };
 
-  // 하트 아이콘
-  const HeartIcon = () => (
-    <Icon name="favorite" size={60} color={colors.primary} />
-  );
-
-  // 비디오 아이콘
-  const VideoIcon = () => (
-    <Icon name="videocam" size={24} color={colors.primary} />
-  );
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* 하단 blur 배경 효과 */}
@@ -81,7 +71,7 @@ const HomeScreen: React.FC = () => {
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.matchCard}>
-          <HeartIcon />
+          <Icon name="favorite" size={60} color={colors.primary} />
           <Text style={styles.matchTitle}>새로운 인연을{'\n'}만나보세요</Text>
           <Text style={styles.matchDescription}>
             랜덤 매칭을 통해 새로운 사람과{'\n'}영상 통화를 시작해보세요
@@ -94,7 +84,7 @@ const HomeScreen: React.FC = () => {
             onPress={handleRandomMatch}
           >
             <View style={styles.buttonIconCircle}>
-              <VideoIcon />
+              <Icon name="videocam" size={24} color={colors.primary} />
             </View>
             <Text style={styles.matchButtonText}>랜덤 매칭 시작</Text>
           </TouchableOpacity>
