@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth-controller';
 import { authenticate } from '../middlewares/auth';
-import { authLimiter, passwordResetLimiter } from '../middlewares/rateLimiter';
+import { authLimiter, passwordResetLimiter, verificationResendLimiter } from '../middlewares/rateLimiter';
 
 const router = Router();
 
@@ -71,5 +71,33 @@ router.post('/change-password', authenticate, authController.changePassword);
  * @access  Private
  */
 router.delete('/account', authenticate, authLimiter, authController.deleteAccount);
+
+/**
+ * @route   POST /api/auth/send-verification-code
+ * @desc    회원가입 전 이메일 인증 코드 발송
+ * @access  Public
+ */
+router.post('/send-verification-code', verificationResendLimiter, authController.sendVerificationCode);
+
+/**
+ * @route   POST /api/auth/verify-code
+ * @desc    회원가입 전 이메일 인증 코드 확인
+ * @access  Public
+ */
+router.post('/verify-code', authController.verifyCode);
+
+/**
+ * @route   POST /api/auth/verify-email
+ * @desc    이메일 인증 코드 확인 (로그인된 사용자)
+ * @access  Private
+ */
+router.post('/verify-email', authenticate, authController.verifyEmail);
+
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    이메일 인증 코드 재발송 (로그인된 사용자)
+ * @access  Private
+ */
+router.post('/resend-verification', authenticate, verificationResendLimiter, authController.resendVerification);
 
 export default router;
