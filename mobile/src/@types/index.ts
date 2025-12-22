@@ -22,6 +22,9 @@ export interface User {
   preferredCountries: string[] | null;
   // 알림 설정
   pushEnabled: boolean;
+  // 이메일 인증
+  emailVerified: boolean;
+  emailVerifiedAt?: string | null;
   lastActive: string | null;
   createdAt: string;
   updatedAt: string;
@@ -126,6 +129,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 // Navigation Types
 export type RootStackParamList = {
   Auth: undefined;
+  EmailVerification: undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Matching: undefined;
   IncomingCall: { sessionId: string; caller: User };
@@ -142,12 +146,30 @@ export type AuthStackParamList = {
   Splash: undefined;
   Welcome: undefined;
   Login: undefined;
-  Register: undefined;
+  Register: { emailVerified?: boolean; formData?: RegisterFormData } | undefined;
   RegisterStep1: undefined;
   RegisterStep2: undefined;
   RegisterStep3: undefined;
   Onboarding: undefined;
+  EmailVerification: { email: string; formData: RegisterFormData };
 };
+
+// 회원가입 폼 데이터 (스크린 간 전달용)
+export interface RegisterFormData {
+  inviteCode: string;
+  email: string;
+  password: string;
+  passwordConfirm: string;
+  nickname: string;
+  birthYear: string;
+  birthMonth: string;
+  birthDay: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER' | '';
+  country: string;
+  preferredGender: 'MALE' | 'FEMALE' | 'ANYONE' | '';
+  minAge: number;
+  maxAge: number;
+}
 
 export type MainTabParamList = {
   Home: undefined;

@@ -28,9 +28,12 @@ export const profileKeys = queryKeys.profile;
  * 내 프로필 조회 Hook
  */
 export const useMyProfile = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
   return useQuery({
     queryKey: profileKeys.me(),
     queryFn: () => userApi.getMyProfile(),
+    enabled: isAuthenticated,
   });
 };
 

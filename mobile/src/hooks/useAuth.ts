@@ -19,19 +19,25 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials: LoginCredentials) => authApi.login(credentials),
     onSuccess: data => {
-      // authStore에 토큰, userId, role 저장
+      // authStore에 토큰, userId, role, emailVerified 저장
       setAuth(
         data.accessToken,
         data.refreshToken,
         data.user.id,
         data.user.role,
+        data.user.emailVerified ?? false,
+        data.user.email,
       );
       queryClient.invalidateQueries({ queryKey: queryKeys.profile.me() });
-      Toast.show({
-        type: 'success',
-        text1: '로그인 성공',
-        text2: `${data.user.nickname}님, 환영합니다!`,
-      });
+
+      if (data.user.emailVerified) {
+        Toast.show({
+          type: 'success',
+          text1: '로그인 성공',
+          text2: `${data.user.nickname}님, 환영합니다!`,
+        });
+      }
+      // 이메일 미인증 시 토스트는 표시하지 않음 (인증 화면으로 이동)
     },
     onError: (error: any) => {
       Toast.show({
@@ -53,18 +59,20 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (data: RegisterData) => authApi.register(data),
     onSuccess: data => {
-      // authStore에 토큰, userId, role 저장
+      // authStore에 토큰, userId, role, emailVerified 저장
       setAuth(
         data.accessToken,
         data.refreshToken,
         data.user.id,
         data.user.role,
+        data.user.emailVerified ?? false,
+        data.user.email,
       );
       queryClient.invalidateQueries({ queryKey: queryKeys.profile.me() });
       Toast.show({
         type: 'success',
         text1: '회원가입 완료',
-        text2: '환영합니다!',
+        text2: '이메일 인증을 진행해주세요',
       });
     },
     onError: (error: any) => {
@@ -79,8 +87,6 @@ export const useRegister = () => {
 
 /**
  * 로그아웃 함수 반환 hook
- * mutation 대신 직접 함수를 사용하여 컴포넌트 언마운트 이슈 방지
- * InteractionManager를 사용하여 iOS 렌더링 사이클 충돌 방지
  */
 export const useLogout = () => {
   const queryClient = useQueryClient();
@@ -89,17 +95,14 @@ export const useLogout = () => {
     // 서버에 로그아웃 알림 (fire-and-forget)
     authApi.logout().catch(() => {});
 
-    // 현재 인터랙션/애니메이션 완료 후 상태 변경
-    // iOS에서 동기적 상태 변경 시 렌더링 사이클 충돌 방지
-    requestAnimationFrame(() => {
-      queryClient.clear();
-      useAuthStore.getState().logout();
+    // 쿼리 캐시 정리 및 인증 상태 초기화
+    queryClient.clear();
+    useAuthStore.getState().logout();
 
-      Toast.show({
-        type: 'success',
-        text1: '로그아웃',
-        text2: '안전하게 로그아웃되었습니다',
-      });
+    Toast.show({
+      type: 'success',
+      text1: '로그아웃',
+      text2: '안전하게 로그아웃되었습니다',
     });
   };
 

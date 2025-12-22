@@ -10,8 +10,15 @@ import {
   registerSchema,
   loginSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
   formatZodError,
 } from '../utils/validation';
+import {
+  sendVerificationEmail,
+  verifyEmailCode,
+  sendPreRegistrationVerificationEmail,
+  verifyPreRegistrationCode,
+} from '../services/email-service';
 
 /**
  * 회원가입
@@ -268,6 +275,134 @@ export const deleteAccount = async (req: Request, res: Response, next: NextFunct
       success: true,
       data: {
         message: '회원 탈퇴가 완료되었습니다.',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 회원가입 전 이메일 인증 코드 발송 (비인증)
+ * POST /api/auth/send-verification-code
+ */
+export const sendVerificationCode = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new AppError(400, 'MISSING_EMAIL', '이메일을 입력해주세요');
+    }
+
+    // 이메일 형식 검증
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new AppError(400, 'INVALID_EMAIL', '올바른 이메일 형식이 아닙니다');
+    }
+
+    await sendPreRegistrationVerificationEmail(email);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: '인증 코드가 이메일로 전송되었습니다',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 회원가입 전 이메일 인증 코드 확인 (비인증)
+ * POST /api/auth/verify-code
+ */
+export const verifyCode = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      throw new AppError(400, 'MISSING_FIELDS', '이메일과 인증 코드를 입력해주세요');
+    }
+
+    // Zod 스키마로 코드 검증
+    const parseResult = verifyEmailSchema.safeParse({ code });
+    if (!parseResult.success) {
+      throw new AppError(400, 'VALIDATION_ERROR', formatZodError(parseResult.error));
+    }
+
+    await verifyPreRegistrationCode(email, code);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: '이메일이 인증되었습니다',
+        emailVerified: true,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 이메일 인증 코드 확인 (로그인된 사용자)
+ * POST /api/auth/verify-email
+ */
+export const verifyEmail = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+    }
+
+    // Zod 스키마로 입력 검증
+    const parseResult = verifyEmailSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      throw new AppError(400, 'VALIDATION_ERROR', formatZodError(parseResult.error));
+    }
+
+    const { code } = parseResult.data;
+
+    await verifyEmailCode(userId, code);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: '이메일이 인증되었습니다',
+        emailVerified: true,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 이메일 인증 코드 재발송
+ * POST /api/auth/resend-verification
+ */
+export const resendVerification = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
+    }
+
+    const user = await authService.getCurrentUser(userId);
+
+    if (user.emailVerified) {
+      throw new AppError(400, 'ALREADY_VERIFIED', '이미 인증된 이메일입니다');
+    }
+
+    await sendVerificationEmail(userId, user.email);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: '인증 코드가 이메일로 전송되었습니다',
       },
     });
   } catch (error) {

@@ -183,6 +183,16 @@ export const resetPasswordSchema = z.object({
 });
 
 /**
+ * 이메일 인증 코드 스키마
+ */
+export const verifyEmailSchema = z.object({
+  code: z
+    .string()
+    .length(6, '인증 코드는 6자리입니다')
+    .regex(/^\d{6}$/, '인증 코드는 숫자 6자리입니다'),
+});
+
+/**
  * 프로필 업데이트 스키마
  */
 export const updateProfileSchema = z
@@ -224,3 +234,4 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
