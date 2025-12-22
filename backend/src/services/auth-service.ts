@@ -12,6 +12,7 @@ import { hashPassword, comparePassword } from '../utils/password';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { AppError } from '../middlewares/errorHandler';
 import { deleteMultipleProfilePhotos } from './storage-service';
+import { isEmailPreVerified, clearEmailPreVerification } from './email-service';
 
 export interface RegisterInput {
   inviteCode: string;
@@ -39,6 +40,7 @@ export interface RegisterOutput {
     country: string;
     bio: string | null;
     interests: string[];
+    emailVerified: boolean;
   };
   accessToken: string;
   refreshToken: string;
@@ -57,6 +59,13 @@ export interface LoginInput {
  * - Serializable isolation level로 동시 요청 시 데이터 정합성 보장
  */
 export const register = async (data: RegisterInput): Promise<RegisterOutput> => {
+  // 이메일 사전 인증 확인 (Step 1에서 인증 완료된 경우)
+  const emailPreVerified = await isEmailPreVerified(data.email);
+
+  if (!emailPreVerified) {
+    throw new AppError(400, 'EMAIL_NOT_VERIFIED', '이메일 인증이 필요합니다. 인증 코드를 먼저 확인해주세요.');
+  }
+
   // 비밀번호는 트랜잭션 전에 해싱 (CPU 바운드 작업)
   const hashedPassword = await hashPassword(data.password);
 
@@ -101,7 +110,7 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
         throw new AppError(400, 'EMAIL_EXISTS', '이미 사용 중인 이메일입니다');
       }
 
-      // 4. 사용자 생성
+      // 4. 사용자 생성 (이메일 사전 인증 완료 상태로)
       const newUser = await tx.user.create({
         data: {
           email: data.email,
@@ -118,6 +127,8 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
           maxAge: data.maxAge || 99,
           preferredCountries: data.preferredCountries || [],
           onlineStatus: 'OFFLINE',
+          emailVerified: true, // 사전 인증 완료
+          emailVerifiedAt: new Date(),
         },
         select: {
           id: true,
@@ -129,6 +140,7 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
           bio: true,
           interests: true,
           role: true,
+          emailVerified: true,
         },
       });
 
@@ -171,6 +183,13 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
     role: user.role,
   });
 
+  // 이메일 사전 인증 상태 정리 (Redis에서 삭제)
+  try {
+    await clearEmailPreVerification(user.email);
+  } catch (error) {
+    console.error('[REGISTER] Failed to clear pre-verification status:', error);
+  }
+
   return {
     user,
     accessToken,
@@ -195,6 +214,7 @@ export const login = async (data: LoginInput): Promise<RegisterOutput> => {
       bio: true,
       interests: true,
       role: true,
+      emailVerified: true,
     },
   });
 
@@ -409,6 +429,7 @@ export const getCurrentUser = async (userId: string) => {
       lastActive: true,
       createdAt: true,
       role: true,
+      emailVerified: true,
     },
   });
 
@@ -531,7 +552,29 @@ export const deleteAccount = async (userId: string, password: string): Promise<v
         where: { userId },
       });
 
-      // 3.10 User 삭제
+      // 3.10 InviteCodeUsage 처리 (초대 코드 재사용 가능하게 복원)
+      const inviteCodeUsages = await tx.inviteCodeUsage.findMany({
+        where: { userId },
+        select: { inviteCodeId: true },
+      });
+
+      for (const usage of inviteCodeUsages) {
+        await tx.inviteCode.updateMany({
+          where: {
+            id: usage.inviteCodeId,
+            usedCount: { gt: 0 },
+          },
+          data: {
+            usedCount: { decrement: 1 },
+          },
+        });
+      }
+
+      await tx.inviteCodeUsage.deleteMany({
+        where: { userId },
+      });
+
+      // 3.11 User 삭제
       await tx.user.delete({
         where: { id: userId },
       });
