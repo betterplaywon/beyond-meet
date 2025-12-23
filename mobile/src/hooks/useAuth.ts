@@ -72,7 +72,7 @@ export const useRegister = () => {
       Toast.show({
         type: 'success',
         text1: '회원가입 완료',
-        text2: '이메일 인증을 진행해주세요',
+        text2: `${data.user.nickname}님, 환영합니다!`,
       });
     },
     onError: (error: any) => {
