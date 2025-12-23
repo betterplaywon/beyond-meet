@@ -156,6 +156,18 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
         Alert.alert('오류', '비밀번호는 8자 이상이어야 합니다');
         return;
       }
+      if (!/[A-Z]/.test(formData.password)) {
+        Alert.alert('오류', '비밀번호에 대문자가 최소 1개 포함되어야 합니다');
+        return;
+      }
+      if (!/[0-9]/.test(formData.password)) {
+        Alert.alert('오류', '비밀번호에 숫자가 최소 1개 포함되어야 합니다');
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+        Alert.alert('오류', '비밀번호에 특수문자가 최소 1개 포함되어야 합니다');
+        return;
+      }
       if (formData.password !== formData.passwordConfirm) {
         Alert.alert('오류', '비밀번호가 일치하지 않습니다');
         return;
@@ -189,15 +201,27 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
         Alert.alert('오류', '선호 성별을 선택해주세요');
         return;
       }
-      if (formData.minAge >= formData.maxAge) {
+      // 나이 범위 유효성 검사 및 기본값 적용
+      const minAge = formData.minAge || 18;
+      const maxAge = formData.maxAge || 40;
+      if (minAge < 18 || minAge > 100) {
+        Alert.alert('오류', '최소 나이는 18세 이상 100세 이하여야 합니다');
+        return;
+      }
+      if (maxAge < 18 || maxAge > 100) {
+        Alert.alert('오류', '최대 나이는 18세 이상 100세 이하여야 합니다');
+        return;
+      }
+      if (minAge >= maxAge) {
         Alert.alert('오류', '최소 나이는 최대 나이보다 작아야 합니다');
         return;
       }
-      handleRegister();
+      // 유효한 값으로 회원가입 진행
+      handleRegister(minAge, maxAge);
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = (finalMinAge: number, finalMaxAge: number) => {
     const birthDate = `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`;
 
     registerMutation.mutate({
@@ -209,8 +233,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
       gender: formData.gender as 'MALE' | 'FEMALE' | 'OTHER',
       country: formData.country,
       preferredGender: formData.preferredGender as 'MALE' | 'FEMALE' | 'ANYONE',
-      minAge: formData.minAge,
-      maxAge: formData.maxAge,
+      minAge: finalMinAge,
+      maxAge: finalMaxAge,
       preferredCountries: [formData.country],
     });
   };
@@ -342,7 +366,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
 
                 <Input
                   label="비밀번호"
-                  placeholder="8자 이상 입력"
+                  description="8자 이상, 대문자·숫자·특수문자 각 1개 이상 포함"
+                  placeholder="비밀번호 입력"
                   value={formData.password}
                   onChangeText={value =>
                     setFormData({ ...formData, password: value })
@@ -458,13 +483,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Input
                       label="최소"
                       placeholder="18"
-                      value={formData.minAge.toString()}
-                      onChangeText={value =>
+                      value={formData.minAge === 0 ? '' : formData.minAge.toString()}
+                      onChangeText={value => {
+                        const numericValue = value.replace(/[^0-9]/g, '');
                         setFormData({
                           ...formData,
-                          minAge: parseInt(value) || 18,
-                        })
-                      }
+                          minAge: numericValue === '' ? 0 : parseInt(numericValue, 10),
+                        });
+                      }}
                       keyboardType="number-pad"
                     />
                   </View>
@@ -473,13 +499,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Input
                       label="최대"
                       placeholder="40"
-                      value={formData.maxAge.toString()}
-                      onChangeText={value =>
+                      value={formData.maxAge === 0 ? '' : formData.maxAge.toString()}
+                      onChangeText={value => {
+                        const numericValue = value.replace(/[^0-9]/g, '');
                         setFormData({
                           ...formData,
-                          maxAge: parseInt(value) || 40,
-                        })
-                      }
+                          maxAge: numericValue === '' ? 0 : parseInt(numericValue, 10),
+                        });
+                      }}
                       keyboardType="number-pad"
                     />
                   </View>
@@ -645,12 +672,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
   },
   backButton: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.white,
   },
   backButtonText: {
     ...typography.body1,
@@ -658,6 +693,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   nextButton: {
+    flex: 1,
     backgroundColor: colors.primary,
     borderRadius: 50,
     paddingVertical: 16,

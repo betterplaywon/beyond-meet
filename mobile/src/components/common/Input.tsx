@@ -15,6 +15,7 @@ import { colors, typography, spacing } from '../../styles/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
+  description?: string;
   error?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -23,6 +24,7 @@ interface InputProps extends TextInputProps {
 
 export const Input: React.FC<InputProps> = ({
   label,
+  description,
   error,
   leftIcon,
   rightIcon,
@@ -42,6 +44,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
+      {description && <Text style={styles.description}>{description}</Text>}
 
       <View style={containerStyle}>
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
@@ -83,8 +86,13 @@ const styles = StyleSheet.create({
   label: {
     ...typography.body2,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     fontWeight: '600',
+  },
+  description: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
