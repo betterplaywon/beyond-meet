@@ -235,7 +235,7 @@ export const isEmailPreVerified = async (email: string): Promise<boolean> => {
   }
 
   const verified = await redis.get(`email_verified:${email}`);
-  return verified === 'true';
+  return verified === true;
 };
 
 /**
