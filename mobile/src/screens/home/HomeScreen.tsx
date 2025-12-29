@@ -60,7 +60,6 @@ const HomeScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoContainer}>
-          <Icon name="favorite" size={32} color={colors.primary} />
           <Text style={styles.headerTitle}>Beyond Meet</Text>
         </View>
         <Text style={styles.headerSubtitle}>
@@ -147,12 +146,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginLeft: spacing.sm,
   },
   headerSubtitle: {
     ...typography.body1,
     color: colors.textSecondary,
-    marginLeft: 40,
   },
   content: {
     flex: 1,
