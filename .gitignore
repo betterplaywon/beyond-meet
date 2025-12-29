@@ -48,3 +48,8 @@ temp/
 
 # Claude MCP settings (contains API keys)
 *.claude
+
+# Android keystore secrets
+mobile/android/keystore.properties
+mobile/android/app/*.keystore
+!mobile/android/app/debug.keystore
