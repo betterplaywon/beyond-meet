@@ -97,13 +97,11 @@ export const sendPushNotification = async (
 
   // 2. 푸시 알림 설정 확인
   if (!user.pushEnabled) {
-    console.log(`Push notifications disabled for user ${userId}`);
     return;
   }
 
   // 3. 디바이스 토큰이 없으면 종료
   if (user.deviceTokens.length === 0) {
-    console.log(`No device tokens for user ${userId}`);
     return;
   }
 
@@ -122,11 +120,6 @@ export const sendPushNotification = async (
 
     const response = await admin.messaging().sendEachForMulticast(message);
 
-    console.log(`Push notification sent to user ${userId}:`, {
-      successCount: response.successCount,
-      failureCount: response.failureCount,
-    });
-
     // 5. 실패한 토큰 제거 (invalid token)
     if (response.failureCount > 0) {
       const failedTokens: string[] = [];
@@ -142,7 +135,6 @@ export const sendPushNotification = async (
             token: { in: failedTokens },
           },
         });
-        console.log(`Removed ${failedTokens.length} invalid tokens`);
       }
     }
   } catch (error) {

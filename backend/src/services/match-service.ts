@@ -2,10 +2,10 @@
  * 매칭 서비스 (함수형)
  */
 
-import prisma from '../config/database';
-import { AppError } from '../middlewares/errorHandler';
-import { RtcTokenBuilder, RtcRole } from 'agora-token';
-import crypto from 'crypto';
+import prisma from "../config/database";
+import { AppError } from "../middlewares/errorHandler";
+import { RtcTokenBuilder, RtcRole } from "agora-token";
+import crypto from "crypto";
 
 /**
  * 매칭에 필요한 사용자 정보 조회
@@ -25,7 +25,7 @@ export const getUserMatchInfo = async (userId: string) => {
 
 interface MatchRequest {
   userId: string;
-  type: 'RANDOM' | 'DIRECT';
+  type: "RANDOM" | "DIRECT";
   targetUserId?: string;
 }
 
@@ -39,7 +39,10 @@ interface MatchSession {
 }
 
 // 매칭 대기열 (메모리)
-const matchQueue: Map<string, { userId: string; filters: any; timestamp: Date }> = new Map();
+const matchQueue: Map<
+  string,
+  { userId: string; filters: any; timestamp: Date }
+> = new Map();
 
 /**
  * userId를 기반으로 고유 Agora UID 생성
@@ -47,10 +50,9 @@ const matchQueue: Map<string, { userId: string; filters: any; timestamp: Date }>
  * - userId를 해시하여 고정된 UID 생성 (동일 사용자는 항상 동일 UID)
  */
 export const generateAgoraUid = (userId: string): number => {
-  const hash = crypto.createHash('sha256').update(userId).digest();
+  const hash = crypto.createHash("sha256").update(userId).digest();
   // 첫 4바이트를 32-bit unsigned integer로 변환
   const uid = hash.readUInt32BE(0);
-  console.log(`[Agora UID] userId=${userId} → uid=${uid}`);
   return uid;
 };
 
@@ -62,13 +64,17 @@ export const generateAgoraUid = (userId: string): number => {
  */
 export const generateAgoraToken = (
   channelName: string,
-  userId: string
+  _userId?: string
 ): { token: string; uid: number } => {
   const appId = process.env.AGORA_APP_ID;
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
 
   if (!appId || !appCertificate) {
-    throw new AppError(500, 'AGORA_CONFIG_MISSING', 'Agora 설정이 누락되었습니다');
+    throw new AppError(
+      500,
+      "AGORA_CONFIG_MISSING",
+      "Agora 설정이 누락되었습니다"
+    );
   }
 
   const role = RtcRole.PUBLISHER;
@@ -89,8 +95,6 @@ export const generateAgoraToken = (
     privilegeExpiredTs
   );
 
-  console.log(`[Agora Token] channel=${channelName}, userId=${userId}, uid=0 (auto-assign)`);
-
   return { token, uid };
 };
 
@@ -100,9 +104,11 @@ export const generateAgoraToken = (
 export const createMatchSession = async (
   userId1: string,
   userId2: string,
-  type: 'RANDOM' | 'DIRECT'
+  type: "RANDOM" | "DIRECT"
 ): Promise<MatchSession> => {
-  const channelName = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const channelName = `call_${Date.now()}_${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
 
   const session = await prisma.matchSession.create({
     data: {
@@ -110,7 +116,7 @@ export const createMatchSession = async (
       userId2,
       channelName,
       matchType: type,
-      status: 'PENDING',
+      status: "PENDING",
     },
   });
 
@@ -122,7 +128,7 @@ export const createMatchSession = async (
       },
     },
     data: {
-      onlineStatus: 'IN_CALL',
+      onlineStatus: "IN_CALL",
     },
   });
 
@@ -135,7 +141,7 @@ export const createMatchSession = async (
     userId1: session.userId1,
     userId2: session.userId2,
     channelName: session.channelName,
-    token: '', // Socket 핸들러에서 각 사용자별로 생성
+    token: "", // Socket 핸들러에서 각 사용자별로 생성
     uid: 0, // Socket 핸들러에서 각 사용자별로 생성
   };
 };
@@ -159,7 +165,7 @@ export const addToMatchQueue = async (userId: string) => {
   });
 
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
   // 대기열에 추가
@@ -204,7 +210,10 @@ export const findMatch = async (userId: string): Promise<string | null> => {
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       return age - 1;
     }
     return age;
@@ -213,32 +222,47 @@ export const findMatch = async (userId: string): Promise<string | null> => {
   const currentUserAge = calculateAge(currentUser.filters.birthDate);
 
   // Tier 1: 엄격한 매칭 (모든 필터 적용)
-  const strictMatch = await tryMatchWithFilters(userId, currentUser, currentUserAge, {
-    checkGender: true,
-    checkAge: true,
-    checkCountry: true,
-  });
+  const strictMatch = await tryMatchWithFilters(
+    userId,
+    currentUser,
+    currentUserAge,
+    {
+      checkGender: true,
+      checkAge: true,
+      checkCountry: true,
+    }
+  );
   if (strictMatch) {
     return strictMatch;
   }
 
   // Tier 2: 국가 필터 제외
-  const countryRelaxedMatch = await tryMatchWithFilters(userId, currentUser, currentUserAge, {
-    checkGender: true,
-    checkAge: true,
-    checkCountry: false,
-  });
+  const countryRelaxedMatch = await tryMatchWithFilters(
+    userId,
+    currentUser,
+    currentUserAge,
+    {
+      checkGender: true,
+      checkAge: true,
+      checkCountry: false,
+    }
+  );
   if (countryRelaxedMatch) {
     return countryRelaxedMatch;
   }
 
   // Tier 3: 나이 범위 ±5년 확대
-  const ageRelaxedMatch = await tryMatchWithFilters(userId, currentUser, currentUserAge, {
-    checkGender: true,
-    checkAge: true,
-    checkCountry: false,
-    ageBuffer: 5,
-  });
+  const ageRelaxedMatch = await tryMatchWithFilters(
+    userId,
+    currentUser,
+    currentUserAge,
+    {
+      checkGender: true,
+      checkAge: true,
+      checkCountry: false,
+      ageBuffer: 5,
+    }
+  );
   if (ageRelaxedMatch) {
     return ageRelaxedMatch;
   }
@@ -264,7 +288,10 @@ async function tryMatchWithFilters(
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       return age - 1;
     }
     return age;
@@ -276,24 +303,27 @@ async function tryMatchWithFilters(
     if (candidateId === userId) continue;
 
     const candidateAge = calculateAge(candidate.filters.birthDate);
-    const reasons: string[] = [];
 
     // 성별 필터
     if (options.checkGender) {
       // ANYONE 체크: 한쪽이라도 ANYONE이면 성별 무시
-      const currentUserAcceptsAny = currentUser.filters.preferredGender === 'ANYONE';
-      const candidateAcceptsAny = candidate.filters.preferredGender === 'ANYONE';
+      const currentUserAcceptsAny =
+        currentUser.filters.preferredGender === "ANYONE";
+      const candidateAcceptsAny =
+        candidate.filters.preferredGender === "ANYONE";
 
       // 양방향 성별 체크
-      if (!currentUserAcceptsAny &&
-          candidate.filters.gender !== currentUser.filters.preferredGender) {
-        reasons.push(`gender mismatch (wants ${currentUser.filters.preferredGender}, got ${candidate.filters.gender})`);
+      if (
+        !currentUserAcceptsAny &&
+        candidate.filters.gender !== currentUser.filters.preferredGender
+      ) {
         continue;
       }
 
-      if (!candidateAcceptsAny &&
-          currentUser.filters.gender !== candidate.filters.preferredGender) {
-        reasons.push(`reverse gender mismatch (candidate wants ${candidate.filters.preferredGender}, got ${currentUser.filters.gender})`);
+      if (
+        !candidateAcceptsAny &&
+        currentUser.filters.gender !== candidate.filters.preferredGender
+      ) {
         continue;
       }
     }
@@ -306,27 +336,34 @@ async function tryMatchWithFilters(
       const candidateMaxAge = candidate.filters.maxAge + ageBuffer;
 
       if (candidateAge < minAge || candidateAge > maxAge) {
-        reasons.push(`age out of range (${candidateAge} not in ${minAge}-${maxAge})`);
         continue;
       }
 
-      if (currentUserAge < candidateMinAge || currentUserAge > candidateMaxAge) {
-        reasons.push(`reverse age out of range (${currentUserAge} not in ${candidateMinAge}-${candidateMaxAge})`);
+      if (
+        currentUserAge < candidateMinAge ||
+        currentUserAge > candidateMaxAge
+      ) {
         continue;
       }
     }
 
     // 국가 필터
     if (options.checkCountry) {
-      if (currentUser.filters.preferredCountries.length > 0 &&
-          !currentUser.filters.preferredCountries.includes(candidate.filters.country)) {
-        reasons.push(`country not in preferred list`);
+      if (
+        currentUser.filters.preferredCountries.length > 0 &&
+        !currentUser.filters.preferredCountries.includes(
+          candidate.filters.country
+        )
+      ) {
         continue;
       }
 
-      if (candidate.filters.preferredCountries.length > 0 &&
-          !candidate.filters.preferredCountries.includes(currentUser.filters.country)) {
-        reasons.push(`reverse country not in preferred list`);
+      if (
+        candidate.filters.preferredCountries.length > 0 &&
+        !candidate.filters.preferredCountries.includes(
+          currentUser.filters.country
+        )
+      ) {
         continue;
       }
     }
@@ -342,7 +379,6 @@ async function tryMatchWithFilters(
     });
 
     if (isBlocked) {
-      reasons.push('blocked');
       continue;
     }
 
@@ -356,7 +392,10 @@ async function tryMatchWithFilters(
 /**
  * 선택 매칭 (친구에게 통화 요청)
  */
-export const requestDirectMatch = async (callerId: string, receiverId: string): Promise<MatchSession> => {
+export const requestDirectMatch = async (
+  callerId: string,
+  receiverId: string
+): Promise<MatchSession> => {
   // 수신자 확인
   const receiver = await prisma.user.findUnique({
     where: { id: receiverId },
@@ -367,11 +406,15 @@ export const requestDirectMatch = async (callerId: string, receiverId: string): 
   });
 
   if (!receiver) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
-  if (receiver.onlineStatus !== 'ONLINE') {
-    throw new AppError(400, 'USER_NOT_ONLINE', '사용자가 온라인 상태가 아닙니다');
+  if (receiver.onlineStatus !== "ONLINE") {
+    throw new AppError(
+      400,
+      "USER_NOT_ONLINE",
+      "사용자가 온라인 상태가 아닙니다"
+    );
   }
 
   // 차단 여부 확인
@@ -385,23 +428,27 @@ export const requestDirectMatch = async (callerId: string, receiverId: string): 
   });
 
   if (isBlocked) {
-    throw new AppError(403, 'USER_BLOCKED', '차단된 사용자입니다');
+    throw new AppError(403, "USER_BLOCKED", "차단된 사용자입니다");
   }
 
   // 친구 관계 확인: 수신자가 발신자를 친구로 추가했는지 확인
   const friendship = await prisma.friendship.findFirst({
     where: {
-      userId: receiverId,    // 수신자가
-      friendId: callerId,    // 발신자를 친구로 추가했는지
+      userId: receiverId, // 수신자가
+      friendId: callerId, // 발신자를 친구로 추가했는지
     },
   });
 
   if (!friendship) {
-    throw new AppError(403, 'NOT_IN_FRIEND_LIST', '상대방이 회원님을 친구로 추가하지 않았습니다');
+    throw new AppError(
+      403,
+      "NOT_IN_FRIEND_LIST",
+      "상대방이 회원님을 친구로 추가하지 않았습니다"
+    );
   }
 
   // 매칭 세션 생성
-  return await createMatchSession(callerId, receiverId, 'DIRECT');
+  return await createMatchSession(callerId, receiverId, "DIRECT");
 };
 
 /**
@@ -413,18 +460,18 @@ export const acceptMatch = async (sessionId: string, userId: string) => {
   });
 
   if (!session) {
-    throw new AppError(404, 'SESSION_NOT_FOUND', '세션을 찾을 수 없습니다');
+    throw new AppError(404, "SESSION_NOT_FOUND", "세션을 찾을 수 없습니다");
   }
 
   if (session.userId2 !== userId) {
-    throw new AppError(403, 'FORBIDDEN', '권한이 없습니다');
+    throw new AppError(403, "FORBIDDEN", "권한이 없습니다");
   }
 
   // 세션 상태 업데이트
   const updatedSession = await prisma.matchSession.update({
     where: { id: sessionId },
     data: {
-      status: 'ACTIVE',
+      status: "ACTIVE",
       startTime: new Date(),
     },
   });
@@ -435,7 +482,7 @@ export const acceptMatch = async (sessionId: string, userId: string) => {
       sessionId: session.id,
       callerId: session.userId1,
       receiverId: session.userId2,
-      status: 'ONGOING',
+      status: "ONGOING",
       startTime: new Date(),
     },
   });
@@ -452,18 +499,18 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
   });
 
   if (!session) {
-    throw new AppError(404, 'SESSION_NOT_FOUND', '세션을 찾을 수 없습니다');
+    throw new AppError(404, "SESSION_NOT_FOUND", "세션을 찾을 수 없습니다");
   }
 
   if (session.userId2 !== userId) {
-    throw new AppError(403, 'FORBIDDEN', '권한이 없습니다');
+    throw new AppError(403, "FORBIDDEN", "권한이 없습니다");
   }
 
   // 세션 상태 업데이트
   await prisma.matchSession.update({
     where: { id: sessionId },
     data: {
-      status: 'REJECTED',
+      status: "REJECTED",
       endTime: new Date(),
     },
   });
@@ -476,7 +523,7 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
       },
     },
     data: {
-      onlineStatus: 'ONLINE',
+      onlineStatus: "ONLINE",
     },
   });
 
@@ -495,7 +542,9 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
  * 큐 전체 재매칭 (주기적 실행용)
  * 대기열의 모든 사용자를 순회하며 매칭 시도
  */
-export const matchAllUsersInQueue = async (): Promise<Array<{ user1: string; user2: string }>> => {
+export const matchAllUsersInQueue = async (): Promise<
+  Array<{ user1: string; user2: string }>
+> => {
   const matches: Array<{ user1: string; user2: string }> = [];
   const processedUsers = new Set<string>();
 
@@ -543,18 +592,18 @@ export const endCall = async (sessionId: string, userId: string) => {
     include: {
       callRecords: {
         where: {
-          status: 'ONGOING',
+          status: "ONGOING",
         },
       },
     },
   });
 
   if (!session) {
-    throw new AppError(404, 'SESSION_NOT_FOUND', '세션을 찾을 수 없습니다');
+    throw new AppError(404, "SESSION_NOT_FOUND", "세션을 찾을 수 없습니다");
   }
 
   if (session.userId1 !== userId && session.userId2 !== userId) {
-    throw new AppError(403, 'FORBIDDEN', '권한이 없습니다');
+    throw new AppError(403, "FORBIDDEN", "권한이 없습니다");
   }
 
   const endTime = new Date();
@@ -565,7 +614,7 @@ export const endCall = async (sessionId: string, userId: string) => {
   await prisma.matchSession.update({
     where: { id: sessionId },
     data: {
-      status: 'COMPLETED',
+      status: "COMPLETED",
       endTime,
       duration,
     },
@@ -576,7 +625,7 @@ export const endCall = async (sessionId: string, userId: string) => {
     await prisma.callRecord.update({
       where: { id: session.callRecords[0].id },
       data: {
-        status: 'COMPLETED',
+        status: "COMPLETED",
         endTime,
         duration,
       },
@@ -591,7 +640,7 @@ export const endCall = async (sessionId: string, userId: string) => {
       },
     },
     data: {
-      onlineStatus: 'ONLINE',
+      onlineStatus: "ONLINE",
     },
   });
 

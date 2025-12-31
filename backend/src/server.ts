@@ -28,12 +28,7 @@ io.on('connection', (socket) => {
 // 주기적 재매칭 시스템 시작
 startPeriodicMatching(io);
 
-server.listen(PORT, () => {
-  console.log(`🚀 Beyond Meet API server running on port ${PORT}`);
-  console.log(`🔌 Socket.io server ready`);
-  console.log(`🔄 Periodic matching system started`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+server.listen(PORT);
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');

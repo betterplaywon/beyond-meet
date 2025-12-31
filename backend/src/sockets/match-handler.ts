@@ -32,9 +32,6 @@ const broadcastStatusToFriends = async (
       });
     });
 
-    console.log(
-      `[STATUS] Broadcasted ${status} to ${friendIds.length} friends of ${userId}`
-    );
   } catch (error) {
     console.error("[STATUS] Failed to broadcast status:", error);
   }
@@ -50,18 +47,13 @@ export const authenticateSocket = async (
   try {
     const token = socket.handshake.auth.token;
 
-    console.log('[SOCKET_AUTH] Token received:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
-
     if (!token) {
-      console.error('[SOCKET_AUTH] ❌ No token provided');
       return next(new Error("인증 토큰이 필요합니다"));
     }
 
     const decoded = verifyAccessToken(token);
-    console.log('[SOCKET_AUTH] Decoded token:', decoded ? `userId=${decoded.id}` : 'INVALID');
 
     if (!decoded || !decoded.id) {
-      console.error('[SOCKET_AUTH] ❌ Invalid token');
       return next(new Error("유효하지 않은 토큰입니다"));
     }
 
@@ -77,10 +69,8 @@ export const authenticateSocket = async (
       },
     });
 
-    console.log('[SOCKET_AUTH] ✅ Authentication successful:', decoded.id);
     next();
   } catch (error) {
-    console.error('[SOCKET_AUTH] ❌ Authentication error:', error);
     next(new Error("인증 실패"));
   }
 };
@@ -104,39 +94,24 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
     "match:request",
     async (data: { type: "RANDOM" | "DIRECT"; targetUserId?: string }) => {
       try {
-        console.log("[MATCH] Match request received:", {
-          userId,
-          type: data.type,
-        });
-
         if (data.type === "RANDOM") {
           // 대기열에 추가
-          const queueResult = await matchService.addToMatchQueue(userId);
-          console.log("[MATCH] User added to queue:", { userId, queueResult });
+          await matchService.addToMatchQueue(userId);
 
           // 매칭 상대 찾기
           const matchedUserId = await matchService.findMatch(userId);
-          console.log("[MATCH] Find match result:", { userId, matchedUserId });
 
           if (matchedUserId) {
-            // 매칭 성공!
-            console.log("[MATCH] Match found!", { userId, matchedUserId });
-
             // 세션 생성
             const session = await matchService.createMatchSession(
               userId,
               matchedUserId,
               "RANDOM"
             );
-            console.log("[MATCH] Session created:", {
-              sessionId: session.id,
-              channelName: session.channelName,
-            });
 
             // 대기열에서 제거
             matchService.removeFromMatchQueue(userId);
             matchService.removeFromMatchQueue(matchedUserId);
-            console.log("[MATCH] Users removed from queue");
 
             // 사용자 정보 가져오기
             const [user1, user2] = await Promise.all([
@@ -155,7 +130,6 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
             );
 
             // 두 사용자에게 매칭 성공 알림 (개별 토큰/UID 전달)
-            console.log("[MATCH] Emitting match:found to userId:", userId);
             io.to(userId).emit("match:found", {
               session: {
                 id: session.id,
@@ -166,10 +140,6 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
               uid: user1TokenData.uid,
             });
 
-            console.log(
-              "[MATCH] Emitting match:found to matchedUserId:",
-              matchedUserId
-            );
             io.to(matchedUserId).emit("match:found", {
               session: {
                 id: session.id,
@@ -181,18 +151,12 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
             });
           } else {
             // 매칭 대기 중
-            console.log("[MATCH] No match found, waiting...", { userId });
             socket.emit("match:waiting", {
               message: "매칭 상대를 찾고 있습니다...",
             });
           }
         } else if (data.type === "DIRECT" && data.targetUserId) {
           // 선택 매칭
-          console.log("[MATCH] Direct match request:", {
-            userId,
-            targetUserId: data.targetUserId,
-          });
-
           const session = await matchService.requestDirectMatch(
             userId,
             data.targetUserId
@@ -331,61 +295,68 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
   /**
    * 모니터링 이벤트: 경고 발송
    */
-  socket.on("moderation:warning", async (data: { sessionId: string; targetUserId: string }) => {
-    try {
-      console.log("[MODERATION] Warning event:", data);
-
-      // 상대방에게 경고 알림
-      io.to(data.targetUserId).emit("moderation:warning-received", {
-        sessionId: data.sessionId,
-        message: "부적절한 행동이 감지되었습니다. 경고를 받았습니다.",
-      });
-    } catch (error) {
-      console.error("[MODERATION] Warning error:", error);
+  socket.on(
+    "moderation:warning",
+    async (data: { sessionId: string; targetUserId: string }) => {
+      try {
+        // 상대방에게 경고 알림
+        io.to(data.targetUserId).emit("moderation:warning-received", {
+          sessionId: data.sessionId,
+          message: "부적절한 행동이 감지되었습니다. 경고를 받았습니다.",
+        });
+      } catch (error) {
+        console.error("[MODERATION] Warning error:", error);
+      }
     }
-  });
+  );
 
   /**
    * 모니터링 이벤트: 강제 종료
    */
-  socket.on("moderation:force-end", async (data: { sessionId: string; reportedUserId: string }) => {
-    try {
-      console.log("[MODERATION] Force end event:", data);
+  socket.on(
+    "moderation:force-end",
+    async (data: { sessionId: string; reportedUserId: string }) => {
+      try {
+        // 세션 가져오기
+        const session = await prisma.matchSession.findUnique({
+          where: { id: data.sessionId },
+        });
 
-      // 세션 가져오기
-      const session = await prisma.matchSession.findUnique({
-        where: { id: data.sessionId },
-      });
+        if (!session) {
+          return;
+        }
 
-      if (!session) {
-        return;
+        // 통화 종료 처리
+        const result = await matchService.endCall(
+          data.sessionId,
+          data.reportedUserId
+        );
+
+        // 양쪽 사용자에게 강제 종료 알림
+        io.to(session.userId1).emit("moderation:call-force-ended", {
+          sessionId: data.sessionId,
+          reason: "Inappropriate content detected",
+        });
+
+        io.to(session.userId2).emit("moderation:call-force-ended", {
+          sessionId: data.sessionId,
+          reason: "Inappropriate content detected",
+        });
+
+        // 자동 신고 생성
+        const moderationService = await import(
+          "../services/moderation-service"
+        );
+        await moderationService.createAutoReport({
+          reportedUserId: data.reportedUserId,
+          sessionId: data.sessionId,
+          confidence: 0.7, // 임시 값 (실제로는 analyze에서 전달받아야 함)
+        });
+      } catch (error) {
+        console.error("[MODERATION] Force end error:", error);
       }
-
-      // 통화 종료 처리
-      const result = await matchService.endCall(data.sessionId, data.reportedUserId);
-
-      // 양쪽 사용자에게 강제 종료 알림
-      io.to(session.userId1).emit("moderation:call-force-ended", {
-        sessionId: data.sessionId,
-        reason: "Inappropriate content detected",
-      });
-
-      io.to(session.userId2).emit("moderation:call-force-ended", {
-        sessionId: data.sessionId,
-        reason: "Inappropriate content detected",
-      });
-
-      // 자동 신고 생성
-      const moderationService = await import("../services/moderation-service");
-      await moderationService.createAutoReport({
-        reportedUserId: data.reportedUserId,
-        sessionId: data.sessionId,
-        confidence: 0.7, // 임시 값 (실제로는 analyze에서 전달받아야 함)
-      });
-    } catch (error) {
-      console.error("[MODERATION] Force end error:", error);
     }
-  });
+  );
 
   /**
    * 연결 해제
@@ -407,7 +378,10 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
       // 친구들에게 오프라인 상태 브로드캐스트
       await broadcastStatusToFriends(io, userId, "OFFLINE");
     } catch (error) {
-      console.error("[SOCKET] disconnect - failed to update user status:", error);
+      console.error(
+        "[SOCKET] disconnect - failed to update user status:",
+        error
+      );
     }
   });
 };
@@ -426,17 +400,11 @@ export const startPeriodicMatching = (io: Server) => {
 
   periodicMatchingInterval = setInterval(async () => {
     try {
-      console.log("[PERIODIC_MATCHING] Starting periodic matching...");
       const matches = await matchService.matchAllUsersInQueue();
-      console.log("[PERIODIC_MATCHING] Matches found:", matches.length);
 
       // 매칭된 사용자들에게 알림 전송
       for (const match of matches) {
         const { user1, user2 } = match;
-        console.log("[PERIODIC_MATCHING] Processing match:", {
-          user1,
-          user2,
-        });
 
         // 세션 생성
         const session = await matchService.createMatchSession(
@@ -444,7 +412,6 @@ export const startPeriodicMatching = (io: Server) => {
           user2,
           "RANDOM"
         );
-        console.log("[PERIODIC_MATCHING] Session created:", session.id);
 
         // 대기열에서 제거
         matchService.removeFromMatchQueue(user1);
@@ -467,7 +434,6 @@ export const startPeriodicMatching = (io: Server) => {
         );
 
         // 두 사용자에게 매칭 성공 알림 (개별 토큰/UID 전달)
-        console.log("[PERIODIC_MATCHING] Emitting match:found to user1:", user1);
         io.to(user1).emit("match:found", {
           session: {
             id: session.id,
@@ -478,7 +444,6 @@ export const startPeriodicMatching = (io: Server) => {
           uid: user1TokenData.uid,
         });
 
-        console.log("[PERIODIC_MATCHING] Emitting match:found to user2:", user2);
         io.to(user2).emit("match:found", {
           session: {
             id: session.id,

@@ -58,10 +58,6 @@ export const validateImageForModeration = (imageBase64: string): void => {
       );
     }
 
-    // 검증 성공
-    console.log(
-      `[IMAGE_VALIDATOR] ✓ 이미지 검증 성공: ${dimensions.width}x${dimensions.height}px, ${format.toUpperCase()}`
-    );
   } catch (error) {
     if (error instanceof AppError) {
       throw error;

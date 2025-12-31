@@ -10,8 +10,6 @@ if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY || !pr
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     }),
   });
-
-  console.log('✅ Firebase Admin SDK initialized');
 }
 
 export default admin;

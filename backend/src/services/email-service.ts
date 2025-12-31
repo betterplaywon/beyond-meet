@@ -90,8 +90,6 @@ export const sendVerificationEmail = async (userId: string, email: string): Prom
     console.error('[EMAIL] Failed to send verification email:', error);
     throw new AppError(500, 'EMAIL_SEND_FAILED', '이메일 전송에 실패했습니다');
   }
-
-  console.log(`[EMAIL] Verification email sent to ${email}`);
 };
 
 /**
@@ -165,8 +163,6 @@ export const sendPreRegistrationVerificationEmail = async (email: string): Promi
     console.error('[EMAIL] Failed to send verification email:', error);
     throw new AppError(500, 'EMAIL_SEND_FAILED', '이메일 전송에 실패했습니다');
   }
-
-  console.log(`[EMAIL] Pre-registration verification email sent to ${email}`);
 };
 
 /**
@@ -219,7 +215,6 @@ export const verifyPreRegistrationCode = async (email: string, code: string): Pr
   await redis.set(`email_verified:${email}`, 'true', { ex: 30 * 60 }); // 30 minutes validity
   await redis.del(key);
 
-  console.log(`[EMAIL] Pre-registration email verified: ${email}`);
   return true;
 };
 
@@ -310,6 +305,5 @@ export const verifyEmailCode = async (userId: string, code: string): Promise<boo
     }),
   ]);
 
-  console.log(`[EMAIL] Email verified for user ${userId}`);
   return true;
 };
