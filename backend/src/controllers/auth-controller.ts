@@ -35,7 +35,6 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const validatedData = parseResult.data;
 
     const result = await authService.register({
-      inviteCode: validatedData.inviteCode,
       email: validatedData.email,
       password: validatedData.password,
       nickname: validatedData.nickname,

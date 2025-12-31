@@ -16,27 +16,6 @@ router.use(requireAdmin);
 router.use(adminLimiter);
 
 /**
- * @route   POST /api/admin/invite-codes
- * @desc    초대 코드 생성
- * @access  Private (Admin)
- */
-router.post('/invite-codes', adminController.createInviteCodes);
-
-/**
- * @route   GET /api/admin/invite-codes
- * @desc    초대 코드 목록 조회
- * @access  Private (Admin)
- */
-router.get('/invite-codes', adminController.getInviteCodes);
-
-/**
- * @route   PATCH /api/admin/invite-codes/:codeId/deactivate
- * @desc    초대 코드 비활성화
- * @access  Private (Admin)
- */
-router.patch('/invite-codes/:codeId/deactivate', adminController.deactivateInviteCode);
-
-/**
  * @route   GET /api/admin/stats
  * @desc    통계 조회
  * @access  Private (Admin)

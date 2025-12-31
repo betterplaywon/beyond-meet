@@ -2,8 +2,8 @@
  * 인증 서비스 (함수형)
  *
  * 보안 수정 내역:
- * - Race Condition 수정: 초대 코드 검증을 트랜잭션 내부로 이동
  * - Serializable isolation level 사용으로 동시성 문제 방지
+ * - BETA_USER_LIMIT으로 가입 인원 제한
  */
 
 import prisma from '../config/database';
@@ -15,7 +15,6 @@ import { deleteMultipleProfilePhotos } from './storage-service';
 import { isEmailPreVerified, clearEmailPreVerification } from './email-service';
 
 export interface RegisterInput {
-  inviteCode: string;
   email: string;
   password: string;
   nickname: string;
@@ -73,35 +72,13 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
     async (tx) => {
       // 1. Beta 사용자 수 제한 확인 (트랜잭션 내부에서 검증)
       const userCount = await tx.user.count();
-      const betaLimit = parseInt(process.env.BETA_USER_LIMIT || '20', 10);
+      const betaLimit = parseInt(process.env.BETA_USER_LIMIT || '30', 10);
 
       if (userCount >= betaLimit) {
         throw new AppError(403, 'BETA_LIMIT_REACHED', 'Beta 테스트 사용자 수가 가득 찼습니다');
       }
 
-      // 2. 초대 코드 검증 (트랜잭션 내부 - Race Condition 방지)
-      const inviteCode = await tx.inviteCode.findUnique({
-        where: { code: data.inviteCode },
-      });
-
-      if (!inviteCode) {
-        throw new AppError(400, 'INVALID_INVITE_CODE', '유효하지 않은 초대 코드입니다');
-      }
-
-      if (!inviteCode.isActive) {
-        throw new AppError(400, 'INVITE_CODE_INACTIVE', '비활성화된 초대 코드입니다');
-      }
-
-      if (inviteCode.expiresAt && inviteCode.expiresAt < new Date()) {
-        throw new AppError(400, 'INVITE_CODE_EXPIRED', '만료된 초대 코드입니다');
-      }
-
-      // Critical: usedCount 검증이 트랜잭션 내부에 있어야 race condition 방지
-      if (inviteCode.usedCount >= inviteCode.maxUses) {
-        throw new AppError(400, 'INVITE_CODE_EXHAUSTED', '사용 횟수가 초과된 초대 코드입니다');
-      }
-
-      // 3. 이메일 중복 확인 (트랜잭션 내부)
+      // 2. 이메일 중복 확인 (트랜잭션 내부)
       const existingUser = await tx.user.findUnique({
         where: { email: data.email },
       });
@@ -110,7 +87,7 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
         throw new AppError(400, 'EMAIL_EXISTS', '이미 사용 중인 이메일입니다');
       }
 
-      // 4. 사용자 생성 (이메일 사전 인증 완료 상태로)
+      // 3. 사용자 생성 (이메일 사전 인증 완료 상태로)
       const newUser = await tx.user.create({
         data: {
           email: data.email,
@@ -141,22 +118,6 @@ export const register = async (data: RegisterInput): Promise<RegisterOutput> => 
           interests: true,
           role: true,
           emailVerified: true,
-        },
-      });
-
-      // 5. 초대 코드 사용 기록
-      await tx.inviteCodeUsage.create({
-        data: {
-          inviteCodeId: inviteCode.id,
-          userId: newUser.id,
-        },
-      });
-
-      // 6. 초대 코드 사용 횟수 증가
-      await tx.inviteCode.update({
-        where: { id: inviteCode.id },
-        data: {
-          usedCount: { increment: 1 },
         },
       });
 
@@ -552,25 +513,8 @@ export const deleteAccount = async (userId: string, password: string): Promise<v
         where: { userId },
       });
 
-      // 3.10 InviteCodeUsage 처리 (초대 코드 재사용 가능하게 복원)
-      const inviteCodeUsages = await tx.inviteCodeUsage.findMany({
-        where: { userId },
-        select: { inviteCodeId: true },
-      });
-
-      for (const usage of inviteCodeUsages) {
-        await tx.inviteCode.updateMany({
-          where: {
-            id: usage.inviteCodeId,
-            usedCount: { gt: 0 },
-          },
-          data: {
-            usedCount: { decrement: 1 },
-          },
-        });
-      }
-
-      await tx.inviteCodeUsage.deleteMany({
+      // 3.10 EmailVerification 삭제
+      await tx.emailVerification.deleteMany({
         where: { userId },
       });
 

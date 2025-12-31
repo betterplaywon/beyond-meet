@@ -96,15 +96,6 @@ const countrySchema = z
   .transform((code) => code.toUpperCase());
 
 /**
- * 초대 코드 스키마
- */
-const inviteCodeSchema = z
-  .string()
-  .min(1, '초대 코드를 입력해주세요')
-  .max(20, '초대 코드는 20자를 초과할 수 없습니다')
-  .transform((code) => code.toUpperCase().trim());
-
-/**
  * 자기소개 스키마
  */
 const bioSchema = z
@@ -147,7 +138,6 @@ const preferredCountriesSchema = z
  */
 export const registerSchema = z
   .object({
-    inviteCode: inviteCodeSchema,
     email: emailSchema,
     password: passwordSchema,
     nickname: nicknameSchema,
