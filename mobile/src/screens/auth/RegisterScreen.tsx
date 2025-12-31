@@ -88,7 +88,6 @@ const DAY_OPTIONS: PickerOption[] = Array.from({ length: 31 }, (_, i) => {
 });
 
 const DEFAULT_FORM_DATA: RegisterFormData = {
-  inviteCode: '',
   email: '',
   password: '',
   passwordConfirm: '',
@@ -138,10 +137,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
   const handleNextStep = () => {
     if (step === 1) {
       // Step 1 검증
-      if (!formData.inviteCode.trim()) {
-        Alert.alert('오류', '초대 코드를 입력해주세요');
-        return;
-      }
       if (!formData.email.trim()) {
         Alert.alert('오류', '이메일을 입력해주세요');
         return;
@@ -225,7 +220,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
     const birthDate = `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`;
 
     registerMutation.mutate({
-      inviteCode: formData.inviteCode,
       email: formData.email,
       password: formData.password,
       nickname: formData.nickname,
@@ -266,10 +260,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   // 아이콘 컴포넌트들
-  const TicketIcon = () => (
-    <Icon name="confirmation-number" size={20} color={colors.textTertiary} />
-  );
-
   const EmailIcon = () => (
     <Icon name="mail" size={20} color={colors.textTertiary} />
   );
@@ -344,16 +334,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
             {/* Step 1: 기본 정보 */}
             {step === 1 && (
               <View style={styles.form}>
-                <Input
-                  label="초대 코드"
-                  placeholder="BETA2025-001"
-                  value={formData.inviteCode}
-                  onChangeText={value =>
-                    setFormData({ ...formData, inviteCode: value })
-                  }
-                  leftIcon={<TicketIcon />}
-                />
-
                 <Input
                   label="이메일"
                   placeholder="example@email.com"

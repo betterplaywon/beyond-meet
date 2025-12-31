@@ -37,7 +37,6 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData {
-  inviteCode: string;
   email: string;
   password: string;
   nickname: string;
@@ -156,7 +155,6 @@ export type AuthStackParamList = {
 
 // 회원가입 폼 데이터 (스크린 간 전달용)
 export interface RegisterFormData {
-  inviteCode: string;
   email: string;
   password: string;
   passwordConfirm: string;
