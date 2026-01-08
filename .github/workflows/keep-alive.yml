@@ -17,17 +17,39 @@ jobs:
       - name: Ping Health Endpoint
         run: |
           echo "🏓 Pinging Render.com server..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://beyond-meet-api.onrender.com/health)
 
-          if [ $response -eq 200 ]; then
-            echo "✅ Server is alive! (HTTP $response)"
-          else
-            echo "⚠️ Server response: HTTP $response"
-            exit 1
-          fi
+          # 최대 3회 재시도 (Render.com cold start 대응)
+          max_attempts=3
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt/$max_attempts..."
+
+            # 타임아웃 120초 설정 (cold start는 보통 60-90초)
+            response=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 120 \
+              --connect-timeout 10 \
+              https://beyond-meet-api.onrender.com/health)
+
+            if [ $response -eq 200 ]; then
+              echo "✅ Server is alive! (HTTP $response)"
+              exit 0
+            else
+              echo "⚠️ Attempt $attempt failed: HTTP $response"
+              if [ $attempt -lt $max_attempts ]; then
+                echo "Waiting 30 seconds before retry..."
+                sleep 30
+              fi
+            fi
+
+            attempt=$((attempt + 1))
+          done
+
+          echo "❌ All attempts failed"
+          exit 1
 
       - name: Show Server Status
         if: success()
         run: |
           echo "📊 Server Status:"
-          curl -s https://beyond-meet-api.onrender.com/health | jq .
+          curl -s --max-time 10 https://beyond-meet-api.onrender.com/health
