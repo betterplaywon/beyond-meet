@@ -84,11 +84,8 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        // 토큰 갱신 실패 - 로그아웃 (중복 호출 방지)
-        const { isAuthenticated } = useAuthStore.getState();
-        if (isAuthenticated) {
-          useAuthStore.getState().logout();
-        }
+        // 토큰 갱신 실패 - 에러만 전파
+        // React Query의 전역 에러 핸들러에서 401 처리
         return Promise.reject(refreshError);
       }
     }
