@@ -3,6 +3,7 @@
  */
 
 import React, { useRef, useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
@@ -10,9 +11,10 @@ import { useCallStore } from '../store/callStore';
 import { useNotificationSetup } from '../hooks/useNotificationSetup';
 import { useSocketEvent } from '../hooks/useSocket';
 import * as pushService from '../services/pushService';
-import * as socketService from '../services/socketService';
+import * as socketService from '../services/socketService'; // call accept/reject에서 사용
 import { IncomingCallModal } from '../components/call/IncomingCallModal';
 import { RootStackParamList } from '../@types';
+import { colors } from '../styles/theme';
 
 // Navigators
 import AuthNavigator from './AuthNavigator';
@@ -41,28 +43,16 @@ const AppContent: React.FC = () => {
   // Auth Store - 상태만 구독
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const emailVerified = useAuthStore((state) => state.emailVerified);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   // Call Store - 상태만 구독
   const incomingCall = useCallStore((state) => state.incomingCall);
   const showIncomingCallModal = useCallStore((state) => state.showIncomingCallModal);
 
+  // ⚠️ 주의: React Hooks 규칙에 따라 모든 훅은 조건부 return 이전에 호출해야 함
+
   // 푸시 알림 초기화 (로그인 시에만 실행됨)
   useNotificationSetup();
-
-  // Socket 연결 관리 (로그인 시 연결, 로그아웃 시 해제)
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log('[SOCKET] Connecting on app level (authenticated)');
-      // 즉시 연결 (동기 실행)
-      socketService.connect();
-    } else {
-      console.log('[SOCKET] Disconnecting on app level (not authenticated)');
-      socketService.disconnect();
-    }
-
-    // ⚠️ Cleanup 없음: Socket은 isAuthenticated 변경 시에만 해제
-    // 화면 전환 시 유지되어야 함
-  }, [isAuthenticated]);
 
   // 통화 수신 이벤트 (앱 전역)
   useSocketEvent('call:incoming', (data: any) => {
@@ -87,6 +77,20 @@ const AppContent: React.FC = () => {
       useCallStore.getState().setIncomingCall(null);
     }
   });
+
+  // AsyncStorage 리하이드레이션 완료될 때까지 로딩 화면 표시
+  if (!hasHydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // ⚠️ Socket 관련 useEffect 제거!
+  // Socket 연결: useLogin/useRegister에서 명령형으로 처리
+  // Socket 해제: useLogout에서 명령형으로 처리
+  // 이로써 useEffect 의존성 복잡도 제거 및 무한 루프 방지
 
   // 통화 수락 핸들러
   const handleAcceptCall = () => {
