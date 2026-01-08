@@ -57,23 +57,33 @@ export const setNavigationRef = (
  * 포그라운드 메시지 리스너 설정
  */
 const setupForegroundListener = (): void => {
-  messaging().onMessage(async remoteMessage => {
-    console.log('[PushService] Foreground message received:', remoteMessage);
-    handleForegroundMessage(remoteMessage);
-  });
+  try {
+    messaging().onMessage(async remoteMessage => {
+      console.log('[PushService] Foreground message received:', remoteMessage);
+      handleForegroundMessage(remoteMessage);
+    });
+  } catch (error) {
+    console.error('[PushService] Failed to setup foreground listener:', error);
+    throw error;
+  }
 };
 
 /**
  * 백그라운드 메시지 리스너 설정
  */
 const setupBackgroundListener = (): void => {
-  messaging().onNotificationOpenedApp(remoteMessage => {
-    console.log(
-      '[PushService] Notification opened app from background:',
-      remoteMessage,
-    );
-    handleNotificationNavigation(remoteMessage);
-  });
+  try {
+    messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log(
+        '[PushService] Notification opened app from background:',
+        remoteMessage,
+      );
+      handleNotificationNavigation(remoteMessage);
+    });
+  } catch (error) {
+    console.error('[PushService] Failed to setup background listener:', error);
+    throw error;
+  }
 };
 
 /**
@@ -87,10 +97,21 @@ const handleInitialNotification = async (): Promise<void> => {
         '[PushService] App opened from notification:',
         remoteMessage,
       );
-      // 약간의 딜레이를 주어 Navigation이 준비될 때까지 대기
-      setTimeout(() => {
-        handleNotificationNavigation(remoteMessage);
-      }, 1000);
+
+      // navigationRef가 설정될 때까지 최대 5초 대기
+      const maxRetries = 10;
+      for (let i = 0; i < maxRetries; i++) {
+        if (navigationRef) {
+          handleNotificationNavigation(remoteMessage);
+          break;
+        }
+        await new Promise<void>(resolve => setTimeout(() => resolve(), 500));
+        console.log(`[PushService] Waiting for navigation ref (${i + 1}/${maxRetries})...`);
+      }
+
+      if (!navigationRef) {
+        console.warn('[PushService] Navigation ref not available after 5s, skipping deep link');
+      }
     }
   } catch (error) {
     console.error('[PushService] Failed to get initial notification:', error);
@@ -167,13 +188,20 @@ const handleNotificationNavigation = (
         notificationData.sessionId &&
         notificationData.channelName &&
         notificationData.token &&
-        notificationData.uid !== undefined
+        notificationData.uid !== undefined &&
+        notificationData.uid !== null
       ) {
+        const uid = Number(notificationData.uid);
+        if (isNaN(uid)) {
+          console.error('[PushService] Invalid UID for CALL_INCOMING:', notificationData.uid);
+          return;
+        }
+
         navigationRef.navigate('VideoCall', {
           sessionId: notificationData.sessionId,
           channelName: notificationData.channelName,
           token: notificationData.token,
-          uid: Number(notificationData.uid),
+          uid,
         });
       }
       break;
@@ -184,13 +212,20 @@ const handleNotificationNavigation = (
         notificationData.sessionId &&
         notificationData.channelName &&
         notificationData.token &&
-        notificationData.uid !== undefined
+        notificationData.uid !== undefined &&
+        notificationData.uid !== null
       ) {
+        const uid = Number(notificationData.uid);
+        if (isNaN(uid)) {
+          console.error('[PushService] Invalid UID for MATCH_FOUND:', notificationData.uid);
+          return;
+        }
+
         navigationRef.navigate('VideoCall', {
           sessionId: notificationData.sessionId,
           channelName: notificationData.channelName,
           token: notificationData.token,
-          uid: Number(notificationData.uid),
+          uid,
         });
       }
       break;
@@ -236,27 +271,33 @@ export const initialize = async (): Promise<void> => {
     return;
   }
 
-  // 0. 백그라운드 메시지 핸들러 등록 (먼저 설정)
-  setupBackgroundMessageHandler();
+  try {
+    // 0. 백그라운드 메시지 핸들러 등록 (먼저 설정)
+    setupBackgroundMessageHandler();
 
-  // 1. 권한 요청
-  const hasPermission = await requestPermission();
-  if (!hasPermission) {
-    console.warn('[PushService] Notification permission denied');
-    return;
+    // 1. 권한 요청
+    const hasPermission = await requestPermission();
+    if (!hasPermission) {
+      console.warn('[PushService] Notification permission denied');
+      return;
+    }
+
+    // 2. 포그라운드 메시지 리스너 등록
+    setupForegroundListener();
+
+    // 3. 백그라운드 메시지 리스너 등록
+    setupBackgroundListener();
+
+    // 4. 초기 알림 확인 (앱이 종료 상태에서 알림으로 열린 경우)
+    await handleInitialNotification();
+
+    isInitialized = true;
+    console.log('[PushService] Initialized successfully');
+  } catch (error) {
+    console.error('[PushService] Initialization failed:', error);
+    // 에러를 throw하여 상위 호출자(useNotificationSetup)가 처리하도록 함
+    throw error;
   }
-
-  // 2. 포그라운드 메시지 리스너 등록
-  setupForegroundListener();
-
-  // 3. 백그라운드 메시지 리스너 등록
-  setupBackgroundListener();
-
-  // 4. 초기 알림 확인 (앱이 종료 상태에서 알림으로 열린 경우)
-  await handleInitialNotification();
-
-  isInitialized = true;
-  console.log('[PushService] Initialized successfully');
 };
 
 /**

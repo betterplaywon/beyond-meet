@@ -21,6 +21,7 @@ interface AuthState {
   userRole: 'USER' | 'ADMIN' | null;
   emailVerified: boolean;
   userEmail: string | null;
+  _hasHydrated: boolean;
 
   // Actions
   setAuth: (accessToken: string, refreshToken: string, userId: string, userRole: 'USER' | 'ADMIN', emailVerified: boolean, email: string) => void;
@@ -28,6 +29,7 @@ interface AuthState {
   setEmailVerified: (verified: boolean) => void;
   logout: () => void;
   isAdmin: () => boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
       userRole: null,
       emailVerified: false,
       userEmail: null,
+      _hasHydrated: false,
 
       // Actions
       setAuth: (accessToken, refreshToken, userId, userRole, emailVerified, email) =>
@@ -77,10 +80,19 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       isAdmin: () => get().userRole === 'ADMIN',
+
+      setHasHydrated: (state) =>
+        set({
+          _hasHydrated: state,
+        }),
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        console.log('[AuthStore] Rehydration completed');
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
