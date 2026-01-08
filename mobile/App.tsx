@@ -10,12 +10,20 @@ import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-qu
 import Toast from 'react-native-toast-message';
 import RootNavigator from './src/navigation/RootNavigator';
 import { colors } from './src/styles/theme';
+import { useAuthStore } from './src/store/authStore';
+import * as socketService from './src/services/socketService';
 
 // React Query 클라이언트 설정
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        // 401 에러는 재시도하지 않음 (인증 실패)
+        if (error?.response?.status === 401) {
+          return false;
+        }
+        return failureCount < 1;
+      },
       staleTime: 5 * 60 * 1000, // 5분
       gcTime: 10 * 60 * 1000, // 10분
       refetchOnWindowFocus: false, // React Native에서 탭 전환 시 불필요한 재요청 방지
@@ -26,7 +34,27 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: (_error, query) => {
+    onError: (error: any, query) => {
+      // 401 Unauthorized 에러 처리
+      if (error?.response?.status === 401) {
+        const { isAuthenticated } = useAuthStore.getState();
+
+        // 이미 로그아웃 상태면 무시
+        if (!isAuthenticated) {
+          return;
+        }
+
+        console.log('[QUERY ERROR] 401 Unauthorized detected, logging out...');
+
+        // 로그아웃 실행 (Socket은 useLogout에서 처리되므로 여기서는 안 함)
+        // navigation은 선언형으로 자동 처리됨
+        socketService.disconnect();
+        queryClient.clear();
+        useAuthStore.getState().logout();
+
+        return;
+      }
+
       // meta.errorMessage가 설정된 쿼리만 Alert 표시
       const errorMessage = query.meta?.errorMessage as string | undefined;
       if (errorMessage) {
