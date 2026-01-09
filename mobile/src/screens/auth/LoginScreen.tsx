@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../@types';
-import { Input } from '../../components/common/Input';
+import { Input, Button } from '../../components/common';
 import { useLogin } from '../../hooks/useAuth';
 import { colors, typography, spacing } from '../../styles/theme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -96,20 +96,16 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
           </View>
 
           {/* 로그인 버튼 (Pill 형태) */}
-          <TouchableOpacity
-            style={[
-              styles.loginButton,
-              (!email || !password || loginMutation.isPending) &&
-                styles.loginButtonDisabled,
-            ]}
-            activeOpacity={0.8}
+          <Button
+            title="로그인"
+            variant="primary"
+            size="medium"
+            fullWidth
+            borderRadius="pill"
             onPress={handleLogin}
-            disabled={!email || !password || loginMutation.isPending}
-          >
-            <Text style={styles.loginButtonText}>
-              {loginMutation.isPending ? '로그인 중...' : '로그인'}
-            </Text>
-          </TouchableOpacity>
+            disabled={!email || !password}
+            loading={loginMutation.isPending}
+          />
 
           {/* 회원가입 링크 */}
           <View style={styles.footer}>
@@ -172,21 +168,6 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing.xl,
-  },
-  loginButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    ...typography.button,
-    color: colors.white,
-    fontSize: 18,
   },
   footer: {
     flexDirection: 'row',

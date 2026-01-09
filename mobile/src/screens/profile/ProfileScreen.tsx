@@ -3,12 +3,12 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
-import { Button } from '../../components/common/Button';
+import { Button, ListItemButton } from '../../components/common';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useLogout } from '../../hooks/useAuth';
 import { colors, typography, spacing, borderRadius } from '../../styles/theme';
@@ -69,39 +69,30 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.menuItem}
+          <ListItemButton
+            label="통화 기록"
+            leftIcon={<Icon name="phone" size={24} color={colors.textSecondary} />}
+            showChevron
             onPress={() => navigation.navigate('CallHistory')}
-            activeOpacity={0.7}
-          >
-            <Icon name="phone" size={24} color={colors.textSecondary} style={styles.menuIcon} />
-            <Text style={styles.menuLabel}>통화 기록</Text>
-            <Icon name="chevron-right" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          />
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <ListItemButton
+            label="설정"
+            leftIcon={<Icon name="settings" size={24} color={colors.textSecondary} />}
+            showChevron
             onPress={() => navigation.navigate('Settings')}
-            activeOpacity={0.7}
-          >
-            <Icon name="settings" size={24} color={colors.textSecondary} style={styles.menuIcon} />
-            <Text style={styles.menuLabel}>설정</Text>
-            <Icon name="chevron-right" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          />
 
           <View style={styles.menuDivider} />
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <ListItemButton
+            label="도움말"
+            leftIcon={<Icon name="help" size={24} color={colors.textSecondary} />}
+            showChevron
             onPress={() => {}}
-            activeOpacity={0.7}
-          >
-            <Icon name="help" size={24} color={colors.textSecondary} style={styles.menuIcon} />
-            <Text style={styles.menuLabel}>도움말</Text>
-            <Icon name="chevron-right" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Logout Button */}
@@ -189,19 +180,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     marginTop: spacing.lg,
     paddingHorizontal: spacing.xl,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  menuIcon: {
-    marginRight: spacing.md,
-  },
-  menuLabel: {
-    ...typography.body1,
-    color: colors.textPrimary,
-    flex: 1,
   },
   menuDivider: {
     height: 1,

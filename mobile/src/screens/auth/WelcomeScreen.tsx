@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../@types';
+import { Button } from '../../components/common';
 import { colors, typography, spacing } from '../../styles/theme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -48,16 +49,20 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
       {/* 버튼 영역 */}
       <View style={styles.buttonContainer}>
         {/* 시작하기 버튼 (Pill + 아이콘) */}
-        <TouchableOpacity
-          style={styles.primaryButton}
-          activeOpacity={0.8}
+        <Button
+          title="회원가입"
+          variant="primary"
+          size="medium"
+          fullWidth
+          borderRadius="pill"
+          icon={
+            <View style={styles.buttonIconCircle}>
+              <Icon name="person" size={18} color={colors.primary} />
+            </View>
+          }
+          iconPosition="left"
           onPress={() => navigation.navigate('Register')}
-        >
-          <View style={styles.buttonIconCircle}>
-            <Icon name="person" size={22} color={colors.primary} />
-          </View>
-          <Text style={styles.primaryButtonText}>시작하기</Text>
-        </TouchableOpacity>
+        />
 
         {/* 로그인 링크 */}
         <View style={styles.loginLinkContainer}>
@@ -117,30 +122,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     alignItems: 'center',
   },
-  primaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    width: '100%',
-    justifyContent: 'center',
-  },
   buttonIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'absolute',
-    left: 8,
-  },
-  primaryButtonText: {
-    ...typography.button,
-    color: colors.white,
-    fontSize: 18,
   },
   loginLinkContainer: {
     flexDirection: 'row',

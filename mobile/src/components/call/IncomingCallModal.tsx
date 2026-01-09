@@ -8,11 +8,11 @@ import {
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
   Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Avatar } from '../common/Avatar';
+import { ModalButton } from '../common';
 import { useCallStore } from '../../store/callStore';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -86,21 +86,21 @@ export const IncomingCallModal: React.FC<Props> = ({
 
           {/* 액션 버튼 */}
           <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.rejectButton]}
+            <ModalButton
+              title="거절"
+              variant="delete"
+              layout="circular"
+              icon={<Icon name="call-end" size={40} color={colors.white} />}
               onPress={onReject}
-            >
-              <Icon name="call-end" size={40} color={colors.white} style={styles.actionIcon} />
-              <Text style={styles.actionLabel}>거절</Text>
-            </TouchableOpacity>
+            />
 
-            <TouchableOpacity
-              style={[styles.actionButton, styles.acceptButton]}
+            <ModalButton
+              title="수락"
+              variant="confirm"
+              layout="circular"
+              icon={<Icon name="call" size={40} color={colors.white} />}
               onPress={onAccept}
-            >
-              <Icon name="call" size={40} color={colors.white} style={styles.actionIcon} />
-              <Text style={styles.actionLabel}>수락</Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       </View>
@@ -145,31 +145,5 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: 'row',
     gap: spacing.lg,
-  },
-  actionButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  rejectButton: {
-    backgroundColor: colors.error,
-  },
-  acceptButton: {
-    backgroundColor: colors.success,
-  },
-  actionIcon: {
-    marginBottom: spacing.xs,
-  },
-  actionLabel: {
-    ...typography.body2,
-    color: colors.white,
-    fontWeight: '600',
   },
 });

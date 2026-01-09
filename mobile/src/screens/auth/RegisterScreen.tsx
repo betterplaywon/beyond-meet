@@ -21,7 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { AuthStackParamList, RegisterFormData } from '../../@types';
-import { Input } from '../../components/common/Input';
+import { Input, Button } from '../../components/common';
 import { Picker, PickerOption } from '../../components/common/Picker';
 import { useRegister } from '../../hooks/useAuth';
 import { useSendVerificationCode } from '../../hooks/useEmailVerification';
@@ -497,27 +497,19 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
             {/* 버튼 영역 */}
             <View style={styles.buttonContainer}>
               {step > 1 && (
-                <TouchableOpacity
-                  style={styles.backButton}
+                <Button
+                  title="← 이전"
+                  variant="outline"
+                  size="medium"
+                  borderRadius="pill"
                   onPress={() => setStep(step - 1)}
-                >
-                  <Text style={styles.backButtonText}>
-                    ← 이전
-                  </Text>
-                </TouchableOpacity>
+                  style={{ flex: 1 }}
+                />
               )}
 
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  isLoading && styles.nextButtonDisabled,
-                ]}
-                activeOpacity={0.8}
-                onPress={handleNextStep}
-                disabled={isLoading}
-              >
-                <Text style={styles.nextButtonText}>
-                  {sendCodeMutation.isPending
+              <Button
+                title={
+                  sendCodeMutation.isPending
                     ? '인증 코드 발송 중...'
                     : registerMutation.isPending
                     ? '회원가입 중...'
@@ -525,9 +517,15 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                     ? '이메일 인증'
                     : step === 3
                     ? '회원가입 완료'
-                    : '다음'}
-                </Text>
-              </TouchableOpacity>
+                    : '다음'
+                }
+                variant="primary"
+                size="medium"
+                borderRadius="pill"
+                loading={isLoading}
+                onPress={handleNextStep}
+                style={{ flex: 1 }}
+              />
             </View>
 
             {/* Login link */}
@@ -656,37 +654,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
     marginBottom: spacing.lg,
-  },
-  backButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.white,
-  },
-  backButtonText: {
-    ...typography.body1,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  nextButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nextButtonDisabled: {
-    opacity: 0.6,
-  },
-  nextButtonText: {
-    ...typography.button,
-    color: colors.white,
-    fontSize: 18,
   },
   footer: {
     flexDirection: 'row',

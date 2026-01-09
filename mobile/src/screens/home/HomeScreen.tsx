@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +18,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSocket } from '../../hooks/useSocket';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
+import { Button } from '../../components/common';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -77,16 +77,20 @@ const HomeScreen: React.FC = () => {
           </Text>
 
           {/* 랜덤 매칭 버튼 (Pill + 아이콘) */}
-          <TouchableOpacity
-            style={styles.matchButton}
-            activeOpacity={0.8}
+          <Button
+            title="랜덤 매칭 시작"
+            variant="primary"
+            size="medium"
+            fullWidth
+            borderRadius="pill"
+            icon={
+              <View style={styles.buttonIconCircle}>
+                <Icon name="videocam" size={20} color={colors.primary} />
+              </View>
+            }
+            iconPosition="left"
             onPress={handleRandomMatch}
-          >
-            <View style={styles.buttonIconCircle}>
-              <Icon name="videocam" size={24} color={colors.primary} />
-            </View>
-            <Text style={styles.matchButtonText}>랜덤 매칭 시작</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
 
@@ -183,31 +187,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     lineHeight: 22,
   },
-  matchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 50,
-    paddingVertical: 14,
-    paddingHorizontal: spacing.xl,
-    paddingLeft: 8,
-    width: '100%',
-    justifyContent: 'center',
-  },
   buttonIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'absolute',
-    left: 8,
-  },
-  matchButtonText: {
-    ...typography.button,
-    color: colors.white,
-    fontSize: 18,
   },
   statsContainer: {
     flexDirection: 'row',
