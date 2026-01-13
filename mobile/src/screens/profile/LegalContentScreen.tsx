@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   backIcon: {
-    fontSize: 24,
+    ...typography.h3,
     color: colors.textPrimary,
   },
   headerTitle: {
@@ -472,8 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   chapterHeading: {
-    ...typography.h3,
-    fontWeight: '700',
+    ...typography.h3Bold,
     color: colors.primary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
@@ -482,15 +481,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   sectionHeading: {
-    ...typography.body1,
-    fontWeight: '700',
+    ...typography.body1Medium,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
   sectionContent: {
     ...typography.body2,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
   footer: {
     marginTop: spacing.xl,

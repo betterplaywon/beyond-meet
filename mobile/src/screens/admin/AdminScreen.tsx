@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { colors } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 import { AdminStackParamList } from '../../@types';
 
 type Props = {
@@ -92,12 +92,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...typography.h2,
     color: colors.text,
   },
   headerSubtitle: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
     marginTop: 4,
   },
@@ -133,17 +132,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.text,
     marginBottom: 4,
   },
   menuDescription: {
-    fontSize: 13,
+    ...typography.body3,
     color: colors.textSecondary,
   },
   arrow: {
-    fontSize: 28,
+    ...typography.h2,
     color: colors.textSecondary,
     marginLeft: 8,
   },
@@ -155,15 +153,13 @@ const styles = StyleSheet.create({
     borderColor: colors.primary + '20',
   },
   infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.text,
     marginBottom: 12,
   },
   infoText: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
 });
 

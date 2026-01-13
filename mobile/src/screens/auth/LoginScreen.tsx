@@ -155,8 +155,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '600',
+    ...typography.h2,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
@@ -164,7 +163,6 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
   },
   form: {
     marginBottom: spacing.xl,
@@ -180,8 +178,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   signupLink: {
-    ...typography.body2,
-    fontWeight: '600',
+    ...typography.body2Medium,
     color: colors.primary,
   },
 });

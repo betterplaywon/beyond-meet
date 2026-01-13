@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   backIcon: {
-    fontSize: 24,
+    ...typography.h3,
     color: colors.textPrimary,
   },
   headerTitle: {
@@ -221,7 +221,6 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: colors.primary,
     flex: 1,
-    lineHeight: 20,
   },
   form: {
     marginBottom: spacing.xl,
@@ -230,8 +229,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   label: {
-    ...typography.body2,
-    fontWeight: '600',
+    ...typography.body2Medium,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },

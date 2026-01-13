@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../styles/theme';
+import { colors, typography } from '../../styles/theme';
 import { Report } from '../../services/adminApi';
 import { useReports } from '../../hooks/useAdmin';
 
@@ -237,12 +237,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    ...typography.h3,
     color: colors.text,
   },
   headerSubtitle: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.textSecondary,
     marginTop: 4,
   },
@@ -266,9 +265,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   filterText: {
-    fontSize: 14,
+    ...typography.body2Medium,
     color: colors.text,
-    fontWeight: '500',
   },
   filterTextActive: {
     color: colors.white,
@@ -295,13 +293,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   reporterText: {
-    fontSize: 14,
+    ...typography.body2,
     color: colors.text,
   },
   reportedText: {
-    fontSize: 14,
+    ...typography.body2Medium,
     color: colors.error,
-    fontWeight: '600',
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -313,14 +310,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   reasonText: {
-    fontSize: 14,
+    ...typography.body2Medium,
     color: colors.text,
-    fontWeight: '500',
   },
   descriptionText: {
-    fontSize: 13,
+    ...typography.body3,
     color: colors.textSecondary,
-    lineHeight: 18,
   },
   reportMeta: {
     flexDirection: 'row',
@@ -328,7 +323,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   metaText: {
-    fontSize: 12,
+    ...typography.caption,
     color: colors.textSecondary,
   },
   loader: {
@@ -340,7 +335,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 16,
+    ...typography.body1,
     color: colors.textSecondary,
   },
 });

@@ -607,8 +607,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '600',
+    ...typography.h2,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
@@ -616,14 +615,12 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
   },
   form: {
     marginBottom: spacing.lg,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.body2Medium,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -645,7 +642,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ageSeparator: {
-    fontSize: 20,
+    ...typography.h5,
     color: colors.textSecondary,
     marginTop: spacing.lg,
   },
@@ -665,8 +662,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   loginLink: {
-    ...typography.body2,
-    fontWeight: '600',
+    ...typography.body2Medium,
     color: colors.primary,
   },
 });

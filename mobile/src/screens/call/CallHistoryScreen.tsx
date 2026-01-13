@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   backIcon: {
-    fontSize: 24,
+    ...typography.h3,
     color: colors.textPrimary,
   },
   headerTitle: {
@@ -222,8 +222,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   sectionTitle: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.textSecondary,
     marginBottom: spacing.md,
     marginLeft: spacing.xs,
@@ -246,8 +245,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   historyName: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -273,7 +271,7 @@ const styles = StyleSheet.create({
     paddingTop: 100,
   },
   emptyIcon: {
-    fontSize: 80,
+    ...typography.display1,
     marginBottom: spacing.lg,
   },
   emptyTitle: {

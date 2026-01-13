@@ -163,9 +163,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   tagText: {
-    ...typography.body2,
+    ...typography.body2Medium,
     color: colors.secondary,
-    fontWeight: '600',
   },
   bioContainer: {
     marginTop: spacing.lg,

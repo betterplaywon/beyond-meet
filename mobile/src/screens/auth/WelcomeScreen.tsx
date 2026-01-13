@@ -104,18 +104,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '600',
+    ...typography.h2,
     color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: spacing.lg,
-    lineHeight: 36,
   },
   description: {
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
   },
   buttonContainer: {
     paddingHorizontal: spacing.xl,
@@ -140,9 +137,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   loginLink: {
-    ...typography.body2,
+    ...typography.body2Medium,
     color: colors.primary,
-    fontWeight: '600',
   },
 });
 

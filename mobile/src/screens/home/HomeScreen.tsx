@@ -147,8 +147,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.h4,
     color: colors.textPrimary,
   },
   headerSubtitle: {
@@ -172,20 +171,17 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   matchTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    ...typography.h3,
     color: colors.textPrimary,
     textAlign: 'center',
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
-    lineHeight: 32,
   },
   matchDescription: {
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
-    lineHeight: 22,
   },
   buttonIconCircle: {
     width: 32,
@@ -214,8 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...typography.statLarge,
     color: colors.primary,
     marginBottom: spacing.xs,
   },

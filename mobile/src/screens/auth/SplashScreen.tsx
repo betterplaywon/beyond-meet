@@ -110,8 +110,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   logo: {
-    fontSize: 36,
-    fontWeight: '700',
+    ...typography.display4,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },

@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   backIcon: {
-    fontSize: 24,
+    ...typography.h3,
     color: colors.textPrimary,
   },
   headerTitle: {
@@ -563,8 +563,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    ...typography.body2,
-    fontWeight: '600',
+    ...typography.body2Medium,
     color: colors.textSecondary,
     marginBottom: spacing.md,
     marginLeft: spacing.xs,
@@ -594,9 +593,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   menuArrow: {
-    ...typography.h3,
+    ...typography.textLight,
     color: colors.textSecondary,
-    fontWeight: '300',
   },
   logoutButton: {
     backgroundColor: colors.white,
@@ -606,8 +604,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   logoutText: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.textPrimary,
   },
   deleteButton: {
@@ -617,8 +614,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteText: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.error,
   },
   bottomSpace: {
@@ -693,8 +689,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalCancelText: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.textSecondary,
   },
   modalConfirmButton: {
@@ -705,8 +700,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalConfirmText: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.white,
   },
   modalButtonDisabled: {
@@ -730,8 +724,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalDeleteText: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.white,
   },
 });

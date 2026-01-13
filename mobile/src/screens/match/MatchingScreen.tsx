@@ -242,10 +242,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   retryText: {
-    ...typography.caption,
+    ...typography.captionMedium,
     color: colors.primary,
     marginBottom: spacing.md,
-    fontWeight: '600',
   },
   loader: {
     marginVertical: spacing.xl,

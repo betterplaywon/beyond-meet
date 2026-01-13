@@ -374,9 +374,8 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   friendName: {
-    ...typography.body1,
+    ...typography.body1Medium,
     color: colors.textPrimary,
-    fontWeight: '600',
     marginBottom: spacing.xs,
   },
   friendStatusContainer: {

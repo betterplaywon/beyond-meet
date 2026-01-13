@@ -305,8 +305,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '600',
+    ...typography.h2,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
@@ -314,7 +313,6 @@ const styles = StyleSheet.create({
     ...typography.body1,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
     marginBottom: spacing.xl,
   },
   codeContainer: {
@@ -329,8 +327,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     borderRadius: 12,
-    fontSize: 24,
-    fontWeight: '600',
+    ...typography.h3,
     textAlign: 'center',
     color: colors.textPrimary,
     backgroundColor: colors.surface,
@@ -355,9 +352,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   verifyButtonText: {
-    ...typography.button,
+    ...typography.h6,
     color: colors.white,
-    fontSize: 18,
   },
   resendContainer: {
     flexDirection: 'row',
@@ -369,8 +365,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   resendLink: {
-    ...typography.body2,
-    fontWeight: '600',
+    ...typography.body2Medium,
     color: colors.primary,
   },
   resendLinkDisabled: {

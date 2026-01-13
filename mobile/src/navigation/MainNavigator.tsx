@@ -9,7 +9,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { MainTabParamList } from '../@types';
-import { colors } from '../styles/theme';
+import { colors, typography } from '../styles/theme';
 import { useAuthStore } from '../store/authStore';
 
 // Screens
@@ -66,8 +66,7 @@ const MainNavigator: React.FC = () => {
           height: 70 + insets.bottom,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
+          ...typography.tabLabel,
           marginTop: 4,
         },
         tabBarItemStyle: {

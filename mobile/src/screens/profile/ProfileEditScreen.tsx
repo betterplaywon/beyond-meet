@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   saveButton: {
+    ...typography.body1Medium,
     color: colors.primary,
-    fontWeight: '600',
   },
   disabledButton: {
     opacity: 0.5,
@@ -421,8 +421,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   sectionTitle: {
-    ...typography.body1,
-    fontWeight: '600',
+    ...typography.body1Medium,
     color: colors.textPrimary,
     marginBottom: spacing.md,
   },
@@ -449,9 +448,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   localBadgeText: {
+    ...typography.microText,
     color: colors.white,
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   removePhotoButton: {
     position: 'absolute',
@@ -468,9 +466,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   removePhotoIcon: {
+    ...typography.h6,
     color: colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   addPhotoButton: {
     width: 100,
@@ -484,7 +481,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textSecondary + '10',
   },
   addPhotoIcon: {
-    fontSize: 40,
+    ...typography.display3,
     color: colors.textSecondary,
   },
   addPhotoButtonDisabled: {
@@ -519,14 +516,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   interestText: {
-    ...typography.body2,
+    ...typography.body2Medium,
     color: colors.primary,
-    fontWeight: '600',
   },
   removeInterestIcon: {
-    ...typography.body1,
+    ...typography.body1Medium,
     color: colors.primary,
-    fontWeight: 'bold',
   },
   addInterestButton: {
     backgroundColor: colors.textSecondary + '20',
@@ -535,9 +530,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   addInterestText: {
-    ...typography.body2,
+    ...typography.body2Medium,
     color: colors.textSecondary,
-    fontWeight: '600',
   },
   infoRow: {
     flexDirection: 'row',
@@ -552,9 +546,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   infoValue: {
-    ...typography.body1,
+    ...typography.body1Medium,
     color: colors.textPrimary,
-    fontWeight: '600',
   },
   infoHint: {
     ...typography.caption,
