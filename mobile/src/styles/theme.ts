@@ -56,20 +56,21 @@ export const borderRadius = {
 };
 
 export const typography = {
+  // 기존 variants - 값 수정 (더 많은 케이스 커버)
   h1: {
     fontSize: 32,
     fontWeight: 'bold' as const,
     lineHeight: 38,
   },
   h2: {
-    fontSize: 24,
-    fontWeight: 'bold' as const,
-    lineHeight: 29,
+    fontSize: 28,
+    fontWeight: '600' as const,
+    lineHeight: 36,
   },
   h3: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '600' as const,
-    lineHeight: 24,
+    lineHeight: 32,
   },
   body1: {
     fontSize: 16,
@@ -90,6 +91,126 @@ export const typography = {
     fontSize: 16,
     fontWeight: '600' as const,
     lineHeight: 19,
+  },
+
+  // Display variants (대형 타이틀 - Splash 등)
+  display1: {
+    fontSize: 80,
+    fontWeight: 'bold' as const,
+    lineHeight: 96,
+  },
+  display2: {
+    fontSize: 60,
+    fontWeight: 'bold' as const,
+    lineHeight: 72,
+  },
+  display3: {
+    fontSize: 40,
+    fontWeight: 'bold' as const,
+    lineHeight: 48,
+  },
+  display4: {
+    fontSize: 36,
+    fontWeight: 'bold' as const,
+    lineHeight: 43,
+  },
+
+  // Heading variants
+  h4: {
+    fontSize: 22,
+    fontWeight: '700' as const,
+    lineHeight: 29,
+  },
+  h5: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    lineHeight: 24,
+  },
+  h6: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    lineHeight: 22,
+  },
+
+  // Body variants (강조)
+  body1Medium: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    lineHeight: 24,
+  },
+  body2Medium: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    lineHeight: 21,
+  },
+  body3: {
+    fontSize: 13,
+    fontWeight: 'normal' as const,
+    lineHeight: 19,
+  },
+  body3Medium: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    lineHeight: 19,
+  },
+
+  // Caption variants
+  captionMedium: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    lineHeight: 17,
+  },
+  captionSmall: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    lineHeight: 18,
+  },
+  microText: {
+    fontSize: 10,
+    fontWeight: 'normal' as const,
+    lineHeight: 14,
+  },
+
+  // 특수 목적 variants
+  buttonSmall: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    lineHeight: 17,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '500' as const,
+    lineHeight: 14,
+  },
+  input: {
+    fontSize: 16,
+    fontWeight: 'normal' as const,
+    lineHeight: 24,
+  },
+  statLarge: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    lineHeight: 24,
+  },
+  statMedium: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    lineHeight: 19,
+  },
+  adminLabel: {
+    fontSize: 13,
+    fontWeight: 'normal' as const,
+    lineHeight: 18,
+  },
+  adminValue: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    lineHeight: 20,
+  },
+  textLight: {
+    fontSize: 14,
+    fontWeight: '300' as const,
+    lineHeight: 20,
   },
 };
 
