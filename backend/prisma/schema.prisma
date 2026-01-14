@@ -142,6 +142,7 @@ model CallRecord {
   // Performance: 통화 기록 조회 최적화
   @@index([callerId, createdAt(sort: Desc)])
   @@index([receiverId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)]) // Admin 통계 쿼리 최적화
   @@map("call_records")
 }
 
@@ -197,6 +198,7 @@ model Friendship {
   @@unique([userId, friendId])
   // Performance: 친구 목록 조회 최적화
   @@index([userId, createdAt(sort: Desc)])
+  @@index([friendId, userId]) // 역방향 조회 최적화
   @@map("friendships")
 }
 
@@ -286,6 +288,7 @@ model ContentModerationLog {
 
   @@index([sessionId])
   @@index([userId])
+  @@index([sessionId, userId]) // Composite 조회 최적화
   @@map("content_moderation_logs")
 }
 
