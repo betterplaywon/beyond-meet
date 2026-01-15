@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as userService from '../services/user-service';
 import { AppError } from '../middlewares/errorHandler';
+import { UserIdParams, PhotoUrlParams } from '../utils/validation';
 
 /**
  * 내 프로필 조회
@@ -35,7 +36,7 @@ export const getMyProfile = async (req: Request, res: Response, next: NextFuncti
  */
 export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params as UserIdParams;
     const requestingUserId = req.user?.id;
 
     if (!requestingUserId) {
@@ -60,7 +61,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authenticatedUserId = req.user?.id;
-    const { userId } = req.params;
+    const { userId } = req.params as UserIdParams;
 
     if (!authenticatedUserId) {
       throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
@@ -134,20 +135,14 @@ export const uploadProfilePhoto = async (req: Request, res: Response, next: Next
 export const deleteProfilePhoto = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.id;
-    const { photoUrl } = req.params;
+    const { photoUrl } = req.params as PhotoUrlParams;
 
     if (!userId) {
       throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
     }
 
-    if (!photoUrl) {
-      throw new AppError(400, 'MISSING_PHOTO_URL', '사진 URL이 필요합니다');
-    }
-
-    // URL 디코딩 (쿼리 파라미터로 전달된 경우)
-    const decodedPhotoUrl = decodeURIComponent(photoUrl);
-
-    await userService.deleteProfilePhoto(userId, decodedPhotoUrl);
+    // Zod 미들웨어가 이미 URL 디코딩과 검증을 처리했으므로 바로 사용
+    await userService.deleteProfilePhoto(userId, photoUrl);
 
     res.status(200).json({
       success: true,
