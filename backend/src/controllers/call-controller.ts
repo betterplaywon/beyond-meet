@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as callService from '../services/call-service';
 import { AppError } from '../middlewares/errorHandler';
+import { CallIdParams, SessionIdParams } from '../utils/validation';
 
 /**
  * 통화 시작
@@ -41,13 +42,10 @@ export const startCall = async (req: Request, res: Response, next: NextFunction)
  */
 export const endCall = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { callId } = req.params;
+    const { callId } = req.params as CallIdParams;
     const { endTime, duration } = req.body;
 
-    if (!callId) {
-      throw new AppError(400, 'MISSING_CALL_ID', '통화 ID가 필요합니다');
-    }
-
+    // Zod 미들웨어가 이미 callId 검증을 처리했으므로 바로 사용
     const call = await callService.endCall(callId, {
       endTime: endTime ? new Date(endTime) : new Date(),
       duration,
@@ -103,17 +101,14 @@ export const getCallHistory = async (req: Request, res: Response, next: NextFunc
  */
 export const getSessionInfo = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { sessionId } = req.params;
+    const { sessionId } = req.params as SessionIdParams;
     const userId = req.user?.id;
-
-    if (!sessionId) {
-      throw new AppError(400, 'MISSING_SESSION_ID', '세션 ID가 필요합니다');
-    }
 
     if (!userId) {
       throw new AppError(401, 'UNAUTHORIZED', '인증이 필요합니다');
     }
 
+    // Zod 미들웨어가 이미 sessionId 검증을 처리했으므로 바로 사용
     const result = await callService.getSessionInfo(sessionId, userId);
 
     res.status(200).json({
@@ -131,17 +126,14 @@ export const getSessionInfo = async (req: Request, res: Response, next: NextFunc
  */
 export const recordCallEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { callId } = req.params;
+    const { callId } = req.params as CallIdParams;
     const { eventType, timestamp, metadata } = req.body;
-
-    if (!callId) {
-      throw new AppError(400, 'MISSING_CALL_ID', '통화 ID가 필요합니다');
-    }
 
     if (!eventType) {
       throw new AppError(400, 'MISSING_EVENT_TYPE', '이벤트 타입이 필요합니다');
     }
 
+    // Zod 미들웨어가 이미 callId 검증을 처리했으므로 바로 사용
     await callService.recordCallEvent(callId, {
       eventType,
       timestamp: timestamp ? new Date(timestamp) : new Date(),
