@@ -134,6 +134,40 @@ const preferredCountriesSchema = z
   .optional();
 
 /**
+ * 라우트 파라미터용 UUID 검증
+ */
+const uuidSchema = z
+  .string()
+  .uuid('유효한 UUID 형식이 아닙니다')
+  .transform((id) => id.trim());
+
+/**
+ * 프로필 사진 URL용 URL 인코딩 문자열
+ */
+const urlEncodedStringSchema = z
+  .string()
+  .min(1, 'URL이 비어있습니다')
+  .transform((url) => decodeURIComponent(url.trim()));
+
+/**
+ * 친구 관련 라우트 파라미터 스키마
+ */
+export const friendParamsSchema = z.object({ friendId: uuidSchema });
+export const blockUserParamsSchema = z.object({ blockedUserId: uuidSchema });
+
+/**
+ * 사용자 관련 라우트 파라미터 스키마
+ */
+export const userIdParamsSchema = z.object({ userId: uuidSchema });
+export const photoUrlParamsSchema = z.object({ photoUrl: urlEncodedStringSchema });
+
+/**
+ * 통화 관련 라우트 파라미터 스키마
+ */
+export const callIdParamsSchema = z.object({ callId: uuidSchema });
+export const sessionIdParamsSchema = z.object({ sessionId: uuidSchema });
+
+/**
  * 회원가입 요청 스키마
  */
 export const registerSchema = z
@@ -225,3 +259,11 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+// 라우트 파라미터 타입
+export type FriendParams = z.infer<typeof friendParamsSchema>;
+export type BlockUserParams = z.infer<typeof blockUserParamsSchema>;
+export type UserIdParams = z.infer<typeof userIdParamsSchema>;
+export type PhotoUrlParams = z.infer<typeof photoUrlParamsSchema>;
+export type CallIdParams = z.infer<typeof callIdParamsSchema>;
+export type SessionIdParams = z.infer<typeof sessionIdParamsSchema>;
