@@ -7,6 +7,8 @@ import * as userController from '../controllers/user-controller';
 import { authenticate } from '../middlewares/auth';
 import { upload } from '../middlewares/upload';
 import { uploadLimiter } from '../middlewares/rateLimiter';
+import { validateParams } from '../middlewares/validation';
+import { userIdParamsSchema, photoUrlParamsSchema } from '../utils/validation';
 
 const router = Router();
 
@@ -23,7 +25,7 @@ router.get('/me', userController.getMyProfile);
  * PUT /api/users/:userId
  * 프로필 업데이트
  */
-router.put('/:userId', userController.updateProfile);
+router.put('/:userId', validateParams(userIdParamsSchema), userController.updateProfile);
 
 /**
  * POST /api/users/me/photos
@@ -35,7 +37,7 @@ router.post('/me/photos', uploadLimiter, upload.single('photo'), userController.
  * DELETE /api/users/me/photos/:photoUrl
  * 프로필 사진 삭제
  */
-router.delete('/me/photos/:photoUrl', userController.deleteProfilePhoto);
+router.delete('/me/photos/:photoUrl', validateParams(photoUrlParamsSchema), userController.deleteProfilePhoto);
 
 /**
  * GET /api/users/me/stats
@@ -47,6 +49,6 @@ router.get('/me/stats', userController.getStats);
  * GET /api/users/:userId
  * 다른 사용자 프로필 조회
  */
-router.get('/:userId', userController.getUserById);
+router.get('/:userId', validateParams(userIdParamsSchema), userController.getUserById);
 
 export default router;

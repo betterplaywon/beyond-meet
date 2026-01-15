@@ -5,6 +5,8 @@
 import { Router } from 'express';
 import * as callController from '../controllers/call-controller';
 import { authenticate } from '../middlewares/auth';
+import { validateParams } from '../middlewares/validation';
+import { callIdParamsSchema, sessionIdParamsSchema } from '../utils/validation';
 
 const router = Router();
 
@@ -20,7 +22,7 @@ router.post('/start', authenticate, callController.startCall);
  * @desc    통화 종료
  * @access  Private
  */
-router.post('/:callId/end', authenticate, callController.endCall);
+router.post('/:callId/end', authenticate, validateParams(callIdParamsSchema), callController.endCall);
 
 /**
  * @route   GET /api/call/history
@@ -34,13 +36,13 @@ router.get('/history', authenticate, callController.getCallHistory);
  * @desc    세션 정보 조회 (통화 종료 후 상대방 정보 확인)
  * @access  Private
  */
-router.get('/session/:sessionId', authenticate, callController.getSessionInfo);
+router.get('/session/:sessionId', authenticate, validateParams(sessionIdParamsSchema), callController.getSessionInfo);
 
 /**
  * @route   POST /api/call/:callId/event
  * @desc    통화 이벤트 기록
  * @access  Private
  */
-router.post('/:callId/event', authenticate, callController.recordCallEvent);
+router.post('/:callId/event', authenticate, validateParams(callIdParamsSchema), callController.recordCallEvent);
 
 export default router;
