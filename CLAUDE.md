@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language Guidelines
+
+**IMPORTANT**: All explanations and communications with the user MUST be in Korean (한글). Internal thinking and technical analysis can be in English, but all user-facing messages, explanations, and documentation must be written in Korean.
+
 ## Project Overview
 
 Beyond Meet is a WebRTC-based 1:1 video dating app built with React Native (iOS/Android) and Node.js backend. Beta strategy: 20-user invite code system with $0/month operational cost.
