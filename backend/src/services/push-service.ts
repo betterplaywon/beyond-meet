@@ -83,11 +83,14 @@ export const sendPushNotification = async (
     data?: Record<string, string>;
   }
 ) => {
-  // 1. 사용자의 디바이스 토큰 조회
+  // 1. 사용자의 디바이스 토큰 조회 (필요한 필드만 select)
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      deviceTokens: true,
+    select: {
+      pushEnabled: true,
+      deviceTokens: {
+        select: { token: true },
+      },
     },
   });
 
@@ -144,7 +147,7 @@ export const sendPushNotification = async (
 };
 
 /**
- * 여러 사용자에게 푸시 알림 전송
+ * 여러 사용자에게 푸시 알림 전송 (배치 처리로 N+1 쿼리 해결)
  */
 export const sendPushNotificationToMultipleUsers = async (
   userIds: string[],
@@ -154,6 +157,73 @@ export const sendPushNotificationToMultipleUsers = async (
     data?: Record<string, string>;
   }
 ) => {
-  const promises = userIds.map((userId) => sendPushNotification(userId, notification));
-  await Promise.allSettled(promises);
+  if (userIds.length === 0) return;
+
+  // 단일 쿼리로 모든 유저 데이터 가져오기 (N+1 쿼리 해결)
+  const users = await prisma.user.findMany({
+    where: {
+      id: { in: userIds },
+      pushEnabled: true,
+    },
+    select: {
+      id: true,
+      deviceTokens: {
+        select: { token: true },
+      },
+    },
+  });
+
+  if (users.length === 0) return;
+
+  // 모든 토큰 수집
+  const allTokens: string[] = [];
+  users.forEach((user) => {
+    user.deviceTokens.forEach((dt) => allTokens.push(dt.token));
+  });
+
+  if (allTokens.length === 0) return;
+
+  // FCM multicast 메시지 생성
+  const message = {
+    notification: {
+      title: notification.title,
+      body: notification.body,
+    },
+    data: notification.data,
+  };
+
+  try {
+    // 한번에 배치 전송 (FCM은 최대 500개 토큰까지 지원)
+    const batchSize = 500;
+    const failedTokens: string[] = [];
+
+    for (let i = 0; i < allTokens.length; i += batchSize) {
+      const batch = allTokens.slice(i, i + batchSize);
+      const response = await admin.messaging().sendEachForMulticast({
+        ...message,
+        tokens: batch,
+      });
+
+      // 실패한 토큰 수집
+      if (response.failureCount > 0) {
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            failedTokens.push(batch[idx]);
+          }
+        });
+      }
+    }
+
+    // 실패한 토큰 일괄 삭제
+    if (failedTokens.length > 0) {
+      await prisma.deviceToken.deleteMany({
+        where: {
+          token: { in: failedTokens },
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Batch push notification failed:', error);
+    // 배치 전송 실패 시에도 에러를 던지지 않고 로그만 남김
+  }
 };

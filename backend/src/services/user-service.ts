@@ -2,16 +2,20 @@
  * 사용자 서비스
  */
 
-import prisma from '../config/database';
-import { AppError } from '../middlewares/errorHandler';
-import { supabaseStorage } from '../config/supabase';
-import { v4 as uuidv4 } from 'uuid';
+import prisma from "../config/database";
+import { AppError } from "../middlewares/errorHandler";
+import { supabaseStorage } from "../config/supabase";
+import { v4 as uuidv4 } from "uuid";
+import {
+  checkBlockStatus,
+  checkFriendshipStatus,
+} from "../utils/relationship-checks";
 
 interface UpdateProfileInput {
   nickname?: string;
   bio?: string;
   interests?: string[];
-  preferredGender?: 'MALE' | 'FEMALE' | 'ANYONE';
+  preferredGender?: "MALE" | "FEMALE" | "ANYONE";
   minAge?: number;
   maxAge?: number;
   preferredCountries?: string[];
@@ -44,7 +48,7 @@ export const getProfile = async (userId: string) => {
   });
 
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
   // 기본값 보장: minAge, maxAge가 null이면 기본값 설정
@@ -59,18 +63,10 @@ export const getProfile = async (userId: string) => {
  * 다른 사용자 프로필 조회 (제한된 정보)
  */
 export const getUserById = async (userId: string, requestingUserId: string) => {
-  // 차단 여부 확인
-  const isBlocked = await prisma.blockList.findFirst({
-    where: {
-      OR: [
-        { userId: requestingUserId, blockedUserId: userId },
-        { userId: userId, blockedUserId: requestingUserId },
-      ],
-    },
-  });
-
-  if (isBlocked) {
-    throw new AppError(403, 'USER_BLOCKED', '차단된 사용자입니다');
+  // 차단 여부 확인 (utility 사용)
+  const blocked = await checkBlockStatus(requestingUserId, userId);
+  if (blocked) {
+    throw new AppError(403, "USER_BLOCKED", "차단된 사용자입니다");
   }
 
   const user = await prisma.user.findUnique({
@@ -89,33 +85,33 @@ export const getUserById = async (userId: string, requestingUserId: string) => {
   });
 
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
-  // 친구 여부 확인
-  const isFriend = await prisma.friendship.findFirst({
-    where: {
-      OR: [
-        { userId: requestingUserId, friendId: userId },
-        { userId: userId, friendId: requestingUserId },
-      ],
-    },
-  });
+  // 친구 여부 확인 (utility 사용)
+  const friendship = await checkFriendshipStatus(requestingUserId, userId);
 
   return {
     ...user,
-    isFriend: !!isFriend,
+    isFriend: !!friendship,
   };
 };
 
 /**
  * 프로필 업데이트
  */
-export const updateProfile = async (userId: string, data: UpdateProfileInput) => {
+export const updateProfile = async (
+  userId: string,
+  data: UpdateProfileInput
+) => {
   // 나이 범위 검증
   if (data.minAge !== undefined && data.maxAge !== undefined) {
     if (data.minAge < 18 || data.maxAge > 100 || data.minAge > data.maxAge) {
-      throw new AppError(400, 'INVALID_AGE_RANGE', '유효하지 않은 나이 범위입니다');
+      throw new AppError(
+        400,
+        "INVALID_AGE_RANGE",
+        "유효하지 않은 나이 범위입니다"
+      );
     }
   }
 
@@ -128,7 +124,9 @@ export const updateProfile = async (userId: string, data: UpdateProfileInput) =>
       ...(data.preferredGender && { preferredGender: data.preferredGender }),
       ...(data.minAge !== undefined && { minAge: data.minAge }),
       ...(data.maxAge !== undefined && { maxAge: data.maxAge }),
-      ...(data.preferredCountries && { preferredCountries: data.preferredCountries }),
+      ...(data.preferredCountries && {
+        preferredCountries: data.preferredCountries,
+      }),
     },
     select: {
       id: true,
@@ -161,7 +159,10 @@ export const updateProfile = async (userId: string, data: UpdateProfileInput) =>
 /**
  * 프로필 사진 업로드 (Supabase Storage)
  */
-export const uploadProfilePhoto = async (userId: string, file: Express.Multer.File) => {
+export const uploadProfilePhoto = async (
+  userId: string,
+  file: Express.Multer.File
+) => {
   // 1. 현재 사용자 프로필 조회
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -169,34 +170,38 @@ export const uploadProfilePhoto = async (userId: string, file: Express.Multer.Fi
   });
 
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
   // 2. 사진 개수 제한 확인 (최대 6장)
   if (user.profilePhotos.length >= 6) {
-    throw new AppError(400, 'MAX_PHOTOS_EXCEEDED', '최대 6장까지 업로드할 수 있습니다');
+    throw new AppError(
+      400,
+      "MAX_PHOTOS_EXCEEDED",
+      "최대 6장까지 업로드할 수 있습니다"
+    );
   }
 
   // 3. 파일명 생성 (UUID + 확장자)
-  const fileExt = file.originalname.split('.').pop();
+  const fileExt = file.originalname.split(".").pop();
   const fileName = `${userId}/${uuidv4()}.${fileExt}`;
 
   // 4. Supabase Storage에 업로드
   const { data, error } = await supabaseStorage
-    .from('profile-photos')
+    .from("profile-photos")
     .upload(fileName, file.buffer, {
       contentType: file.mimetype,
       upsert: false,
     });
 
   if (error) {
-    console.error('Supabase upload error:', error);
-    throw new AppError(500, 'UPLOAD_FAILED', '사진 업로드에 실패했습니다');
+    console.error("Supabase upload error:", error);
+    throw new AppError(500, "UPLOAD_FAILED", "사진 업로드에 실패했습니다");
   }
 
   // 5. Public URL 생성
   const { data: urlData } = supabaseStorage
-    .from('profile-photos')
+    .from("profile-photos")
     .getPublicUrl(data.path);
 
   const photoUrl = urlData.publicUrl;
@@ -230,27 +235,27 @@ export const deleteProfilePhoto = async (userId: string, photoUrl: string) => {
   });
 
   if (!user) {
-    throw new AppError(404, 'USER_NOT_FOUND', '사용자를 찾을 수 없습니다');
+    throw new AppError(404, "USER_NOT_FOUND", "사용자를 찾을 수 없습니다");
   }
 
   // 2. 사진이 존재하는지 확인
   if (!user.profilePhotos.includes(photoUrl)) {
-    throw new AppError(404, 'PHOTO_NOT_FOUND', '사진을 찾을 수 없습니다');
+    throw new AppError(404, "PHOTO_NOT_FOUND", "사진을 찾을 수 없습니다");
   }
 
   // 3. Supabase Storage에서 파일 경로 추출
   const url = new URL(photoUrl);
-  const pathParts = url.pathname.split('/profile-photos/');
+  const pathParts = url.pathname.split("/profile-photos/");
   const filePath = pathParts[1];
 
   // 4. Supabase Storage에서 삭제
   if (filePath) {
     const { error } = await supabaseStorage
-      .from('profile-photos')
+      .from("profile-photos")
       .remove([filePath]);
 
     if (error) {
-      console.error('Supabase delete error:', error);
+      console.error("Supabase delete error:", error);
       // 삭제 실패해도 DB에서는 제거 (Storage와 DB 불일치 방지)
     }
   }
@@ -269,9 +274,16 @@ export const deleteProfilePhoto = async (userId: string, photoUrl: string) => {
 /**
  * 프로필 사진 업데이트 (URL 배열로 직접 설정)
  */
-export const updateProfilePhotos = async (userId: string, photoUrls: string[]) => {
+export const updateProfilePhotos = async (
+  userId: string,
+  photoUrls: string[]
+) => {
   if (photoUrls.length > 6) {
-    throw new AppError(400, 'TOO_MANY_PHOTOS', '최대 6장의 사진만 업로드할 수 있습니다');
+    throw new AppError(
+      400,
+      "TOO_MANY_PHOTOS",
+      "최대 6장의 사진만 업로드할 수 있습니다"
+    );
   }
 
   const user = await prisma.user.update({
@@ -293,7 +305,7 @@ export const updateProfilePhotos = async (userId: string, photoUrls: string[]) =
  */
 export const updateOnlineStatus = async (
   userId: string,
-  status: 'ONLINE' | 'OFFLINE' | 'IN_CALL'
+  status: "ONLINE" | "OFFLINE" | "IN_CALL"
 ) => {
   await prisma.user.update({
     where: { id: userId },
@@ -327,70 +339,44 @@ export const getFriendIds = async (userId: string): Promise<string[]> => {
 };
 
 /**
- * 사용자 통계 조회
+ * 사용자 통계 조회 (병렬 처리 및 aggregate 최적화)
  */
 export const getUserStats = async (userId: string) => {
-  // 친구 수
-  const friendCount = await prisma.friendship.count({
-    where: {
-      OR: [
-        { userId: userId },
-        { friendId: userId },
-      ],
-    },
-  });
-
-  // 총 통화 수
-  const totalCalls = await prisma.callRecord.count({
-    where: {
-      OR: [
-        { callerId: userId },
-        { receiverId: userId },
-      ],
-      status: 'COMPLETED',
-    },
-  });
-
-  // 총 통화 시간 (분)
-  const callRecords = await prisma.callRecord.findMany({
-    where: {
-      OR: [
-        { callerId: userId },
-        { receiverId: userId },
-      ],
-      status: 'COMPLETED',
-      duration: {
-        not: null,
-      },
-    },
-    select: {
-      duration: true,
-    },
-  });
-
-  const totalDuration = callRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
-  const totalMinutes = Math.floor(totalDuration / 60);
-
-  // 오늘의 통화 수
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todayCalls = await prisma.callRecord.count({
-    where: {
-      OR: [
-        { callerId: userId },
-        { receiverId: userId },
-      ],
-      status: 'COMPLETED',
-      createdAt: {
-        gte: today,
+  // 모든 쿼리를 병렬로 실행하여 성능 향상
+  const [friendCount, callStats, todayCalls] = await Promise.all([
+    // 친구 수 (단방향 카운트만 - 자신이 추가한 친구)
+    prisma.friendship.count({
+      where: { userId },
+    }),
+
+    // 총 통화 수 + 총 통화 시간 (aggregate로 한번에)
+    prisma.callRecord.aggregate({
+      where: {
+        OR: [{ callerId: userId }, { receiverId: userId }],
+        status: "COMPLETED",
+        duration: { not: null },
       },
-    },
-  });
+      _count: { id: true },
+      _sum: { duration: true },
+    }),
+
+    // 오늘의 통화 수
+    prisma.callRecord.count({
+      where: {
+        OR: [{ callerId: userId }, { receiverId: userId }],
+        createdAt: { gte: today },
+      },
+    }),
+  ]);
+
+  const totalMinutes = Math.floor((callStats._sum.duration || 0) / 60);
 
   return {
     friendCount,
-    totalCalls,
+    totalCalls: callStats._count.id,
     totalMinutes,
     todayCalls,
   };

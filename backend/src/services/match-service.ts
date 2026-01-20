@@ -6,6 +6,7 @@ import prisma from "../config/database";
 import { AppError } from "../middlewares/errorHandler";
 import { RtcTokenBuilder, RtcRole } from "agora-token";
 import crypto from "crypto";
+import { calculateAge } from "../utils/age";
 
 /**
  * 매칭에 필요한 사용자 정보 조회
@@ -43,6 +44,9 @@ const matchQueue: Map<
   string,
   { userId: string; filters: any; timestamp: Date }
 > = new Map();
+
+// 매칭 큐 TTL (5분)
+const MATCH_QUEUE_TTL = 5 * 60 * 1000;
 
 /**
  * userId를 기반으로 고유 Agora UID 생성
@@ -204,21 +208,6 @@ export const findMatch = async (userId: string): Promise<string | null> => {
     return null;
   }
 
-  // 나이 계산 함수
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      return age - 1;
-    }
-    return age;
-  };
-
   const currentUserAge = calculateAge(currentUser.filters.birthDate);
 
   // Tier 1: 엄격한 매칭 (모든 필터 적용)
@@ -284,19 +273,6 @@ async function tryMatchWithFilters(
     ageBuffer?: number;
   }
 ): Promise<string | null> {
-  const calculateAge = (birthDate: Date): number => {
-    const today = new Date();
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate.getDate())
-    ) {
-      return age - 1;
-    }
-    return age;
-  };
-
   const ageBuffer = options.ageBuffer || 0;
 
   for (const [candidateId, candidate] of matchQueue) {
@@ -654,4 +630,35 @@ export const endCall = async (sessionId: string, userId: string) => {
       userId2: session.userId2,
     },
   };
+};
+
+/**
+ * 오래된 매칭 큐 엔트리 제거
+ * TTL을 초과한 엔트리를 삭제하여 메모리 누수 방지
+ */
+export const cleanupMatchQueue = () => {
+  const now = Date.now();
+  let removedCount = 0;
+
+  for (const [userId, entry] of matchQueue.entries()) {
+    // TTL(5분) 이상 된 엔트리 제거
+    if (now - entry.timestamp.getTime() > MATCH_QUEUE_TTL) {
+      matchQueue.delete(userId);
+      removedCount++;
+    }
+  }
+
+  if (removedCount > 0) {
+    console.log(
+      `[Match Queue Cleanup] Removed ${removedCount} stale entries. Queue size: ${matchQueue.size}`
+    );
+  }
+};
+
+/**
+ * 주기적 cleanup 시작 (1분마다 실행)
+ */
+export const startMatchQueueCleanup = () => {
+  setInterval(cleanupMatchQueue, 60 * 1000); // 1분마다 실행
+  console.log("[Match Queue] Cleanup scheduler started");
 };
