@@ -9,6 +9,8 @@ import { useAuthStore } from '../store/authStore';
 
 // Private 상태 변수
 let socket: Socket | null = null;
+// 현재 연결에 사용된 토큰 (토큰 변경 감지용)
+let currentConnectedToken: string | null = null;
 // callback -> wrapper function 매핑 (메모리 누수 방지)
 const listenerWrappers: WeakMap<Function, Function> = new WeakMap();
 // event별 등록된 callback 추적
@@ -75,12 +77,21 @@ const setupEventHandlers = (): void => {
  * Socket 연결
  */
 export const connect = (): void => {
-  if (socket?.connected) {
-    console.log('[SOCKET] Already connected');
+  const token = useAuthStore.getState().accessToken;
+
+  // 이미 연결되어 있고 토큰이 동일하면 재연결 불필요
+  if (socket?.connected && currentConnectedToken === token) {
+    console.log('[SOCKET] Already connected with current token');
     return;
   }
 
-  const token = useAuthStore.getState().accessToken;
+  // 토큰이 다르면 기존 연결 해제 후 재연결
+  if (socket?.connected && currentConnectedToken !== token) {
+    console.log('[SOCKET] Token changed, disconnecting old socket...');
+    socket.disconnect();
+    socket = null;
+  }
+
   console.log('[SOCKET] Access Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
 
   if (!token) {
@@ -104,6 +115,9 @@ export const connect = (): void => {
     reconnectionAttempts: 5,
   });
 
+  // 연결된 토큰 기록
+  currentConnectedToken = token;
+
   setupEventHandlers();
 };
 
@@ -114,9 +128,24 @@ export const disconnect = (): void => {
   if (socket) {
     socket.disconnect();
     socket = null;
+    currentConnectedToken = null;
     listeners.clear();
     pendingListeners.clear();
   }
+};
+
+/**
+ * 새 토큰으로 Socket 강제 재연결
+ * 토큰 갱신 후 호출하여 새 토큰으로 인증된 Socket 연결을 생성
+ */
+export const reconnectWithNewToken = (): void => {
+  console.log('[SOCKET] Force reconnecting with new token...');
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  currentConnectedToken = null;
+  connect();
 };
 
 /**

@@ -13,6 +13,7 @@ import {
   Alert,
   Platform,
   PermissionsAndroid,
+  BackHandler,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -63,6 +64,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     Alert.alert('오류', '통화 정보가 올바르지 않습니다.', [
       { text: '확인', onPress: () => navigation.goBack() },
     ]);
+    return null;
   }
 
   const isJoined = useCallStore(state => state.isJoined);
@@ -446,6 +448,19 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callDuration, maxDuration]);
+
+  // Android 하드웨어 백 버튼 처리 - 통화 중 뒤로가기 비활성화
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // true 반환 = 이벤트 소비, 기본 동작(뒤로가기) 방지
+      // 통화 종료는 EndCall 버튼으로만 가능
+      return true;
+    });
+
+    return () => backHandler.remove();
+  }, []);
 
   const handleToggleMute = () => {
     agoraEngineRef.current?.muteLocalAudioStream(!isMuted);

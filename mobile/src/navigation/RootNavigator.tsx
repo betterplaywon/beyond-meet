@@ -57,6 +57,11 @@ const AppContent: React.FC = () => {
   // 통화 수신 이벤트 (앱 전역)
   useSocketEvent('call:incoming', (data: any) => {
     console.log('[ROOT] Incoming call:', data);
+    // Null safety: data 구조 검증
+    if (!data?.session || !data?.caller) {
+      console.error('[ROOT] Invalid call:incoming data:', data);
+      return;
+    }
     useCallStore.getState().setIncomingCall({
       session: data.session,
       caller: data.caller,
@@ -66,16 +71,19 @@ const AppContent: React.FC = () => {
 
   // 통화 수락 완료 이벤트 (토큰 및 UID 받기)
   useSocketEvent('call:accepted', (data: any) => {
-    if (data.token && data.uid) {
-      console.log('[ROOT] Call accepted, received token and UID:', data.uid);
-      navigation.navigate('VideoCall', {
-        sessionId: data.session.id,
-        channelName: data.session.channelName,
-        token: data.token,
-        uid: data.uid,
-      });
-      useCallStore.getState().setIncomingCall(null);
+    // Null safety: 모든 필수 필드 검증
+    if (!data?.token || !data?.uid || !data?.session?.id || !data?.session?.channelName) {
+      console.error('[ROOT] Invalid call:accepted data:', data);
+      return;
     }
+    console.log('[ROOT] Call accepted, received token and UID:', data.uid);
+    navigation.navigate('VideoCall', {
+      sessionId: data.session.id,
+      channelName: data.session.channelName,
+      token: data.token,
+      uid: data.uid,
+    });
+    useCallStore.getState().setIncomingCall(null);
   });
 
   // AsyncStorage 리하이드레이션 완료될 때까지 로딩 화면 표시

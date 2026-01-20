@@ -7,6 +7,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import { ENV } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 import { ApiResponse } from '../@types';
+import * as socketService from './socketService';
 
 /**
  * Axios 인스턴스 생성
@@ -76,6 +77,10 @@ api.interceptors.response.use(
 
         // 새 토큰 저장 (emailVerified 및 기타 상태는 유지)
         useAuthStore.getState().setTokens(accessToken, newRefreshToken);
+
+        // Socket 재연결 (새 토큰으로 인증)
+        console.log('[API] Token refreshed, reconnecting socket with new token...');
+        socketService.reconnectWithNewToken();
 
         // 원래 요청 재시도
         if (originalRequest.headers) {
