@@ -3,8 +3,8 @@
  * WebRTC 기반 영상 통화 데이팅 앱
  */
 
-import React from 'react';
-import { StatusBar, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { StatusBar, Alert, AppState, AppStateStatus } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
 import Toast from 'react-native-toast-message';
@@ -65,6 +65,27 @@ const queryClient = new QueryClient({
 });
 
 function App(): React.JSX.Element {
+  // 앱 포그라운드/백그라운드 전환 시 Socket 상태 관리
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      const { isAuthenticated } = useAuthStore.getState();
+
+      if (nextAppState === 'active' && isAuthenticated) {
+        // 포그라운드 복귀 시 Socket 연결 상태 확인 및 재연결
+        if (!socketService.isConnected()) {
+          console.log('[APP] Foreground - Socket disconnected, reconnecting...');
+          socketService.connect();
+        } else {
+          console.log('[APP] Foreground - Socket already connected');
+        }
+      } else if (nextAppState === 'background') {
+        console.log('[APP] Background - Socket status:', socketService.isConnected());
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
