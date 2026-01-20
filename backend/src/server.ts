@@ -2,6 +2,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import createApp from './app';
 import { authenticateSocket, setupMatchHandlers, startPeriodicMatching, stopPeriodicMatching } from './sockets/match-handler';
+import { startMatchQueueCleanup } from './services/match-service';
 
 const PORT = process.env.PORT || 3000;
 
@@ -28,7 +29,12 @@ io.on('connection', (socket) => {
 // 주기적 재매칭 시스템 시작
 startPeriodicMatching(io);
 
-server.listen(PORT);
+// 매칭 큐 cleanup 시스템 시작
+startMatchQueueCleanup();
+
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
