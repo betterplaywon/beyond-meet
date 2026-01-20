@@ -5,68 +5,53 @@
 import prisma from '../config/database';
 
 /**
- * 통계 조회
+ * 통계 조회 (병렬 처리 및 aggregate 최적화)
  */
 export const getStats = async () => {
-  // 전체 사용자 수
-  const totalUsers = await prisma.user.count();
-
-  // 활성 사용자 수 (최근 7일 이내 활동)
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const activeUsers = await prisma.user.count({
-    where: {
-      lastActive: {
-        gte: sevenDaysAgo,
-      },
-    },
-  });
-
-  // 온라인 사용자 수
-  const onlineUsers = await prisma.user.count({
-    where: {
-      onlineStatus: 'ONLINE',
-    },
-  });
-
-  // 총 통화 수
-  const totalCalls = await prisma.callRecord.count({
-    where: {
-      status: 'COMPLETED',
-    },
-  });
-
-  // 총 통화 시간 (분)
-  const callRecords = await prisma.callRecord.findMany({
-    where: {
-      status: 'COMPLETED',
-      duration: {
-        not: null,
-      },
-    },
-    select: {
-      duration: true,
-    },
-  });
-
-  const totalCallDuration = callRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
-  const totalCallMinutes = Math.floor(totalCallDuration / 60);
-
-  // 오늘의 통화 수
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todayCalls = await prisma.callRecord.count({
-    where: {
-      status: 'COMPLETED',
-      createdAt: {
-        gte: today,
-      },
-    },
-  });
+  // 모든 쿼리를 병렬로 실행하여 성능 향상
+  const [totalUsers, activeUsers, onlineUsers, callStats, todayCalls] = await Promise.all([
+    // 전체 사용자 수
+    prisma.user.count(),
 
-  // Beta 사용자 제한
+    // 활성 사용자 수 (최근 7일 이내 활동)
+    prisma.user.count({
+      where: {
+        lastActive: { gte: sevenDaysAgo },
+      },
+    }),
+
+    // 온라인 사용자 수
+    prisma.user.count({
+      where: {
+        onlineStatus: { in: ['ONLINE', 'IN_CALL'] },
+      },
+    }),
+
+    // 총 통화 수 + 총 통화 시간 (aggregate로 한번에)
+    prisma.callRecord.aggregate({
+      where: {
+        status: 'COMPLETED',
+        duration: { not: null },
+      },
+      _count: { id: true },
+      _sum: { duration: true },
+    }),
+
+    // 오늘의 통화 수
+    prisma.callRecord.count({
+      where: {
+        createdAt: { gte: today },
+      },
+    }),
+  ]);
+
+  const totalCallMinutes = Math.floor((callStats._sum.duration || 0) / 60);
   const betaLimit = parseInt(process.env.BETA_USER_LIMIT || '30', 10);
 
   return {
@@ -77,7 +62,7 @@ export const getStats = async () => {
       betaLimit,
     },
     calls: {
-      total: totalCalls,
+      total: callStats._count.id,
       today: todayCalls,
       totalMinutes: totalCallMinutes,
     },
