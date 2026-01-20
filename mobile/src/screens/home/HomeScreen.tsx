@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
+    width: '100%',
   },
   matchDescription: {
     ...typography.body1,
