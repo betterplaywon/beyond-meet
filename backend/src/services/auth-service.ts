@@ -13,6 +13,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { AppError } from '../middlewares/errorHandler';
 import { deleteMultipleProfilePhotos } from './storage-service';
 import { isEmailPreVerified, clearEmailPreVerification } from './email-service';
+import { updateUserStatus } from '../utils/user-status';
 
 export interface RegisterInput {
   email: string;
@@ -189,13 +190,8 @@ export const login = async (data: LoginInput): Promise<RegisterOutput> => {
     throw new AppError(401, 'INVALID_CREDENTIALS', '이메일 또는 비밀번호가 올바르지 않습니다');
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      onlineStatus: 'ONLINE',
-      lastActive: new Date(),
-    },
-  });
+  // 사용자 온라인 상태 업데이트 (utility 사용)
+  await updateUserStatus(user.id, 'ONLINE');
 
   const accessToken = generateAccessToken({
     id: user.id,
@@ -262,13 +258,8 @@ export const refreshToken = async (userId: string): Promise<{ accessToken: strin
  * 로그아웃
  */
 export const logout = async (userId: string): Promise<void> => {
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      onlineStatus: 'OFFLINE',
-      lastActive: new Date(),
-    },
-  });
+  // 사용자 오프라인 상태 업데이트 (utility 사용)
+  await updateUserStatus(userId, 'OFFLINE');
 };
 
 /**
