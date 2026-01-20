@@ -18,18 +18,18 @@ jobs:
         run: |
           echo "🏓 Pinging Render.com server..."
 
-          # 최대 3회 재시도 (Render.com cold start 대응)
-          max_attempts=3
+          # 최대 5회 재시도 (Render.com cold start 대응)
+          max_attempts=5
           attempt=1
 
           while [ $attempt -le $max_attempts ]; do
             echo "Attempt $attempt/$max_attempts..."
 
-            # 타임아웃 120초 설정 (cold start는 보통 60-90초)
+            # 타임아웃 180초 설정 (cold start가 간헐적으로 120초 초과할 수 있음)
             # set +e로 curl 실패 시에도 스크립트가 계속 실행되도록 함
             set +e
             response=$(curl -s -o /dev/null -w "%{http_code}" \
-              --max-time 120 \
+              --max-time 180 \
               --connect-timeout 10 \
               https://beyond-meet-api.onrender.com/health)
             curl_exit_code=$?
@@ -40,7 +40,7 @@ jobs:
               response="000"
               echo "⚠️ Curl exit code: $curl_exit_code"
               case $curl_exit_code in
-                28) echo "   Reason: Operation timeout (server took >120s to respond)" ;;
+                28) echo "   Reason: Operation timeout (server took >180s to respond)" ;;
                 6)  echo "   Reason: Could not resolve host" ;;
                 7)  echo "   Reason: Failed to connect to host" ;;
                 *)  echo "   Reason: Unknown curl error" ;;
