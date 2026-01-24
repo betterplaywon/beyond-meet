@@ -15,10 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useTranslation } from 'react-i18next';
 import { useSocket } from '../../hooks/useSocket';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
-import { Button } from '../../components/common';
+import { Button, LanguageSelector } from '../../components/common';
 import { RootStackParamList } from '../../@types';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -27,6 +28,7 @@ const { width, height } = Dimensions.get('window');
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const HomeScreen: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { data: user } = useMyProfile();
   const { data: friends = [] } = useFriends(user?.id);
@@ -37,8 +39,8 @@ const HomeScreen: React.FC = () => {
     if (!socket.isConnected()) {
       Toast.show({
         type: 'error',
-        text1: '연결 오류',
-        text2: '서버와 연결되지 않았습니다. 다시 시도해주세요.',
+        text1: t('home.connectionError'),
+        text2: t('home.serverDisconnected'),
       });
       return;
     }
@@ -61,9 +63,10 @@ const HomeScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <Text style={styles.headerTitle}>Beyond Meet</Text>
+          <LanguageSelector />
         </View>
         <Text style={styles.headerSubtitle}>
-          {user?.nickname}님, 환영합니다!
+          {t('home.welcome', { nickname: user?.nickname })}
         </Text>
       </View>
 
@@ -71,14 +74,14 @@ const HomeScreen: React.FC = () => {
       <View style={styles.content}>
         <View style={styles.matchCard}>
           <Icon name="favorite" size={60} color={colors.primary} />
-          <Text style={styles.matchTitle}>새로운 인연을{'\n'}만나보세요</Text>
+          <Text style={styles.matchTitle}>{t('home.newConnection')}</Text>
           <Text style={styles.matchDescription}>
-            랜덤 매칭을 통해 새로운 사람과{'\n'}영상 통화를 시작해보세요
+            {t('home.matchDescription')}
           </Text>
 
           {/* 랜덤 매칭 버튼 (Pill + 아이콘) */}
           <Button
-            title="랜덤 매칭 시작"
+            title={t('home.startMatch')}
             variant="primary"
             size="medium"
             fullWidth
@@ -98,17 +101,17 @@ const HomeScreen: React.FC = () => {
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>0</Text>
-          <Text style={styles.statLabel}>오늘의 통화</Text>
+          <Text style={styles.statLabel}>{t('home.todayCalls')}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{friends.length}</Text>
-          <Text style={styles.statLabel}>친구</Text>
+          <Text style={styles.statLabel}>{t('home.friends')}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>0분</Text>
-          <Text style={styles.statLabel}>총 통화 시간</Text>
+          <Text style={styles.statValue}>{t('home.minutes', { count: 0 })}</Text>
+          <Text style={styles.statLabel}>{t('home.totalCallTime')}</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -144,6 +147,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
   headerTitle: {

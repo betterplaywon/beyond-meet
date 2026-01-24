@@ -71,8 +71,8 @@ const AppContent: React.FC = () => {
 
   // 통화 수락 완료 이벤트 (토큰 및 UID 받기)
   useSocketEvent('call:accepted', (data: any) => {
-    // Null safety: 모든 필수 필드 검증
-    if (!data?.token || !data?.uid || !data?.session?.id || !data?.session?.channelName) {
+    // Null safety: 모든 필수 필드 검증 (uid는 0이 유효한 값이므로 typeof 체크)
+    if (!data?.token || typeof data?.uid !== 'number' || !data?.session?.id || !data?.session?.channelName) {
       console.error('[ROOT] Invalid call:accepted data:', data);
       return;
     }

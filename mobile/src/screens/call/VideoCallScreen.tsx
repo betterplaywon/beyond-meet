@@ -29,6 +29,7 @@ import {
   RtcSurfaceView,
 } from 'react-native-agora';
 import RNFS from 'react-native-fs';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../@types';
 import { CallControls } from '../../components/call/CallControls';
 import { CallTimer } from '../../components/call/CallTimer';
@@ -52,6 +53,7 @@ interface Props {
 }
 
 const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { sessionId, channelName, token } = route.params;
   const insets = useSafeAreaInsets();
 
@@ -61,8 +63,8 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       channelName: !!channelName,
       token: !!token,
     });
-    Alert.alert('오류', '통화 정보가 올바르지 않습니다.', [
-      { text: '확인', onPress: () => navigation.goBack() },
+    Alert.alert(t('common.error'), t('call.invalidInfo'), [
+      { text: t('common.confirm'), onPress: () => navigation.goBack() },
     ]);
     return null;
   }
@@ -201,11 +203,11 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
         // 강제 종료
         socketService.sendModerationForceEnd(sessionId);
         Alert.alert(
-          '통화 종료',
-          '부적절한 콘텐츠가 감지되어 통화가 종료되었습니다.',
+          t('call.ended'),
+          t('call.endedByModeration'),
           [
             {
-              text: '확인',
+              text: t('common.confirm'),
               onPress: () => {
                 navigation.replace('CallEnd', { sessionId });
               },
@@ -216,7 +218,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     } catch {
       // 모더레이션 에러는 조용히 무시 (다음 프레임에서 재시도)
     }
-  }, [sessionId, navigation]);
+  }, [sessionId, navigation, t]);
 
   // 모니터링 시작/중지
   useEffect(() => {
@@ -254,9 +256,9 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       moderationIntervalRef.current = null;
     }
 
-    Alert.alert('통화 종료', '상대방이 통화를 종료했습니다.', [
+    Alert.alert(t('call.ended'), t('call.endedByOther'), [
       {
-        text: '확인',
+        text: t('common.confirm'),
         onPress: () => {
           navigation.replace('CallEnd', { sessionId: data.sessionId });
         },
@@ -268,8 +270,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   useSocketEvent('moderation:warning-received', (data: any) => {
     console.log('[MODERATION] Warning received:', data);
     setWarningMessage(
-      data.message ||
-        '부적절한 행동이 감지되었습니다.\n반복될 경우 통화가 종료될 수 있습니다.',
+      data.message || t('moderation.warningMessage'),
     );
     setShowWarningModal(true);
   });
@@ -286,11 +287,11 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     }
 
     Alert.alert(
-      '통화 종료',
-      '부적절한 콘텐츠가 감지되어 통화가 종료되었습니다.',
+      t('call.ended'),
+      t('call.endedByModeration'),
       [
         {
-          text: '확인',
+          text: t('common.confirm'),
           onPress: () => {
             navigation.replace('CallEnd', { sessionId: data.sessionId });
           },
@@ -315,7 +316,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
             grants['android.permission.RECORD_AUDIO'] !==
               PermissionsAndroid.RESULTS.GRANTED
           ) {
-            Alert.alert('권한 필요', '카메라와 마이크 권한이 필요합니다.');
+            Alert.alert(t('call.permissionRequired'), t('call.permissionMessage'));
             return false;
           }
         } catch (err) {
@@ -329,7 +330,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
     const setupVideoSDK = async () => {
       try {
         if (!ENV.AGORA_APP_ID) {
-          Alert.alert('설정 오류', 'Agora App ID가 설정되지 않았습니다.');
+          Alert.alert(t('call.settingsError'), t('call.agoraNotConfigured'));
           return;
         }
 
@@ -368,7 +369,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
             setRemoteUid(0);
           },
           onError: (err, msg) => {
-            Alert.alert('Agora 오류', `에러 코드: ${err}\n메시지: ${msg}`);
+            Alert.alert(t('call.agoraError'), t('call.agoraErrorMessage', { err, msg }));
           },
           // 스냅샷 완료 콜백
           onSnapshotTaken: (
@@ -411,7 +412,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           clientRoleType: ClientRoleType.ClientRoleBroadcaster,
         });
       } catch {
-        Alert.alert('오류', '영상 통화를 시작할 수 없습니다.');
+        Alert.alert(t('common.error'), t('call.startFailed'));
       }
     };
 
@@ -421,7 +422,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
       agoraEngineRef.current?.leaveChannel();
       agoraEngineRef.current?.release();
     };
-  }, [channelName, token, setIsJoined]);
+  }, [channelName, token, setIsJoined, t]);
 
   // 타이머 로직 - callStore의 callDuration을 직접 업데이트
   useEffect(() => {
@@ -453,11 +454,14 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     if (Platform.OS !== 'android') return;
 
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      // true 반환 = 이벤트 소비, 기본 동작(뒤로가기) 방지
-      // 통화 종료는 EndCall 버튼으로만 가능
-      return true;
-    });
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        // true 반환 = 이벤트 소비, 기본 동작(뒤로가기) 방지
+        // 통화 종료는 EndCall 버튼으로만 가능
+        return true;
+      },
+    );
 
     return () => backHandler.remove();
   }, []);
@@ -477,10 +481,10 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleEndCall = () => {
-    Alert.alert('통화 종료', '통화를 종료하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('call.ended'), t('call.endConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '종료',
+        text: t('call.end'),
         style: 'destructive',
         onPress: () => {
           // Socket으로 종료 이벤트 전송
@@ -492,17 +496,17 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const handleTimeUp = () => {
-    Alert.alert('시간 종료', '5분이 경과하여 통화가 종료됩니다.');
+    Alert.alert(t('call.timeUp'), t('call.timeUpMessage'));
     // Socket으로 종료 이벤트 전송
     socketService.endCall(sessionId);
     navigation.replace('CallEnd', { sessionId });
   };
 
   const handleReport = async () => {
-    Alert.alert('신고하기', '이 사용자를 신고하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('call.report'), t('call.reportConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '신고',
+        text: t('call.report'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -511,10 +515,10 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
               reason: 'INAPPROPRIATE_CONTENT',
               description: '사용자가 직접 신고',
             });
-            Alert.alert('신고 완료', '신고가 접수되었습니다.');
+            Alert.alert(t('call.reportDone'), t('call.reportSuccess'));
           } catch (error) {
             console.error('[REPORT] Failed to submit report:', error);
-            Alert.alert('오류', '신고 접수에 실패했습니다.');
+            Alert.alert(t('common.error'), t('call.reportFailed'));
           }
         },
       },
@@ -543,7 +547,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           ) : (
             <View style={styles.remoteVideo}>
               <Text style={styles.placeholder}>
-                {isJoined ? '상대방 연결 대기 중...' : '연결 중...'}
+                {isJoined ? t('call.waitingForOther') : t('match.connecting')}
               </Text>
             </View>
           )}
@@ -562,7 +566,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
             />
           ) : (
             <View style={[styles.localVideo, { top: insets.top + 10 }]}>
-              <Text style={styles.localPlaceholder}>연결 중...</Text>
+              <Text style={styles.localPlaceholder}>{t('match.connecting')}</Text>
             </View>
           )}
 

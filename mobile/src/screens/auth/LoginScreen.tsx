@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { AuthStackParamList } from '../../@types';
 import { Input, Button } from '../../components/common';
 import { useLogin } from '../../hooks/useAuth';
@@ -34,6 +35,7 @@ interface Props {
 }
 
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const loginMutation = useLogin();
@@ -63,17 +65,17 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
         >
           {/* 타이틀 */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>로그인</Text>
+            <Text style={styles.title}>{t('auth.login')}</Text>
             <Text style={styles.subtitle}>
-              계정에 로그인하고{'\n'}새로운 인연을 만나보세요
+              {t('auth.loginSubtitle')}
             </Text>
           </View>
 
           {/* 폼 */}
           <View style={styles.form}>
             <Input
-              label="이메일"
-              placeholder="example@email.com"
+              label={t('auth.email')}
+              placeholder={t('auth.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -84,8 +86,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             <Input
-              label="비밀번호"
-              placeholder="8자 이상 입력"
+              label={t('auth.password')}
+              placeholder={t('auth.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -97,7 +99,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* 로그인 버튼 (Pill 형태) */}
           <Button
-            title="로그인"
+            title={t('auth.login')}
             variant="primary"
             size="medium"
             fullWidth
@@ -109,9 +111,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* 회원가입 링크 */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>계정이 없으신가요? </Text>
+            <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.signupLink}>회원가입</Text>
+              <Text style={styles.signupLink}>{t('auth.register')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

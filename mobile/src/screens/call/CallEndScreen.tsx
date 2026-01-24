@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../@types';
 import { Button } from '../../components/common/Button';
 import { Avatar } from '../../components/common/Avatar';
@@ -41,6 +42,7 @@ const formatDuration = (seconds: number | null): string => {
 };
 
 const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { sessionId } = route.params;
   const userId = useAuthStore(state => state.userId);
   const callDuration = useCallStore(state => state.callDuration);
@@ -66,12 +68,12 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
       },
       {
         onSuccess: () => {
-          Alert.alert('성공', `${sessionInfo.partner.nickname}님을 친구로 추가했습니다.`);
+          Alert.alert(t('call.friendAdded'), t('call.friendAddedMessage', { nickname: sessionInfo.partner.nickname }));
         },
         onError: (error: any) => {
           const message =
-            error.response?.data?.error?.message || '친구 추가에 실패했습니다.';
-          Alert.alert('오류', message);
+            error.response?.data?.error?.message || t('errors.requestFailed');
+          Alert.alert(t('common.error'), message);
         },
       },
     );
@@ -90,14 +92,14 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.content}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>불러오는 중...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   const partner = sessionInfo?.partner || {
-    nickname: '상대방',
+    nickname: t('call.opponent'),
     profilePhotos: [],
   };
 
@@ -117,8 +119,8 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
           <Text style={styles.icon}>✓</Text>
         </View>
 
-        <Text style={styles.title}>통화가 종료되었습니다</Text>
-        <Text style={styles.duration}>통화 시간: {displayDuration}</Text>
+        <Text style={styles.title}>{t('call.callEnded')}</Text>
+        <Text style={styles.duration}>{t('call.callDuration', { duration: displayDuration })}</Text>
 
         {/* 상대방 정보 */}
         <View style={styles.partnerContainer}>
@@ -135,7 +137,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
           {showAddFriendButton && (
             <Button
               title={
-                addFriendMutation.isPending ? '추가 중...' : '친구 추가하기'
+                addFriendMutation.isPending ? t('call.addingFriend') : t('call.addFriend')
               }
               variant="secondary"
               fullWidth
@@ -145,16 +147,16 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
           )}
           {isAlreadyFriend && (
             <View style={styles.alreadyFriendContainer}>
-              <Text style={styles.alreadyFriendText}>이미 친구입니다</Text>
+              <Text style={styles.alreadyFriendText}>{t('call.alreadyFriend')}</Text>
             </View>
           )}
           {addFriendMutation.isSuccess && (
             <View style={styles.friendAddedContainer}>
-              <Text style={styles.friendAddedText}>친구로 추가되었습니다</Text>
+              <Text style={styles.friendAddedText}>{t('call.friendAdded')}</Text>
             </View>
           )}
           <Button
-            title="홈으로 돌아가기"
+            title={t('call.goHome')}
             variant="primary"
             fullWidth
             onPress={handleGoHome}

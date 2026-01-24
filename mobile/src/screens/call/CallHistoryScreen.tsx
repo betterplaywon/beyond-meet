@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../@types';
 import { Avatar } from '../../components/common/Avatar';
 import { useMyProfile } from '../../hooks/useProfile';
@@ -31,6 +32,7 @@ interface Props {
 }
 
 const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { data: user } = useMyProfile();
 
   // React Query로 통화 기록 조회
@@ -47,7 +49,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const formatDuration = (seconds: number | null): string => {
-    if (seconds === null) return '부재중';
+    if (seconds === null) return t('callHistory.missed');
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${String(minutes).padStart(2, '0')}:${String(
@@ -76,11 +78,11 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
 
       let dateKey: string;
       if (date.toDateString() === today.toDateString()) {
-        dateKey = '오늘';
+        dateKey = t('callHistory.today');
       } else if (date.toDateString() === yesterday.toDateString()) {
-        dateKey = '어제';
+        dateKey = t('callHistory.yesterday');
       } else {
-        dateKey = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+        dateKey = t('callHistory.dateFormat', { month: date.getMonth() + 1, day: date.getDate() });
       }
 
       if (!grouped[dateKey]) {
@@ -137,9 +139,9 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>📞</Text>
-      <Text style={styles.emptyTitle}>통화 기록이 없어요</Text>
+      <Text style={styles.emptyTitle}>{t('callHistory.empty')}</Text>
       <Text style={styles.emptyDescription}>
-        새로운 사람과 영상 통화를 시작해보세요
+        {t('callHistory.emptySubtitle')}
       </Text>
     </View>
   );
@@ -156,7 +158,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>통화 기록</Text>
+        <Text style={styles.headerTitle}>{t('callHistory.title')}</Text>
         <View style={styles.placeholder} />
       </View>
 

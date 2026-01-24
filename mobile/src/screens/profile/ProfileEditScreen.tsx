@@ -21,6 +21,7 @@ import { launchImageLibrary, ImagePickerResponse } from 'react-native-image-pick
 import { RootStackParamList } from '../../@types';
 import { Input } from '../../components/common/Input';
 import { useMyProfile, useUpdateProfile, useUploadProfilePhoto, useDeleteProfilePhoto } from '../../hooks/useProfile';
+import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../services/api';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -44,6 +45,7 @@ interface Props {
 }
 
 const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { data: user } = useMyProfile();
 
   // React Query mutation hooks
@@ -76,7 +78,7 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleAddPhoto = () => {
     if (photos.length >= 3) {
-      Alert.alert('알림', '최대 3장까지만 추가할 수 있습니다.');
+      Alert.alert(t('common.error'), t('profile.photosMaxAlert'));
       return;
     }
 
@@ -95,13 +97,13 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
 
         if (response.errorCode) {
           console.error('ImagePicker Error:', response.errorMessage);
-          Alert.alert('오류', '이미지를 선택하는 중 오류가 발생했습니다.');
+          Alert.alert(t('common.error'), t('profile.photoError'));
           return;
         }
 
         const asset = response.assets?.[0];
         if (!asset?.uri) {
-          Alert.alert('오류', '이미지를 가져올 수 없습니다.');
+          Alert.alert(t('common.error'), t('profile.photoLoadError'));
           return;
         }
 
@@ -124,10 +126,10 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
       setPhotos((prev) => prev.filter((_, i) => i !== index));
     } else {
       // 서버 사진: 삭제 대기 목록에 추가하고 화면에서 제거
-      Alert.alert('사진 삭제', '이 사진을 삭제하시겠습니까?', [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(t('profile.deletePhoto'), t('profile.deletePhotoConfirm'), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             setPhotosToDelete((prev) => [...prev, photo.uri]);
@@ -140,12 +142,12 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleAddInterest = () => {
     Alert.prompt(
-      '관심사 추가',
-      '새로운 관심사를 입력하세요',
+      t('profile.addInterest'),
+      t('profile.addInterestPlaceholder'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '추가',
+          text: t('common.add'),
           onPress: (text?: string) => {
             if (text && text.trim()) {
               setInterests([...interests, text.trim()]);
@@ -165,12 +167,12 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!user?.id) {
-      Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+      Alert.alert(t('common.error'), t('profile.userNotFound'));
       return;
     }
 
     if (!nickname.trim()) {
-      Alert.alert('오류', '닉네임을 입력해주세요.');
+      Alert.alert(t('common.error'), t('profile.nicknameRequired'));
       return;
     }
 
@@ -220,19 +222,19 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
         {
           onSuccess: () => {
             setIsSaving(false);
-            Alert.alert('성공', '프로필이 업데이트되었습니다.', [
-              { text: '확인', onPress: () => navigation.goBack() },
+            Alert.alert(t('common.success'), t('profile.updateSuccess'), [
+              { text: t('common.confirm'), onPress: () => navigation.goBack() },
             ]);
           },
           onError: (err) => {
             setIsSaving(false);
-            Alert.alert('오류', parseApiError(err));
+            Alert.alert(t('common.error'), parseApiError(err));
           },
         }
       );
     } catch (err) {
       setIsSaving(false);
-      Alert.alert('오류', parseApiError(err));
+      Alert.alert(t('common.error'), parseApiError(err));
     }
   };
 
@@ -244,9 +246,9 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           style={styles.headerButton}
         >
-          <Text style={styles.headerButtonText}>취소</Text>
+          <Text style={styles.headerButtonText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>프로필 편집</Text>
+        <Text style={styles.headerTitle}>{t('profile.editTitle')}</Text>
         <TouchableOpacity
           onPress={handleSave}
           style={styles.headerButton}
@@ -261,7 +263,7 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
                 styles.saveButton,
               ]}
             >
-              저장
+              {t('common.save')}
             </Text>
           )}
         </TouchableOpacity>
@@ -270,7 +272,7 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.content}>
         {/* 프로필 사진 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>프로필 사진</Text>
+          <Text style={styles.sectionTitle}>{t('profile.photos')}</Text>
           <View style={styles.photosContainer}>
             {photos.map((photo, index) => (
               <View key={index} style={styles.photoItem}>
@@ -302,39 +304,39 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.photoHint}>최대 3장까지 추가 가능합니다</Text>
+          <Text style={styles.photoHint}>{t('profile.photosHint')}</Text>
         </View>
 
         {/* 닉네임 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>닉네임</Text>
+          <Text style={styles.sectionTitle}>{t('profile.nickname')}</Text>
           <Input
             value={nickname}
             onChangeText={setNickname}
-            placeholder="닉네임을 입력하세요"
+            placeholder={t('profile.nicknamePlaceholder')}
             maxLength={20}
           />
-          <Text style={styles.inputHint}>최대 20자</Text>
+          <Text style={styles.inputHint}>{t('profile.nicknameHint')}</Text>
         </View>
 
         {/* 자기소개 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>자기소개</Text>
+          <Text style={styles.sectionTitle}>{t('profile.bio')}</Text>
           <Input
             value={bio}
             onChangeText={setBio}
-            placeholder="자기소개를 입력하세요"
+            placeholder={t('profile.bioPlaceholder')}
             multiline
             numberOfLines={4}
             maxLength={200}
             style={styles.bioInput}
           />
-          <Text style={styles.inputHint}>최대 200자</Text>
+          <Text style={styles.inputHint}>{t('profile.bioHint')}</Text>
         </View>
 
         {/* 관심사 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>관심사</Text>
+          <Text style={styles.sectionTitle}>{t('profile.interests')}</Text>
           <View style={styles.interestsContainer}>
             {interests.map((interest, index) => (
               <TouchableOpacity
@@ -351,29 +353,35 @@ const ProfileEditScreen: React.FC<Props> = ({ navigation }) => {
                 style={styles.addInterestButton}
                 onPress={handleAddInterest}
               >
-                <Text style={styles.addInterestText}>+ 추가</Text>
+                <Text style={styles.addInterestText}>{t('common.add')}</Text>
               </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.inputHint}>최대 10개까지 추가 가능합니다</Text>
+          <Text style={styles.inputHint}>{t('profile.interestsHint')}</Text>
         </View>
 
         {/* 기본 정보 (수정 불가) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>기본 정보</Text>
+          <Text style={styles.sectionTitle}>{t('profile.basicInfo')}</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>생년월일</Text>
-            <Text style={styles.infoValue}>1995년 3월 15일</Text>
+            <Text style={styles.infoLabel}>{t('register.birthDate')}</Text>
+            <Text style={styles.infoValue}>
+              {user?.birthDate ? new Date(user.birthDate).toLocaleDateString() : '-'}
+            </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>성별</Text>
-            <Text style={styles.infoValue}>남성</Text>
+            <Text style={styles.infoLabel}>{t('register.gender')}</Text>
+            <Text style={styles.infoValue}>
+              {user?.gender ? t(`options.gender.${user.gender.toLowerCase()}`) : '-'}
+            </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>국가</Text>
-            <Text style={styles.infoValue}>🇰🇷 대한민국</Text>
+            <Text style={styles.infoLabel}>{t('register.country')}</Text>
+            <Text style={styles.infoValue}>
+              {user?.country ? t(`options.countries.${user.country}`) : '-'}
+            </Text>
           </View>
-          <Text style={styles.infoHint}>기본 정보는 수정할 수 없습니다</Text>
+          <Text style={styles.infoHint}>{t('profile.basicInfoHint')}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

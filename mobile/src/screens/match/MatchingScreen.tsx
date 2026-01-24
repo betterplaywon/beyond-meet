@@ -17,6 +17,7 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../@types';
 import { Button } from '../../components/common/Button';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
@@ -37,6 +38,7 @@ interface Props {
 }
 
 const MatchingScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const setCurrentSession = useCallStore(state => state.setCurrentSession);
   const socket = useSocket();
   const insets = useSafeAreaInsets();
@@ -66,8 +68,8 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     const timeout = setTimeout(() => {
       Toast.show({
         type: 'info',
-        text1: '매칭 시간 초과',
-        text2: '현재 매칭 가능한 사용자가 없습니다. 나중에 다시 시도해주세요.',
+        text1: t('match.timeout'),
+        text2: t('match.timeoutMessage'),
       });
       socketService.cancelMatch();
       navigation.goBack();
@@ -78,7 +80,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
       pulse.stop();
       clearTimeout(timeout);
     };
-  }, [navigation, scaleAnim]);
+  }, [navigation, scaleAnim, t]);
 
   // 매칭 대기 이벤트 리스너
   useSocketEvent('match:waiting', (data: any) => {
@@ -98,8 +100,8 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
 
     Toast.show({
       type: 'success',
-      text1: '매칭 성공!',
-      text2: `${data.partner?.nickname || '상대방'}님과 연결되었습니다`,
+      text1: t('match.success'),
+      text2: t('match.successMessage', { nickname: data.partner?.nickname || t('call.opponent') }),
     });
 
     // VideoCallScreen으로 이동 (UID 포함)
@@ -116,8 +118,8 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
     console.log('Match failed:', data);
     Toast.show({
       type: 'error',
-      text1: '매칭 실패',
-      text2: data.message || '매칭에 실패했습니다. 다시 시도해주세요.',
+      text1: t('match.failed'),
+      text2: data.message || t('match.failedMessage'),
     });
     navigation.goBack();
   });
@@ -142,7 +144,7 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
           ]}
         />
         <Text style={styles.connectionText}>
-          {socket.isConnected() ? '서버 연결됨' : '연결 중...'}
+          {socket.isConnected() ? t('match.serverConnected') : t('match.connecting')}
         </Text>
       </View>
 
@@ -154,8 +156,8 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
           <Icon name="favorite" size={100} color={colors.primary} />
         </Animated.View>
 
-        <Text style={styles.title}>매칭 중입니다...</Text>
-        <Text style={styles.subtitle}>새로운 사람을 찾고 있어요</Text>
+        <Text style={styles.title}>{t('match.searching')}</Text>
+        <Text style={styles.subtitle}>{t('match.searchingSubtitle')}</Text>
 
         <ActivityIndicator
           size="large"
@@ -171,17 +173,17 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
               color={colors.primary}
               style={styles.tipsTitleIcon}
             />
-            <Text style={styles.tipsTitle}>매칭 팁</Text>
+            <Text style={styles.tipsTitle}>{t('match.tipsTitle')}</Text>
           </View>
-          <Text style={styles.tip}>• 밝은 곳에서 통화하세요</Text>
-          <Text style={styles.tip}>• 예의 바른 대화를 나눠요</Text>
-          <Text style={styles.tip}>• 5분간 즐거운 대화를!</Text>
+          <Text style={styles.tip}>{t('match.tip1')}</Text>
+          <Text style={styles.tip}>{t('match.tip2')}</Text>
+          <Text style={styles.tip}>{t('match.tip3')}</Text>
         </View>
       </View>
 
       <View style={styles.footer}>
         <Button
-          title="취소"
+          title={t('common.cancel')}
           variant="outline"
           fullWidth
           onPress={handleCancel}

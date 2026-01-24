@@ -26,12 +26,14 @@ import { useFriends, useRemoveFriend } from '../../hooks/useFriends';
 import { useFriendStatusSync } from '../../hooks/useFriendStatusSync';
 import { useSocket, useSocketEvent } from '../../hooks/useSocket';
 import * as socketService from '../../services/socketService';
+import { useTranslation } from 'react-i18next';
 import { colors, typography, spacing } from '../../styles/theme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type FriendsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const FriendsScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<FriendsScreenNavigationProp>();
   const { data: user } = useMyProfile();
   const isFocused = useIsFocused(); // 현재 탭이 포커스되어 있는지 확인
@@ -93,8 +95,8 @@ const FriendsScreen = () => {
     setCallingFriendId(null);
     Toast.show({
       type: 'info',
-      text1: '통화 거절',
-      text2: '상대방이 통화를 거절했습니다.',
+      text1: t('friends.callRejected'),
+      text2: t('friends.callRejectedMessage'),
     });
   });
 
@@ -104,8 +106,8 @@ const FriendsScreen = () => {
     setCallingFriendId(null);
     Toast.show({
       type: 'error',
-      text1: '통화 실패',
-      text2: data.reason || '통화 요청에 실패했습니다.',
+      text1: t('friends.callFailed'),
+      text2: data.reason || t('friends.callFailedMessage'),
     });
   });
 
@@ -114,9 +116,9 @@ const FriendsScreen = () => {
   // 단, 현재 탭이 포커스되어 있을 때만 Alert 표시 (다른 탭에서 에러 발생 방지)
   React.useEffect(() => {
     if (error && isFocused) {
-      Alert.alert('오류', '친구 목록을 불러오는데 실패했습니다.');
+      Alert.alert(t('common.error'), t('friends.loadError'));
     }
-  }, [error, isFocused]);
+  }, [error, isFocused, t]);
 
   const handleRefresh = () => {
     refetch();
@@ -127,8 +129,8 @@ const FriendsScreen = () => {
     if (!socket.isConnected()) {
       Toast.show({
         type: 'error',
-        text1: '연결 오류',
-        text2: '서버와 연결되지 않았습니다. 다시 시도해주세요.',
+        text1: t('home.connectionError'),
+        text2: t('home.serverDisconnected'),
       });
       return;
     }
@@ -137,8 +139,8 @@ const FriendsScreen = () => {
     if (callingFriendId) {
       Toast.show({
         type: 'info',
-        text1: '통화 요청 중',
-        text2: '이미 통화 요청이 진행 중입니다.',
+        text1: t('friends.callRequesting'),
+        text2: t('friends.alreadyCalling'),
       });
       return;
     }
@@ -149,8 +151,8 @@ const FriendsScreen = () => {
 
     Toast.show({
       type: 'info',
-      text1: '통화 요청',
-      text2: `${friend.nickname}님에게 통화를 요청했습니다.`,
+      text1: t('friends.callRequesting'),
+      text2: t('friends.callRequested', { nickname: friend.nickname }),
     });
   };
 
@@ -170,8 +172,8 @@ const FriendsScreen = () => {
         onSuccess: () => {
           Toast.show({
             type: 'success',
-            text1: '친구 삭제',
-            text2: `${friendToDelete.nickname}님을 친구 목록에서 삭제했습니다.`,
+            text1: t('friends.deleteFriend'),
+            text2: t('friends.deleted', { nickname: friendToDelete.nickname }),
           });
           setDeleteModalVisible(false);
           setFriendToDelete(null);
@@ -189,9 +191,9 @@ const FriendsScreen = () => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Icon name="people" size={80} color={colors.textTertiary} />
-      <Text style={styles.emptyTitle}>아직 친구가 없어요</Text>
+      <Text style={styles.emptyTitle}>{t('friends.empty')}</Text>
       <Text style={styles.emptyDescription}>
-        영상 통화 후 친구를 추가해보세요
+        {t('friends.emptySubtitle')}
       </Text>
     </View>
   );
@@ -225,10 +227,10 @@ const FriendsScreen = () => {
             />
             <Text style={styles.friendStatus}>
               {isCalling
-                ? '통화 요청 중...'
+                ? t('friends.calling')
                 : item.onlineStatus === 'ONLINE'
-                ? '온라인'
-                : '오프라인'}
+                ? t('friends.online')
+                : t('friends.offline')}
             </Text>
           </View>
         </View>
@@ -262,9 +264,9 @@ const FriendsScreen = () => {
     <SafeAreaView edges={['top']} style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>친구 목록</Text>
+        <Text style={styles.headerTitle}>{t('friends.title')}</Text>
         <Text style={styles.headerSubtitle}>
-          {friends.length > 0 ? `${friends.length}명의 친구` : ''}
+          {friends.length > 0 ? t('friends.count', { count: friends.length }) : ''}
         </Text>
       </View>
 
@@ -272,7 +274,7 @@ const FriendsScreen = () => {
       {isLoading && friends.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>친구 목록을 불러오는 중...</Text>
+          <Text style={styles.loadingText}>{t('friends.loading')}</Text>
         </View>
       ) : (
         <FlatList
@@ -300,16 +302,16 @@ const FriendsScreen = () => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>친구 삭제</Text>
+            <Text style={styles.modalTitle}>{t('friends.deleteFriend')}</Text>
             <Text style={styles.modalMessage}>
-              {friendToDelete?.nickname}님을 친구 목록에서{'\n'}삭제하시겠습니까?
+              {t('friends.deleteConfirm', { nickname: friendToDelete?.nickname })}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={handleCancelDelete}
               >
-                <Text style={styles.modalButtonCancelText}>아니오</Text>
+                <Text style={styles.modalButtonCancelText}>{t('common.no')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
@@ -319,7 +321,7 @@ const FriendsScreen = () => {
                 {removeFriendMutation.isPending ? (
                   <ActivityIndicator size="small" color={colors.white} />
                 ) : (
-                  <Text style={styles.modalButtonConfirmText}>예</Text>
+                  <Text style={styles.modalButtonConfirmText}>{t('common.yes')}</Text>
                 )}
               </TouchableOpacity>
             </View>

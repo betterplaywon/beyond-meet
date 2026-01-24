@@ -11,6 +11,7 @@ import { Avatar } from '../../components/common/Avatar';
 import { Button, ListItemButton } from '../../components/common';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useLogout } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { colors, typography, spacing, borderRadius } from '../../styles/theme';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 const ProfileScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { data: user } = useMyProfile();
   const logoutMutation = useLogout();
 
@@ -33,9 +35,9 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>내 프로필</Text>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
           <Button
-            title="편집"
+            title={t('common.edit')}
             variant="text"
             onPress={() => navigation.navigate('ProfileEdit')}
           />
@@ -70,7 +72,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         {/* Menu Items */}
         <View style={styles.menuContainer}>
           <ListItemButton
-            label="통화 기록"
+            label={t('profile.callHistory')}
             leftIcon={<Icon name="phone" size={24} color={colors.textSecondary} />}
             showChevron
             onPress={() => navigation.navigate('CallHistory')}
@@ -79,7 +81,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.menuDivider} />
 
           <ListItemButton
-            label="설정"
+            label={t('profile.settings')}
             leftIcon={<Icon name="settings" size={24} color={colors.textSecondary} />}
             showChevron
             onPress={() => navigation.navigate('Settings')}
@@ -88,7 +90,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.menuDivider} />
 
           <ListItemButton
-            label="도움말"
+            label={t('profile.help')}
             leftIcon={<Icon name="help" size={24} color={colors.textSecondary} />}
             showChevron
             onPress={() => {}}
@@ -98,7 +100,7 @@ const ProfileScreen: React.FC<Props> = ({ navigation }) => {
         {/* Logout Button */}
         <View style={styles.logoutContainer}>
           <Button
-            title="로그아웃"
+            title={t('auth.logout')}
             variant="outline"
             fullWidth
             onPress={handleLogout}

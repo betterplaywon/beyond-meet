@@ -14,3 +14,4 @@ export { Avatar } from './Avatar';
 export { Picker } from './Picker';
 export { NotificationPermissionModal } from './NotificationPermissionModal';
 export type { PickerOption } from './Picker';
+export { LanguageSelector } from './LanguageSelector';

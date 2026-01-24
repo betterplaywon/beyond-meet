@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 
 interface ModerationWarningModalProps {
   visible: boolean;
@@ -19,8 +20,11 @@ interface ModerationWarningModalProps {
 export const ModerationWarningModal: React.FC<ModerationWarningModalProps> = ({
   visible,
   onClose,
-  message = '부적절한 행동이 감지되었습니다.\n반복될 경우 통화가 종료될 수 있습니다.',
+  message,
 }) => {
+  const { t } = useTranslation();
+  const displayMessage = message || t('moderation.warningMessage');
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.overlay}>
@@ -35,10 +39,10 @@ export const ModerationWarningModal: React.FC<ModerationWarningModalProps> = ({
         )}
         <View style={styles.container}>
           <Icon name="alert-circle" size={60} color="#FF6B6B" />
-          <Text style={styles.title}>경고</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text style={styles.title}>{t('moderation.warningTitle')}</Text>
+          <Text style={styles.message}>{displayMessage}</Text>
           <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>확인</Text>
+            <Text style={styles.buttonText}>{t('common.confirm')}</Text>
           </TouchableOpacity>
         </View>
       </View>
