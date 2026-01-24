@@ -21,6 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackScreenProps } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useTranslation } from 'react-i18next';
 import { colors, typography, spacing } from '../../styles/theme';
 import {
   useVerifyEmail,
@@ -53,6 +54,7 @@ interface Props {
 }
 
 const EmailVerificationScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [resendCooldown, setResendCooldown] = useState(0);
   const inputRefs = useRef<(TextInput | null)[]>([]);
@@ -202,9 +204,9 @@ const EmailVerificationScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
 
         {/* 타이틀 */}
-        <Text style={styles.title}>이메일 인증</Text>
+        <Text style={styles.title}>{t('emailVerification.title')}</Text>
         <Text style={styles.subtitle}>
-          {maskedEmail}로{'\n'}전송된 6자리 코드를 입력해주세요
+          {t('emailVerification.subtitle', { email: maskedEmail })}
         </Text>
 
         {/* 코드 입력 */}
@@ -231,7 +233,7 @@ const EmailVerificationScreen: React.FC<Props> = ({ navigation, route }) => {
 
         {/* 타이머 안내 */}
         <Text style={styles.timerText}>
-          인증 코드는 10분 후 만료됩니다
+          {t('emailVerification.timerText')}
         </Text>
 
         {/* 인증 버튼 */}
@@ -244,13 +246,13 @@ const EmailVerificationScreen: React.FC<Props> = ({ navigation, route }) => {
           disabled={!isCodeComplete || isVerifying}
         >
           <Text style={styles.verifyButtonText}>
-            {isVerifying ? '확인 중...' : '인증하기'}
+            {isVerifying ? t('emailVerification.verifying') : t('emailVerification.verify')}
           </Text>
         </TouchableOpacity>
 
         {/* 재전송 링크 */}
         <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>코드를 받지 못하셨나요? </Text>
+          <Text style={styles.resendText}>{t('emailVerification.noCode')} </Text>
           <TouchableOpacity
             onPress={handleResend}
             disabled={resendCooldown > 0 || isResending}
@@ -262,10 +264,10 @@ const EmailVerificationScreen: React.FC<Props> = ({ navigation, route }) => {
               ]}
             >
               {resendCooldown > 0
-                ? `재전송 (${resendCooldown}초)`
+                ? t('emailVerification.resendCountdown', { seconds: resendCooldown })
                 : isResending
-                ? '전송 중...'
-                : '재전송'}
+                ? t('emailVerification.sending')
+                : t('emailVerification.resend')}
             </Text>
           </TouchableOpacity>
         </View>

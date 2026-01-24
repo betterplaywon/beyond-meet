@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { AuthStackParamList, RegisterFormData } from '../../@types';
 import { Input, Button } from '../../components/common';
 import { Picker, PickerOption } from '../../components/common/Picker';
@@ -42,51 +43,6 @@ interface Props {
   route: RegisterScreenRouteProp;
 }
 
-// 성별 옵션
-const GENDER_OPTIONS: PickerOption[] = [
-  { label: '남성', value: 'MALE' },
-  { label: '여성', value: 'FEMALE' },
-  { label: '기타', value: 'OTHER' },
-];
-
-// 선호 성별 옵션
-const PREFERRED_GENDER_OPTIONS: PickerOption[] = [
-  { label: '남성', value: 'MALE' },
-  { label: '여성', value: 'FEMALE' },
-  { label: '누구나', value: 'ANYONE' },
-];
-
-// 국가 옵션 (주요 국가만)
-const COUNTRY_OPTIONS: PickerOption[] = [
-  { label: '대한민국', value: 'KR' },
-  { label: '미국', value: 'US' },
-  { label: '일본', value: 'JP' },
-  { label: '중국', value: 'CN' },
-  { label: '영국', value: 'GB' },
-  { label: '프랑스', value: 'FR' },
-  { label: '독일', value: 'DE' },
-  { label: '캐나다', value: 'CA' },
-  { label: '호주', value: 'AU' },
-];
-
-// 연도 옵션 (1950 ~ 2007, 18세 이상)
-const YEAR_OPTIONS: PickerOption[] = Array.from({ length: 58 }, (_, i) => {
-  const year = 2007 - i;
-  return { label: `${year}년`, value: year.toString() };
-});
-
-// 월 옵션
-const MONTH_OPTIONS: PickerOption[] = Array.from({ length: 12 }, (_, i) => {
-  const month = i + 1;
-  return { label: `${month}월`, value: month.toString().padStart(2, '0') };
-});
-
-// 일 옵션
-const DAY_OPTIONS: PickerOption[] = Array.from({ length: 31 }, (_, i) => {
-  const day = i + 1;
-  return { label: `${day}일`, value: day.toString().padStart(2, '0') };
-});
-
 const DEFAULT_FORM_DATA: RegisterFormData = {
   email: '',
   password: '',
@@ -103,6 +59,53 @@ const DEFAULT_FORM_DATA: RegisterFormData = {
 };
 
 const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { t } = useTranslation();
+
+  // 성별 옵션
+  const GENDER_OPTIONS: PickerOption[] = [
+    { label: t('options.gender.male'), value: 'MALE' },
+    { label: t('options.gender.female'), value: 'FEMALE' },
+    { label: t('options.gender.other'), value: 'OTHER' },
+  ];
+
+  // 선호 성별 옵션
+  const PREFERRED_GENDER_OPTIONS: PickerOption[] = [
+    { label: t('options.gender.male'), value: 'MALE' },
+    { label: t('options.gender.female'), value: 'FEMALE' },
+    { label: t('options.gender.anyone'), value: 'ANYONE' },
+  ];
+
+  // 국가 옵션 (주요 국가만)
+  const COUNTRY_OPTIONS: PickerOption[] = [
+    { label: t('options.countries.KR'), value: 'KR' },
+    { label: t('options.countries.US'), value: 'US' },
+    { label: t('options.countries.JP'), value: 'JP' },
+    { label: t('options.countries.CN'), value: 'CN' },
+    { label: t('options.countries.GB'), value: 'GB' },
+    { label: t('options.countries.FR'), value: 'FR' },
+    { label: t('options.countries.DE'), value: 'DE' },
+    { label: t('options.countries.CA'), value: 'CA' },
+    { label: t('options.countries.AU'), value: 'AU' },
+  ];
+
+  // 연도 옵션 (1950 ~ 2007, 18세 이상)
+  const YEAR_OPTIONS: PickerOption[] = Array.from({ length: 58 }, (_, i) => {
+    const year = 2007 - i;
+    return { label: `${year}${t('register.year')}`, value: year.toString() };
+  });
+
+  // 월 옵션
+  const MONTH_OPTIONS: PickerOption[] = Array.from({ length: 12 }, (_, i) => {
+    const month = i + 1;
+    return { label: `${month}${t('register.month')}`, value: month.toString().padStart(2, '0') };
+  });
+
+  // 일 옵션
+  const DAY_OPTIONS: PickerOption[] = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1;
+    return { label: `${day}${t('register.day')}`, value: day.toString().padStart(2, '0') };
+  });
+
   // 이메일 인증 완료 후 돌아온 경우 Step 2부터 시작
   const initialStep = route.params?.emailVerified ? 2 : 1;
   const initialFormData = route.params?.formData || DEFAULT_FORM_DATA;
@@ -138,33 +141,33 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
     if (step === 1) {
       // Step 1 검증
       if (!formData.email.trim()) {
-        Alert.alert('오류', '이메일을 입력해주세요');
+        Alert.alert(t('common.error'), t('validation.emailRequired'));
         return;
       }
       // 이메일 형식 검증
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
-        Alert.alert('오류', '올바른 이메일 형식을 입력해주세요');
+        Alert.alert(t('common.error'), t('validation.emailInvalid'));
         return;
       }
       if (!formData.password || formData.password.length < 8) {
-        Alert.alert('오류', '비밀번호는 8자 이상이어야 합니다');
+        Alert.alert(t('common.error'), t('validation.passwordMinLength'));
         return;
       }
       if (!/[A-Z]/.test(formData.password)) {
-        Alert.alert('오류', '비밀번호에 대문자가 최소 1개 포함되어야 합니다');
+        Alert.alert(t('common.error'), t('validation.passwordUppercase'));
         return;
       }
       if (!/[0-9]/.test(formData.password)) {
-        Alert.alert('오류', '비밀번호에 숫자가 최소 1개 포함되어야 합니다');
+        Alert.alert(t('common.error'), t('validation.passwordNumber'));
         return;
       }
       if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
-        Alert.alert('오류', '비밀번호에 특수문자가 최소 1개 포함되어야 합니다');
+        Alert.alert(t('common.error'), t('validation.passwordSpecialChar'));
         return;
       }
       if (formData.password !== formData.passwordConfirm) {
-        Alert.alert('오류', '비밀번호가 일치하지 않습니다');
+        Alert.alert(t('common.error'), t('validation.passwordMismatch'));
         return;
       }
 
@@ -179,36 +182,36 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
       });
     } else if (step === 2) {
       if (!formData.nickname.trim()) {
-        Alert.alert('오류', '닉네임을 입력해주세요');
+        Alert.alert(t('common.error'), t('validation.nicknameRequired'));
         return;
       }
       if (!formData.birthYear || !formData.birthMonth || !formData.birthDay) {
-        Alert.alert('오류', '생년월일을 선택해주세요');
+        Alert.alert(t('common.error'), t('validation.birthDateRequired'));
         return;
       }
       if (!formData.gender) {
-        Alert.alert('오류', '성별을 선택해주세요');
+        Alert.alert(t('common.error'), t('validation.genderRequired'));
         return;
       }
       setStep(3);
     } else if (step === 3) {
       if (!formData.preferredGender) {
-        Alert.alert('오류', '선호 성별을 선택해주세요');
+        Alert.alert(t('common.error'), t('validation.preferredGenderRequired'));
         return;
       }
       // 나이 범위 유효성 검사 및 기본값 적용
       const minAge = formData.minAge || 18;
       const maxAge = formData.maxAge || 40;
       if (minAge < 18 || minAge > 100) {
-        Alert.alert('오류', '최소 나이는 18세 이상 100세 이하여야 합니다');
+        Alert.alert(t('common.error'), t('validation.minAgeRange'));
         return;
       }
       if (maxAge < 18 || maxAge > 100) {
-        Alert.alert('오류', '최대 나이는 18세 이상 100세 이하여야 합니다');
+        Alert.alert(t('common.error'), t('validation.maxAgeRange'));
         return;
       }
       if (minAge >= maxAge) {
-        Alert.alert('오류', '최소 나이는 최대 나이보다 작아야 합니다');
+        Alert.alert(t('common.error'), t('validation.ageRangeInvalid'));
         return;
       }
       // 유효한 값으로 회원가입 진행
@@ -236,24 +239,24 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
   const getStepTitle = () => {
     switch (step) {
       case 1:
-        return '계정 만들기';
+        return t('register.step1Title');
       case 2:
-        return '프로필 정보';
+        return t('register.step2Title');
       case 3:
-        return '매칭 설정';
+        return t('register.step3Title');
       default:
-        return '회원가입';
+        return t('auth.register');
     }
   };
 
   const getStepSubtitle = () => {
     switch (step) {
       case 1:
-        return '새로운 인연을 만나기 위한\n첫 번째 단계예요';
+        return t('register.step1Subtitle');
       case 2:
-        return '당신에 대해\n조금 더 알려주세요';
+        return t('register.step2Subtitle');
       case 3:
-        return '어떤 사람을\n만나고 싶으신가요?';
+        return t('register.step3Subtitle');
       default:
         return '';
     }
@@ -335,8 +338,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
             {step === 1 && (
               <View style={styles.form}>
                 <Input
-                  label="이메일"
-                  placeholder="example@email.com"
+                  label={t('auth.email')}
+                  placeholder={t('auth.emailPlaceholder')}
                   value={formData.email}
                   onChangeText={handleEmailChange}
                   keyboardType="email-address"
@@ -345,9 +348,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                 />
 
                 <Input
-                  label="비밀번호"
-                  description="8자 이상, 대문자·숫자·특수문자 각 1개 이상 포함"
-                  placeholder="비밀번호 입력"
+                  label={t('auth.password')}
+                  description={t('register.passwordHint')}
+                  placeholder={t('register.passwordInputPlaceholder')}
                   value={formData.password}
                   onChangeText={value =>
                     setFormData({ ...formData, password: value })
@@ -357,8 +360,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                 />
 
                 <Input
-                  label="비밀번호 확인"
-                  placeholder="비밀번호를 다시 입력"
+                  label={t('register.passwordConfirmLabel')}
+                  placeholder={t('register.passwordConfirmPlaceholder')}
                   value={formData.passwordConfirm}
                   onChangeText={value =>
                     setFormData({ ...formData, passwordConfirm: value })
@@ -373,8 +376,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
             {step === 2 && (
               <View style={styles.form}>
                 <Input
-                  label="닉네임"
-                  placeholder="닉네임 (2-10자)"
+                  label={t('register.nickname')}
+                  placeholder={t('register.nicknamePlaceholder')}
                   value={formData.nickname}
                   onChangeText={value =>
                     setFormData({ ...formData, nickname: value })
@@ -382,7 +385,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                   leftIcon={<PersonIcon />}
                 />
 
-                <Text style={styles.sectionLabel}>생년월일</Text>
+                <Text style={styles.sectionLabel}>{t('register.birthDate')}</Text>
                 <View style={styles.dateRow}>
                   <View style={styles.dateField}>
                     <Picker
@@ -391,7 +394,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                       onChange={value =>
                         setFormData({ ...formData, birthYear: value })
                       }
-                      placeholder="년"
+                      placeholder={t('register.year')}
                     />
                   </View>
                   <View style={styles.dateField}>
@@ -401,7 +404,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                       onChange={value =>
                         setFormData({ ...formData, birthMonth: value })
                       }
-                      placeholder="월"
+                      placeholder={t('register.month')}
                     />
                   </View>
                   <View style={styles.dateField}>
@@ -411,13 +414,13 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                       onChange={value =>
                         setFormData({ ...formData, birthDay: value })
                       }
-                      placeholder="일"
+                      placeholder={t('register.day')}
                     />
                   </View>
                 </View>
 
                 <Picker
-                  label="성별"
+                  label={t('register.gender')}
                   value={formData.gender}
                   options={GENDER_OPTIONS}
                   onChange={value =>
@@ -426,17 +429,17 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                       gender: value as 'MALE' | 'FEMALE' | 'OTHER',
                     })
                   }
-                  placeholder="성별을 선택하세요"
+                  placeholder={t('register.genderPlaceholder')}
                 />
 
                 <Picker
-                  label="국가"
+                  label={t('register.country')}
                   value={formData.country}
                   options={COUNTRY_OPTIONS}
                   onChange={value =>
                     setFormData({ ...formData, country: value })
                   }
-                  placeholder="국가를 선택하세요"
+                  placeholder={t('register.countryPlaceholder')}
                 />
               </View>
             )}
@@ -445,7 +448,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
             {step === 3 && (
               <View style={styles.form}>
                 <Picker
-                  label="선호 성별"
+                  label={t('register.preferredGender')}
                   value={formData.preferredGender}
                   options={PREFERRED_GENDER_OPTIONS}
                   onChange={value =>
@@ -454,14 +457,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                       preferredGender: value as 'MALE' | 'FEMALE' | 'ANYONE',
                     })
                   }
-                  placeholder="선호 성별을 선택하세요"
+                  placeholder={t('register.preferredGenderPlaceholder')}
                 />
 
-                <Text style={styles.sectionLabel}>선호 나이 범위</Text>
+                <Text style={styles.sectionLabel}>{t('register.preferredAgeRange')}</Text>
                 <View style={styles.ageRow}>
                   <View style={styles.ageField}>
                     <Input
-                      label="최소"
+                      label={t('register.minAge')}
                       placeholder="18"
                       value={formData.minAge === 0 ? '' : formData.minAge.toString()}
                       onChangeText={value => {
@@ -477,7 +480,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
                   <Text style={styles.ageSeparator}>~</Text>
                   <View style={styles.ageField}>
                     <Input
-                      label="최대"
+                      label={t('register.maxAge')}
                       placeholder="40"
                       value={formData.maxAge === 0 ? '' : formData.maxAge.toString()}
                       onChangeText={value => {
@@ -498,7 +501,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.buttonContainer}>
               {step > 1 && (
                 <Button
-                  title="← 이전"
+                  title={t('register.prev')}
                   variant="outline"
                   size="medium"
                   borderRadius="pill"
@@ -510,14 +513,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
               <Button
                 title={
                   sendCodeMutation.isPending
-                    ? '인증 코드 발송 중...'
+                    ? t('register.sendingCode')
                     : registerMutation.isPending
-                    ? '회원가입 중...'
+                    ? t('register.registering')
                     : step === 1
-                    ? '이메일 인증'
+                    ? t('register.emailVerification')
                     : step === 3
-                    ? '회원가입 완료'
-                    : '다음'
+                    ? t('register.complete')
+                    : t('register.next')
                 }
                 variant="primary"
                 size="medium"
@@ -530,9 +533,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation, route }) => {
 
             {/* Login link */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>이미 계정이 있으신가요? </Text>
+              <Text style={styles.footerText}>{t('auth.hasAccount')} </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.loginLink}>로그인</Text>
+                <Text style={styles.loginLink}>{t('auth.login')}</Text>
               </TouchableOpacity>
             </View>
           </View>

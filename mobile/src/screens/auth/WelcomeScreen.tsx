@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { AuthStackParamList } from '../../@types';
 import { Button } from '../../components/common';
 import { colors, typography, spacing } from '../../styles/theme';
@@ -30,6 +31,8 @@ interface Props {
 }
 
 const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       {/* 하단 blur 배경 효과 */}
@@ -39,10 +42,9 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* 콘텐츠 영역 */}
       <View style={styles.content}>
-        <Text style={styles.title}>영상으로 만나는{'\n'}새로운 인연</Text>
+        <Text style={styles.title}>{t('welcome.title')}</Text>
         <Text style={styles.description}>
-          실시간 영상 통화로 진짜 모습을 만나보세요.{'\n'}
-          새로운 인연의 시작을 함께해요.
+          {t('welcome.description')}
         </Text>
       </View>
 
@@ -50,7 +52,7 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.buttonContainer}>
         {/* 시작하기 버튼 (Pill + 아이콘) */}
         <Button
-          title="회원가입"
+          title={t('auth.register')}
           variant="primary"
           size="medium"
           fullWidth
@@ -66,9 +68,9 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* 로그인 링크 */}
         <View style={styles.loginLinkContainer}>
-          <Text style={styles.loginText}>이미 계정이 있으신가요? </Text>
+          <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginLink}>로그인</Text>
+            <Text style={styles.loginLink}>{t('auth.login')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../@types';
 import { useMyProfile, useUpdateSettings, useDeleteAccount } from '../../hooks/useProfile';
 import { useLogout } from '../../hooks/useAuth';
@@ -35,6 +36,7 @@ interface Props {
 }
 
 const SettingsScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { data: user } = useMyProfile();
   const { mutate: logout } = useLogout();
 
@@ -68,9 +70,9 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       // iOS: ActionSheet 사용
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ['취소', '남성', '여성', '누구나'],
+          options: [t('common.cancel'), t('options.gender.male'), t('options.gender.female'), t('options.gender.anyone')],
           cancelButtonIndex: 0,
-          title: '매칭하고 싶은 성별을 선택하세요',
+          title: t('settings.selectGender'),
         },
         buttonIndex => {
           if (buttonIndex === 1) {
@@ -85,12 +87,12 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
     } else {
       // Android: Alert 사용 (취소는 외부 탭으로 처리)
       Alert.alert(
-        '원하는 성별',
-        '매칭하고 싶은 성별을 선택하세요',
+        t('settings.preferredGender'),
+        t('settings.selectGender'),
         [
-          { text: '남성', onPress: () => handleSaveGenderFilter('MALE') },
-          { text: '여성', onPress: () => handleSaveGenderFilter('FEMALE') },
-          { text: '누구나', onPress: () => handleSaveGenderFilter('ANYONE') },
+          { text: t('options.gender.male'), onPress: () => handleSaveGenderFilter('MALE') },
+          { text: t('options.gender.female'), onPress: () => handleSaveGenderFilter('FEMALE') },
+          { text: t('options.gender.anyone'), onPress: () => handleSaveGenderFilter('ANYONE') },
         ],
         { cancelable: true }, // 외부 탭으로 취소 가능
       );
@@ -111,11 +113,11 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         onSuccess: () => {
           // React Query가 자동으로 user 데이터를 refetch하므로
           // genderFilter는 자동으로 업데이트됨 (로컬 상태 업데이트 불필요)
-          Alert.alert('성공', '매칭 필터가 업데이트되었습니다.');
+          Alert.alert(t('common.success'), t('settings.filterUpdated'));
         },
         onError: err => {
           console.error('Failed to update gender filter:', err);
-          Alert.alert('오류', parseApiError(err));
+          Alert.alert(t('common.error'), parseApiError(err));
         },
       },
     );
@@ -134,17 +136,17 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
     // 유효성 검사
     if (isNaN(minAge) || isNaN(maxAge)) {
-      Alert.alert('오류', '유효한 숫자를 입력해주세요.');
+      Alert.alert(t('common.error'), t('settings.invalidNumber'));
       return;
     }
 
     if (minAge < 18 || maxAge > 100) {
-      Alert.alert('오류', '나이는 18세 이상 100세 이하로 설정해주세요.');
+      Alert.alert(t('common.error'), t('settings.invalidAge'));
       return;
     }
 
     if (minAge > maxAge) {
-      Alert.alert('오류', '최소 나이는 최대 나이보다 작아야 합니다.');
+      Alert.alert(t('common.error'), t('settings.minMaxError'));
       return;
     }
 
@@ -161,11 +163,11 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       {
         onSuccess: () => {
           setShowAgeModal(false);
-          Alert.alert('성공', '나이 범위가 업데이트되었습니다.');
+          Alert.alert(t('common.success'), t('settings.ageRangeUpdated'));
         },
         onError: err => {
           console.error('Failed to update age range:', err);
-          Alert.alert('오류', parseApiError(err));
+          Alert.alert(t('common.error'), parseApiError(err));
         },
       },
     );
@@ -173,28 +175,28 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleBlockList = () => {
     // TODO: 차단 목록 화면으로 이동
-    Alert.alert('준비 중', '차단 목록 기능은 추후 구현 예정입니다.');
+    Alert.alert(t('common.preparing'), t('settings.blockListPreparing'));
   };
 
   const handlePrivacyPolicy = () => {
     navigation.navigate('LegalContent', {
       type: 'privacy',
-      title: '개인정보처리방침',
+      title: t('settings.privacyPolicy'),
     });
   };
 
   const handleTermsOfService = () => {
     navigation.navigate('LegalContent', {
       type: 'terms',
-      title: '이용약관',
+      title: t('settings.termsOfService'),
     });
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('auth.logout'),
         style: 'destructive',
         onPress: () => {
           logout();
@@ -205,12 +207,12 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '회원 탈퇴',
-      '정말 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다.',
+      t('auth.deleteAccount'),
+      t('auth.deleteAccountConfirm'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '탈퇴',
+          text: t('auth.deleteAccount'),
           style: 'destructive',
           onPress: () => {
             setShowDeleteModal(true);
@@ -222,7 +224,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleConfirmDelete = () => {
     if (!deletePassword) {
-      Alert.alert('오류', '비밀번호를 입력해주세요.');
+      Alert.alert(t('common.error'), t('settings.enterPassword'));
       return;
     }
 
@@ -234,7 +236,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       },
       onError: err => {
         console.error('Failed to delete account:', err);
-        Alert.alert('오류', parseApiError(err));
+        Alert.alert(t('common.error'), parseApiError(err));
       },
     });
   };
@@ -242,13 +244,13 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const getGenderFilterText = () => {
     switch (genderFilter) {
       case 'MALE':
-        return '남성';
+        return t('options.gender.male');
       case 'FEMALE':
-        return '여성';
+        return t('options.gender.female');
       case 'ANYONE':
-        return '누구나';
+        return t('options.gender.anyone');
       default:
-        return '전체';
+        return t('options.gender.all');
     }
   };
 
@@ -263,14 +265,14 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>나이 범위 설정</Text>
+            <Text style={styles.modalTitle}>{t('settings.ageRangeSetup')}</Text>
             <Text style={styles.modalSubtitle}>
-              매칭하고 싶은 나이 범위를 설정하세요 (18-100세)
+              {t('settings.ageRangeDescription')}
             </Text>
 
             <View style={styles.ageInputContainer}>
               <View style={styles.ageInputWrapper}>
-                <Text style={styles.ageInputLabel}>최소 나이</Text>
+                <Text style={styles.ageInputLabel}>{t('settings.minAge')}</Text>
                 <TextInput
                   style={styles.ageInput}
                   value={tempMinAge}
@@ -285,7 +287,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               <Text style={styles.ageSeparator}>~</Text>
 
               <View style={styles.ageInputWrapper}>
-                <Text style={styles.ageInputLabel}>최대 나이</Text>
+                <Text style={styles.ageInputLabel}>{t('settings.maxAge')}</Text>
                 <TextInput
                   style={styles.ageInput}
                   value={tempMaxAge}
@@ -303,7 +305,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                 style={styles.modalCancelButton}
                 onPress={() => setShowAgeModal(false)}
               >
-                <Text style={styles.modalCancelText}>취소</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -314,7 +316,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isUpdating}
               >
                 <Text style={styles.modalConfirmText}>
-                  {isUpdating ? '저장 중...' : '저장'}
+                  {isUpdating ? t('common.saving') : t('common.save')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -334,16 +336,16 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>비밀번호 확인</Text>
+            <Text style={styles.modalTitle}>{t('auth.passwordConfirm')}</Text>
             <Text style={styles.modalSubtitle}>
-              회원 탈퇴를 진행하려면 비밀번호를 입력해주세요
+              {t('auth.deleteAccountPassword')}
             </Text>
 
             <TextInput
               style={styles.passwordInput}
               value={deletePassword}
               onChangeText={setDeletePassword}
-              placeholder="비밀번호"
+              placeholder={t('auth.password')}
               placeholderTextColor={colors.textSecondary}
               secureTextEntry
               autoCapitalize="none"
@@ -357,7 +359,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                   setDeletePassword('');
                 }}
               >
-                <Text style={styles.modalCancelText}>취소</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -368,7 +370,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isDeleting}
               >
                 <Text style={styles.modalDeleteText}>
-                  {isDeleting ? '처리 중...' : '탈퇴'}
+                  {isDeleting ? t('common.processing') : t('auth.deleteAccount')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -384,33 +386,33 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>설정</Text>
+        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* 계정 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>계정</Text>
+          <Text style={styles.sectionTitle}>{t('settings.account')}</Text>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={handleChangePassword}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuLabel}>비밀번호 변경</Text>
+            <Text style={styles.menuLabel}>{t('settings.changePassword')}</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* 매칭 필터 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>매칭 필터</Text>
+          <Text style={styles.sectionTitle}>{t('settings.matchFilter')}</Text>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={handleEditGenderFilter}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuLabel}>원하는 성별</Text>
+            <Text style={styles.menuLabel}>{t('settings.preferredGender')}</Text>
             <View style={styles.menuRight}>
               <Text style={styles.menuValue}>{getGenderFilterText()}</Text>
               <Text style={styles.menuArrow}>›</Text>
@@ -421,18 +423,18 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onPress={handleEditAgeRange}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuLabel}>나이 범위</Text>
+            <Text style={styles.menuLabel}>{t('settings.ageRange')}</Text>
             <View style={styles.menuRight}>
               <Text style={styles.menuValue}>
-                {ageRange.min} - {ageRange.max}세
+                {t('settings.ageRangeValue', { min: ageRange.min, max: ageRange.max })}
               </Text>
               <Text style={styles.menuArrow}>›</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-            <Text style={styles.menuLabel}>국가</Text>
+            <Text style={styles.menuLabel}>{t('settings.country')}</Text>
             <View style={styles.menuRight}>
-              <Text style={styles.menuValue}>🇰🇷 대한민국</Text>
+              <Text style={styles.menuValue}>🇰🇷 {t('options.countries.KR')}</Text>
               <Text style={styles.menuArrow}>›</Text>
             </View>
           </TouchableOpacity>
@@ -440,9 +442,9 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* 알림 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>알림</Text>
+          <Text style={styles.sectionTitle}>{t('settings.notifications')}</Text>
           <View style={styles.menuItem}>
-            <Text style={styles.menuLabel}>푸시 알림</Text>
+            <Text style={styles.menuLabel}>{t('settings.pushNotifications')}</Text>
             <Switch
               value={pushEnabled}
               onValueChange={(value) => {
@@ -455,7 +457,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                   {
                     onError: err => {
                       console.error('Failed to update push settings:', err);
-                      Alert.alert('오류', parseApiError(err));
+                      Alert.alert(t('common.error'), parseApiError(err));
                     },
                   },
                 );
@@ -471,13 +473,13 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
         {/* 기타 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>기타</Text>
+          <Text style={styles.sectionTitle}>{t('settings.other')}</Text>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={handleBlockList}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuLabel}>차단 목록</Text>
+            <Text style={styles.menuLabel}>{t('settings.blockList')}</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -485,7 +487,7 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onPress={handlePrivacyPolicy}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuLabel}>개인정보 처리방침</Text>
+            <Text style={styles.menuLabel}>{t('settings.privacyPolicy')}</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -493,11 +495,11 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onPress={handleTermsOfService}
             activeOpacity={0.7}
           >
-            <Text style={styles.menuLabel}>이용약관</Text>
+            <Text style={styles.menuLabel}>{t('settings.termsOfService')}</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <View style={styles.menuItem}>
-            <Text style={styles.menuLabel}>버전 정보</Text>
+            <Text style={styles.menuLabel}>{t('settings.version')}</Text>
             <Text style={styles.menuValue}>1.0.0</Text>
           </View>
         </View>
@@ -509,14 +511,14 @@ const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             onPress={handleLogout}
             activeOpacity={0.7}
           >
-            <Text style={styles.logoutText}>로그아웃</Text>
+            <Text style={styles.logoutText}>{t('auth.logout')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDeleteAccount}
             activeOpacity={0.7}
           >
-            <Text style={styles.deleteText}>회원 탈퇴</Text>
+            <Text style={styles.deleteText}>{t('auth.deleteAccount')}</Text>
           </TouchableOpacity>
         </View>
 

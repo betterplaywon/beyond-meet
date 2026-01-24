@@ -20,6 +20,7 @@ import { RootStackParamList } from '../../@types';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { authApi } from '../../api/auth.api';
+import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../services/api';
 import { colors, typography, spacing } from '../../styles/theme';
 
@@ -33,6 +34,7 @@ interface Props {
 }
 
 const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,39 +43,39 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
   const { mutate: changePassword, isPending } = useMutation({
     mutationFn: () => authApi.changePassword(currentPassword, newPassword),
     onSuccess: () => {
-      Alert.alert('성공', '비밀번호가 변경되었습니다.', [
-        { text: '확인', onPress: () => navigation.goBack() },
+      Alert.alert(t('common.success'), t('changePassword.success'), [
+        { text: t('common.confirm'), onPress: () => navigation.goBack() },
       ]);
     },
     onError: (error) => {
-      Alert.alert('오류', parseApiError(error));
+      Alert.alert(t('common.error'), parseApiError(error));
     },
   });
 
   const handleSubmit = () => {
     // 유효성 검사
     if (!currentPassword.trim()) {
-      Alert.alert('오류', '현재 비밀번호를 입력해주세요.');
+      Alert.alert(t('common.error'), t('changePassword.currentRequired'));
       return;
     }
 
     if (!newPassword.trim()) {
-      Alert.alert('오류', '새 비밀번호를 입력해주세요.');
+      Alert.alert(t('common.error'), t('changePassword.newRequired'));
       return;
     }
 
     if (newPassword.length < 8) {
-      Alert.alert('오류', '새 비밀번호는 최소 8자 이상이어야 합니다.');
+      Alert.alert(t('common.error'), t('changePassword.newMinLength'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('오류', '새 비밀번호와 확인이 일치하지 않습니다.');
+      Alert.alert(t('common.error'), t('changePassword.newMismatch'));
       return;
     }
 
     if (currentPassword === newPassword) {
-      Alert.alert('오류', '새 비밀번호는 현재 비밀번호와 달라야 합니다.');
+      Alert.alert(t('common.error'), t('changePassword.samePassword'));
       return;
     }
 
@@ -90,7 +92,7 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>비밀번호 변경</Text>
+        <Text style={styles.headerTitle}>{t('changePassword.title')}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -103,53 +105,52 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.infoCard}>
             <Text style={styles.infoIcon}>🔒</Text>
             <Text style={styles.infoText}>
-              보안을 위해 비밀번호는 주기적으로 변경하는 것이 좋습니다.{'\n'}
-              비밀번호는 최소 8자 이상으로 설정해주세요.
+              {t('changePassword.description')}
             </Text>
           </View>
 
           {/* 입력 필드 */}
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>현재 비밀번호</Text>
+              <Text style={styles.label}>{t('changePassword.currentPassword')}</Text>
               <Input
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                placeholder="현재 비밀번호를 입력하세요"
+                placeholder={t('changePassword.currentPasswordPlaceholder')}
                 secureTextEntry
                 autoComplete="password"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>새 비밀번호</Text>
+              <Text style={styles.label}>{t('changePassword.newPassword')}</Text>
               <Input
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="새 비밀번호를 입력하세요 (8자 이상)"
+                placeholder={t('changePassword.newPasswordPlaceholder')}
                 secureTextEntry
                 autoComplete="new-password"
               />
               {newPassword.length > 0 && newPassword.length < 8 && (
                 <Text style={styles.errorText}>
-                  비밀번호는 최소 8자 이상이어야 합니다.
+                  {t('changePassword.minLengthError')}
                 </Text>
               )}
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>새 비밀번호 확인</Text>
+              <Text style={styles.label}>{t('changePassword.confirmPassword')}</Text>
               <Input
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="새 비밀번호를 다시 입력하세요"
+                placeholder={t('changePassword.confirmPasswordPlaceholder')}
                 secureTextEntry
                 autoComplete="new-password"
               />
               {confirmPassword.length > 0 &&
                 newPassword !== confirmPassword && (
                   <Text style={styles.errorText}>
-                    비밀번호가 일치하지 않습니다.
+                    {t('changePassword.mismatchError')}
                   </Text>
                 )}
             </View>
@@ -157,7 +158,7 @@ const ChangePasswordScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* 변경 버튼 */}
           <Button
-            title={isPending ? '변경 중...' : '비밀번호 변경'}
+            title={isPending ? t('changePassword.changing') : t('changePassword.submit')}
             onPress={handleSubmit}
             disabled={isPending}
             variant="primary"

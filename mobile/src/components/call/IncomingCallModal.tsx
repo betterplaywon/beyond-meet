@@ -11,6 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useTranslation } from 'react-i18next';
 import { Avatar } from '../common/Avatar';
 import { ModalButton } from '../common';
 import { useCallStore } from '../../store/callStore';
@@ -27,6 +28,7 @@ export const IncomingCallModal: React.FC<Props> = ({
   onAccept,
   onReject,
 }) => {
+  const { t } = useTranslation();
   const incomingCall = useCallStore((state) => state.incomingCall);
 
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -80,14 +82,14 @@ export const IncomingCallModal: React.FC<Props> = ({
           </Animated.View>
 
           <Text style={styles.name}>{incomingCall.caller.nickname}</Text>
-          <Text style={styles.age}>{/* 나이 계산 */}세</Text>
+          <Text style={styles.age}>{t('call.age')}</Text>
 
-          <Text style={styles.message}>영상 통화를 요청했어요</Text>
+          <Text style={styles.message}>{t('call.incoming')}</Text>
 
           {/* 액션 버튼 */}
           <View style={styles.actionsContainer}>
             <ModalButton
-              title="거절"
+              title={t('call.reject')}
               variant="delete"
               layout="circular"
               icon={<Icon name="call-end" size={40} color={colors.white} />}
@@ -95,7 +97,7 @@ export const IncomingCallModal: React.FC<Props> = ({
             />
 
             <ModalButton
-              title="수락"
+              title={t('call.accept')}
               variant="confirm"
               layout="circular"
               icon={<Icon name="call" size={40} color={colors.white} />}
