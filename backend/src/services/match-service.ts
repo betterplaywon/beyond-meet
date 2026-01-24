@@ -86,8 +86,9 @@ export const generateAgoraToken = (
   const currentTimestamp = Math.floor(Date.now() / 1000);
   const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-  // UID를 0으로 설정하여 Agora가 자동 할당하도록 처리해 토큰이 모든 UID에 대해 유효.
-  const uid = 0;
+  // 각 사용자에게 고유한 UID를 할당하여 토큰 충돌 방지
+  // uid=0(wildcard)으로 동일 토큰 발급 시 프로덕션에서 한쪽 연결 거부됨
+  const uid = Math.floor(Math.random() * 2147483646) + 1;
 
   const token = RtcTokenBuilder.buildTokenWithUid(
     appId,
