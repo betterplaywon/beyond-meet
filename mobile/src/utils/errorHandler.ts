@@ -4,6 +4,7 @@
 
 import { Alert } from 'react-native';
 import axios, { AxiosError } from 'axios';
+import i18n from '../i18n';
 import { ApiResponse } from '../@types';
 
 /**
@@ -12,17 +13,17 @@ import { ApiResponse } from '../@types';
 export const parseApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiResponse<unknown>>;
-    return axiosError.response?.data?.error?.message || '요청에 실패했습니다.';
+    return axiosError.response?.data?.error?.message || i18n.t('errors.requestFailed');
   }
   if (error instanceof Error) {
     return error.message;
   }
-  return '알 수 없는 오류가 발생했습니다.';
+  return i18n.t('errors.unknown');
 };
 
 /**
  * 에러를 Alert으로 표시합니다.
  */
-export const showErrorAlert = (error: unknown, title = '오류'): void => {
-  Alert.alert(title, parseApiError(error));
+export const showErrorAlert = (error: unknown, title?: string): void => {
+  Alert.alert(title || i18n.t('common.error'), parseApiError(error));
 };
