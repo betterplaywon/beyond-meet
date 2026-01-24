@@ -12,6 +12,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { colors } from './src/styles/theme';
 import { useAuthStore } from './src/store/authStore';
 import * as socketService from './src/services/socketService';
+import './src/i18n';
 
 // React Query 클라이언트 설정
 const queryClient = new QueryClient({
