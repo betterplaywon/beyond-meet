@@ -3,7 +3,9 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import * as socketService from '../services/socketService';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Socket 연결 관리
@@ -54,4 +56,56 @@ export const useSocketEvent = (event: string, callback: Function) => {
       socketService.off(event, stableCallback);
     };
   }, [event]); // socket 제거 - 싱글톤이므로 의존성 불필요
+};
+
+/**
+ * AppState 기반 Socket 재연결 훅
+ * 앱이 백그라운드에서 포그라운드로 돌아올 때 Socket 연결 상태를 확인하고 재연결
+ *
+ * @example
+ * ```tsx
+ * // RootNavigator에서 사용
+ * const AppContent = () => {
+ *   useSocketReconnect();
+ *   return <Navigator />;
+ * };
+ * ```
+ */
+export const useSocketReconnect = (): void => {
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+  const isAuthenticated = useAuthStore(state => !!state.accessToken);
+
+  useEffect(() => {
+    // 로그인 상태가 아니면 작동하지 않음
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const handleAppStateChange = (nextAppState: AppStateStatus): void => {
+      const previousState = appState.current;
+
+      // 백그라운드/비활성 → 포그라운드 전환 시
+      if (
+        (previousState === 'background' || previousState === 'inactive') &&
+        nextAppState === 'active'
+      ) {
+        console.log('[SOCKET] 🔄 App returned to foreground, checking connection...');
+
+        // 연결 상태 확인 후 필요시 재연결
+        if (!socketService.isConnected()) {
+          console.log('[SOCKET] Socket disconnected, reconnecting...');
+          socketService.ensureConnected();
+        }
+      }
+
+      appState.current = nextAppState;
+    };
+
+    // AppState 이벤트 구독
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
 };

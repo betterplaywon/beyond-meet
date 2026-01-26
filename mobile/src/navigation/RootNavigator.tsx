@@ -4,12 +4,19 @@
 
 import React, { useRef, useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer, NavigationContainerRef, useNavigation } from '@react-navigation/native';
-import { createStackNavigator, StackNavigationProp } from '@react-navigation/stack';
+import {
+  NavigationContainer,
+  NavigationContainerRef,
+  useNavigation,
+} from '@react-navigation/native';
+import {
+  createStackNavigator,
+  StackNavigationProp,
+} from '@react-navigation/stack';
 import { useAuthStore } from '../store/authStore';
 import { useCallStore } from '../store/callStore';
 import { useNotificationSetup } from '../hooks/useNotificationSetup';
-import { useSocketEvent } from '../hooks/useSocket';
+import { useSocketEvent, useSocketReconnect } from '../hooks/useSocket';
 import * as pushService from '../services/pushService';
 import * as socketService from '../services/socketService'; // call accept/reject에서 사용
 import { IncomingCallModal } from '../components/call/IncomingCallModal';
@@ -41,18 +48,23 @@ const AppContent: React.FC = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   // Auth Store - 상태만 구독
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const emailVerified = useAuthStore((state) => state.emailVerified);
-  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const emailVerified = useAuthStore(state => state.emailVerified);
+  const hasHydrated = useAuthStore(state => state._hasHydrated);
 
   // Call Store - 상태만 구독
-  const incomingCall = useCallStore((state) => state.incomingCall);
-  const showIncomingCallModal = useCallStore((state) => state.showIncomingCallModal);
+  const incomingCall = useCallStore(state => state.incomingCall);
+  const showIncomingCallModal = useCallStore(
+    state => state.showIncomingCallModal,
+  );
 
   // ⚠️ 주의: React Hooks 규칙에 따라 모든 훅은 조건부 return 이전에 호출해야 함
 
   // 푸시 알림 초기화 (로그인 시에만 실행됨)
   useNotificationSetup();
+
+  // AppState 기반 Socket 재연결 (백그라운드 → 포그라운드 전환 시)
+  useSocketReconnect();
 
   // 통화 수신 이벤트 (앱 전역)
   useSocketEvent('call:incoming', (data: any) => {
@@ -72,7 +84,12 @@ const AppContent: React.FC = () => {
   // 통화 수락 완료 이벤트 (토큰 및 UID 받기)
   useSocketEvent('call:accepted', (data: any) => {
     // Null safety: 모든 필수 필드 검증 (uid는 0이 유효한 값이므로 typeof 체크)
-    if (!data?.token || typeof data?.uid !== 'number' || !data?.session?.id || !data?.session?.channelName) {
+    if (
+      !data?.token ||
+      typeof data?.uid !== 'number' ||
+      !data?.session?.id ||
+      !data?.session?.channelName
+    ) {
       console.error('[ROOT] Invalid call:accepted data:', data);
       return;
     }
@@ -89,7 +106,14 @@ const AppContent: React.FC = () => {
   // AsyncStorage 리하이드레이션 완료될 때까지 로딩 화면 표시
   if (!hasHydrated) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: colors.surface,
+        }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -123,7 +147,10 @@ const AppContent: React.FC = () => {
           <Stack.Screen name="Auth" component={AuthNavigator} />
         ) : !emailVerified ? (
           // 로그인됨 but 이메일 미인증 → 이메일 인증 화면
-          <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
+          <Stack.Screen
+            name="EmailVerification"
+            component={EmailVerificationScreen}
+          />
         ) : (
           // 로그인됨 + 이메일 인증됨 → 메인 앱
           <>
@@ -135,7 +162,10 @@ const AppContent: React.FC = () => {
             <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="LegalContent" component={LegalContentScreen} />
-            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+            <Stack.Screen
+              name="ChangePassword"
+              component={ChangePasswordScreen}
+            />
           </>
         )}
       </Stack.Navigator>
@@ -153,7 +183,8 @@ const AppContent: React.FC = () => {
 };
 
 const RootNavigator: React.FC = () => {
-  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const navigationRef =
+    useRef<NavigationContainerRef<RootStackParamList>>(null);
 
   useEffect(() => {
     // pushService에 navigation ref 설정 (Deep Link 처리용)
