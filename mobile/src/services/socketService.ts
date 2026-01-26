@@ -7,8 +7,22 @@ import { io, Socket } from 'socket.io-client';
 import { ENV } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 
+// 재연결 설정 상수
+const RECONNECTION_CONFIG = {
+  reconnection: true,
+  reconnectionDelay: 1000,        // 초기 재연결 대기: 1초
+  reconnectionDelayMax: 30000,    // 최대 재연결 대기: 30초 (콜드 스타트 대응)
+  reconnectionAttempts: Infinity, // 무한 재연결 시도
+  timeout: 20000,                 // 연결 타임아웃: 20초
+};
+
 // Private 상태 변수
 let socket: Socket | null = null;
+let reconnectAttemptCount = 0;    // 재연결 시도 횟수 추적
+
+// 연결 상태 콜백
+type ConnectionCallback = (connected: boolean) => void;
+const connectionCallbacks: Set<ConnectionCallback> = new Set();
 // 현재 연결에 사용된 토큰 (토큰 변경 감지용)
 let currentConnectedToken: string | null = null;
 // callback -> wrapper function 매핑 (메모리 누수 방지)
@@ -47,6 +61,19 @@ const registerPendingListeners = (): void => {
 };
 
 /**
+ * 연결 상태 변경 알림
+ */
+const notifyConnectionChange = (connected: boolean): void => {
+  connectionCallbacks.forEach(callback => {
+    try {
+      callback(connected);
+    } catch (error) {
+      console.error('[SOCKET] Connection callback error:', error);
+    }
+  });
+};
+
+/**
  * 이벤트 핸들러 설정
  */
 const setupEventHandlers = (): void => {
@@ -54,12 +81,15 @@ const setupEventHandlers = (): void => {
 
   socket.on('connect', () => {
     console.log('[SOCKET] ✅ Connected! Socket ID:', socket?.id);
+    reconnectAttemptCount = 0; // 연결 성공 시 카운터 리셋
+    notifyConnectionChange(true);
     // 연결 성공 시 대기 중인 리스너들 등록
     registerPendingListeners();
   });
 
   socket.on('disconnect', reason => {
     console.log('[SOCKET] ❌ Disconnected. Reason:', reason);
+    notifyConnectionChange(false);
   });
 
   socket.on('error', error => {
@@ -67,9 +97,13 @@ const setupEventHandlers = (): void => {
   });
 
   socket.on('connect_error', error => {
+    reconnectAttemptCount++;
     // 개발 환경에서 서버 미실행 시 발생 가능 (정상적인 케이스)
     // 재연결 로직이 자동으로 처리하므로 warn 레벨로 로깅
-    console.warn('[SOCKET] ⚠️ Connection Error (will retry):', error.message);
+    console.warn(
+      `[SOCKET] ⚠️ Connection Error (attempt ${reconnectAttemptCount}, will retry):`,
+      error.message,
+    );
   });
 };
 
@@ -110,9 +144,7 @@ export const connect = (): void => {
       token,
     },
     transports: ['websocket'],
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionAttempts: 5,
+    ...RECONNECTION_CONFIG,
   });
 
   // 연결된 토큰 기록
@@ -258,6 +290,46 @@ export const off = (event: string, callback?: Function): void => {
  */
 export const isConnected = (): boolean => {
   return socket?.connected ?? false;
+};
+
+/**
+ * 연결 상태 변경 구독
+ * @returns unsubscribe 함수
+ */
+export const onConnectionChange = (callback: ConnectionCallback): (() => void) => {
+  connectionCallbacks.add(callback);
+  return () => {
+    connectionCallbacks.delete(callback);
+  };
+};
+
+/**
+ * 강제 재연결 (AppState 복귀 시 사용)
+ * 연결이 끊어진 상태일 때만 재연결 시도
+ */
+export const ensureConnected = (): void => {
+  const token = useAuthStore.getState().accessToken;
+
+  if (!token) {
+    console.log('[SOCKET] Cannot ensure connection - no token');
+    return;
+  }
+
+  if (socket?.connected) {
+    console.log('[SOCKET] Already connected, no action needed');
+    return;
+  }
+
+  console.log('[SOCKET] 🔄 Ensuring connection (force reconnect)...');
+
+  // 기존 소켓이 있으면 정리
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
+  currentConnectedToken = null;
+  connect();
 };
 
 /**
