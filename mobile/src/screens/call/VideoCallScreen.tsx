@@ -53,7 +53,7 @@ const MAX_DURATION = 300; // 5분
 
 const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t } = useTranslation();
-  const { sessionId, channelName, token, uid: serverUid } = route.params;
+  const { sessionId, channelName, token, uid: serverUid, partnerId } = route.params;
   const insets = useSafeAreaInsets();
   const isJoined = useCallStore(state => state.isJoined);
 
@@ -93,6 +93,7 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   // 4. AI 모더레이션
   const { cleanup: moderationCleanup } = useModeration({
     sessionId,
+    partnerId,
     isCallEndedRef,
     takeSnapshot: controls.takeSnapshot,
     remoteUidRef,

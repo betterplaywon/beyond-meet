@@ -219,7 +219,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
         session.userId1
       );
 
-      // 수락한 사용자에게 (본인의 토큰/UID 전달)
+      // 수락한 사용자에게 (본인의 토큰/UID + 상대방 ID 전달)
       socket.emit("call:accepted", {
         session: {
           id: session.id,
@@ -227,9 +227,10 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
         },
         token: user2TokenData.token,
         uid: user2TokenData.uid,
+        partnerId: session.userId1,
       });
 
-      // 발신자에게 수락 알림 (발신자의 토큰/UID 전달)
+      // 발신자에게 수락 알림 (발신자의 토큰/UID + 상대방 ID 전달)
       io.to(session.userId1).emit("call:accepted", {
         session: {
           id: session.id,
@@ -237,6 +238,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
         },
         token: user1TokenData.token,
         uid: user1TokenData.uid,
+        partnerId: userId,
       });
     } catch (error: any) {
       console.error("[SOCKET] call:accept error:", error);

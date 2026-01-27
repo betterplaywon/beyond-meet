@@ -104,12 +104,13 @@ const MatchingScreen: React.FC<Props> = ({ navigation }) => {
       text2: t('match.successMessage', { nickname: data.partner?.nickname || t('call.opponent') }),
     });
 
-    // VideoCallScreen으로 이동 (UID 포함)
+    // VideoCallScreen으로 이동 (UID, partnerId 포함)
     navigation.replace('VideoCall', {
       sessionId: data.session.id,
       channelName: data.session.channelName,
       token: data.token,
       uid: data.uid,
+      partnerId: data.partner?.id,
     });
   });
 

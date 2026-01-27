@@ -86,12 +86,12 @@ export const analyzeImage = async (
     const buffer = Buffer.from(base64Data, 'base64');
 
     // 3. Buffer를 Blob으로 변환 (Hugging Face API 요구사항)
-    const blob = new Blob([buffer.buffer], { type: 'image/png' });
+    const blob = new Blob([buffer], { type: 'image/jpeg' });
 
     // 4. AI 모델로 이미지 분석
     const result = await imageClassification({
       model: HUGGINGFACE_MODEL,
-      data: blob,
+      inputs: blob,
       accessToken: HUGGINGFACE_API_KEY,
     });
 

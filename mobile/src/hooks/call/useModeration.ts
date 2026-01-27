@@ -5,6 +5,7 @@ import api from '../../services/api';
 
 interface UseModerationParams {
   sessionId: string;
+  partnerId: string;
   isCallEndedRef: React.MutableRefObject<boolean>;
   takeSnapshot: (uid: number, filePath: string) => Promise<string>;
   remoteUidRef: React.MutableRefObject<number>;
@@ -15,6 +16,7 @@ interface UseModerationParams {
 
 export const useModeration = ({
   sessionId,
+  partnerId,
   isCallEndedRef,
   takeSnapshot,
   remoteUidRef,
@@ -70,7 +72,7 @@ export const useModeration = ({
       if (action === 'WARNING_ISSUED') {
         socketService.sendModerationWarning(
           sessionId,
-          remoteUidRef.current.toString(),
+          partnerId,
         );
       } else if (action === 'CALL_ENDED') {
         socketService.sendModerationForceEnd(sessionId);
@@ -83,7 +85,7 @@ export const useModeration = ({
         console.warn('[MODERATION] Frame analysis failed (will retry):', message);
       }
     }
-  }, [sessionId, isCallEndedRef, remoteUidRef, takeSnapshot, onCallForceEnd]);
+  }, [sessionId, partnerId, isCallEndedRef, remoteUidRef, takeSnapshot, onCallForceEnd]);
 
   useEffect(() => {
     if (!isJoined || !isRemoteJoined) {
