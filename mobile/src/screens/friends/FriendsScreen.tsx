@@ -77,6 +77,7 @@ const FriendsScreen = () => {
       session: { id: string; channelName: string };
       token: string;
       uid: number;
+      partnerId: string;
     }) => {
       console.log('[FriendsScreen] Call accepted:', data);
       setCallingFriendId(null);
@@ -85,6 +86,7 @@ const FriendsScreen = () => {
         channelName: data.session.channelName,
         token: data.token,
         uid: data.uid,
+        partnerId: data.partnerId,
       });
     },
   );

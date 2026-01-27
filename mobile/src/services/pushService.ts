@@ -202,6 +202,7 @@ const handleNotificationNavigation = (
           channelName: notificationData.channelName,
           token: notificationData.token,
           uid,
+          partnerId: notificationData.partnerId || '',
         });
       }
       break;
@@ -226,6 +227,7 @@ const handleNotificationNavigation = (
           channelName: notificationData.channelName,
           token: notificationData.token,
           uid,
+          partnerId: notificationData.partnerId || '',
         });
       }
       break;

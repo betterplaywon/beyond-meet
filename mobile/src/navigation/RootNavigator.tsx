@@ -88,7 +88,8 @@ const AppContent: React.FC = () => {
       !data?.token ||
       typeof data?.uid !== 'number' ||
       !data?.session?.id ||
-      !data?.session?.channelName
+      !data?.session?.channelName ||
+      !data?.partnerId
     ) {
       console.error('[ROOT] Invalid call:accepted data:', data);
       return;
@@ -99,6 +100,7 @@ const AppContent: React.FC = () => {
       channelName: data.session.channelName,
       token: data.token,
       uid: data.uid,
+      partnerId: data.partnerId,
     });
     useCallStore.getState().setIncomingCall(null);
   });
