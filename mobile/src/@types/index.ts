@@ -132,7 +132,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Matching: undefined;
   IncomingCall: { sessionId: string; caller: User };
-  VideoCall: { sessionId: string; channelName: string; token: string; uid: number };
+  VideoCall: { sessionId: string; channelName: string; token: string; uid: number; partnerId: string };
   CallEnd: { sessionId: string };
   CallHistory: undefined;
   ProfileEdit: undefined;
