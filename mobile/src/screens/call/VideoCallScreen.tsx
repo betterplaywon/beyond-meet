@@ -21,7 +21,8 @@ import {
 } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { RtcSurfaceView } from 'react-native-agora';
+import { RtcSurfaceView, RtcTextureView } from 'react-native-agora';
+import ViewShot from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../../@types';
 import { CallControls } from '../../components/call/CallControls';
@@ -61,6 +62,9 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   const controlsOpacity = useRef(new Animated.Value(1)).current;
   const controlsVisible = useRef(true);
 
+  // 원격 비디오 캡처를 위한 ref
+  const remoteVideoRef = useRef<ViewShot>(null);
+
   const toggleControls = useCallback(() => {
     controlsVisible.current = !controlsVisible.current;
     Animated.timing(controlsOpacity, {
@@ -91,12 +95,19 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
   });
 
   // 4. AI 모더레이션
+  console.log('[VideoCallScreen] Moderation params:', {
+    sessionId,
+    partnerId,
+    isJoined,
+    isRemoteJoined,
+    hasRemoteVideoRef: !!remoteVideoRef.current,
+  });
+
   const { cleanup: moderationCleanup } = useModeration({
     sessionId,
     partnerId,
     isCallEndedRef,
-    takeSnapshot: controls.takeSnapshot,
-    remoteUidRef,
+    remoteVideoRef,
     isRemoteJoined,
     isJoined,
     onCallForceEnd: () =>
@@ -213,16 +224,35 @@ const VideoCallScreen: React.FC<Props> = ({ navigation, route }) => {
           onPress={toggleControls}
         >
           {/* 상대방 영상 (전체 화면) */}
+          {/* Android: TextureView 사용 (ViewShot 캡처 가능) */}
+          {/* iOS: SurfaceView 사용 (TextureView 미지원) */}
           {isRemoteJoined ? (
-            <RtcSurfaceView
+            <ViewShot
+              ref={remoteVideoRef}
               style={styles.remoteVideo}
-              canvas={{
-                uid: remoteUidRef.current,
-                renderMode: 1,
-                mirrorMode: 0,
-              }}
-              zOrderOnTop={false}
-            />
+              options={{ format: 'jpg', quality: 0.8 }}
+            >
+              {Platform.OS === 'android' ? (
+                <RtcTextureView
+                  style={styles.remoteVideoInner}
+                  canvas={{
+                    uid: remoteUidRef.current,
+                    renderMode: 1,
+                    mirrorMode: 0,
+                  }}
+                />
+              ) : (
+                <RtcSurfaceView
+                  style={styles.remoteVideoInner}
+                  canvas={{
+                    uid: remoteUidRef.current,
+                    renderMode: 1,
+                    mirrorMode: 0,
+                  }}
+                  zOrderOnTop={false}
+                />
+              )}
+            </ViewShot>
           ) : (
             <View style={styles.remoteVideo}>
               <Text style={styles.placeholder}>
@@ -302,6 +332,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  remoteVideoInner: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   placeholder: {
     ...typography.h3,

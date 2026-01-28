@@ -24,10 +24,6 @@ export const useAgoraEngine = ({
   const { t } = useTranslation();
   const engineRef = useRef<IRtcEngine | undefined>(undefined);
   const remoteUidRef = useRef<number>(0);
-  const snapshotResolverRef = useRef<{
-    resolve: (filePath: string) => void;
-    reject: (error: Error) => void;
-  } | null>(null);
 
   const [localUid, setLocalUid] = useState<number>(0);
   const [isRemoteJoined, setIsRemoteJoined] = useState(false);
@@ -107,25 +103,6 @@ export const useAgoraEngine = ({
               t('call.agoraErrorMessage', { err, msg }),
             );
           },
-          onSnapshotTaken: (
-            _connection,
-            _uid,
-            filePath,
-            _width,
-            _height,
-            errCode,
-          ) => {
-            if (snapshotResolverRef.current) {
-              if (errCode === 0) {
-                snapshotResolverRef.current.resolve(filePath);
-              } else {
-                snapshotResolverRef.current.reject(
-                  new Error(`Snapshot failed with error code: ${errCode}`),
-                );
-              }
-              snapshotResolverRef.current = null;
-            }
-          },
         });
 
         agoraEngine.enableVideo();
@@ -164,8 +141,6 @@ export const useAgoraEngine = ({
       toggleMute: (): boolean => {
         const current = engineRef.current;
         if (!current) return false;
-        // 현재 mute 상태를 토글하기 위해 엔진의 현재 상태를 반전
-        // 호출자가 상태를 추적해야 함
         return true;
       },
       toggleVideo: (): boolean => {
@@ -179,32 +154,6 @@ export const useAgoraEngine = ({
       },
       switchCamera: () => {
         engineRef.current?.switchCamera();
-      },
-      takeSnapshot: (uid: number, filePath: string): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          if (!engineRef.current) {
-            reject(new Error('Agora engine not initialized'));
-            return;
-          }
-
-          snapshotResolverRef.current = { resolve, reject };
-
-          // 5초 타임아웃
-          const timeout = setTimeout(() => {
-            if (snapshotResolverRef.current) {
-              snapshotResolverRef.current = null;
-              reject(new Error('Snapshot timeout'));
-            }
-          }, 5000);
-
-          const result = engineRef.current.takeSnapshot(uid, filePath);
-
-          if (result !== 0) {
-            clearTimeout(timeout);
-            snapshotResolverRef.current = null;
-            reject(new Error(`takeSnapshot returned error code: ${result}`));
-          }
-        });
       },
     }),
     [],
