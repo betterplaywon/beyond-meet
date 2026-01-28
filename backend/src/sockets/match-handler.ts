@@ -314,25 +314,26 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
 
   /**
    * 모니터링 이벤트: 강제 종료
+   * 참고: 자동 신고는 /api/moderation/analyze 컨트롤러에서 생성됨
    */
   socket.on(
     "moderation:force-end",
     async (data: { sessionId: string; reportedUserId: string }) => {
       try {
+        console.log("[MODERATION] Force end requested:", data);
+
         // 세션 가져오기
         const session = await prisma.matchSession.findUnique({
           where: { id: data.sessionId },
         });
 
         if (!session) {
+          console.log("[MODERATION] Session not found:", data.sessionId);
           return;
         }
 
         // 통화 종료 처리
-        const result = await matchService.endCall(
-          data.sessionId,
-          data.reportedUserId
-        );
+        await matchService.endCall(data.sessionId, data.reportedUserId);
 
         // 양쪽 사용자에게 강제 종료 알림
         io.to(session.userId1).emit("moderation:call-force-ended", {
@@ -345,15 +346,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           reason: "Inappropriate content detected",
         });
 
-        // 자동 신고 생성
-        const moderationService = await import(
-          "../services/moderation-service"
-        );
-        await moderationService.createAutoReport({
-          reportedUserId: data.reportedUserId,
-          sessionId: data.sessionId,
-          confidence: 0.7, // 임시 값 (실제로는 analyze에서 전달받아야 함)
-        });
+        console.log("[MODERATION] Force end completed for session:", data.sessionId);
       } catch (error) {
         console.error("[MODERATION] Force end error:", error);
       }
