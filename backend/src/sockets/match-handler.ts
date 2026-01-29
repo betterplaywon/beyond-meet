@@ -3,7 +3,13 @@
  */
 
 import { Server, Socket } from "socket.io";
-import { verifyAccessToken } from "../utils/jwt";
+import {
+  verifyAccessToken,
+  verifyRefreshToken,
+  generateAccessToken,
+  generateRefreshToken,
+  TokenPayload,
+} from "../utils/jwt";
 import * as matchService from "../services/match-service";
 import * as userService from "../services/user-service";
 import prisma from "../config/database";
@@ -39,19 +45,73 @@ const broadcastStatusToFriends = async (
 
 /**
  * Socket 인증 미들웨어
+ * accessToken 만료 시 refreshToken으로 자동 갱신
  */
 export const authenticateSocket = async (
   socket: AuthenticatedSocket,
   next: (err?: Error) => void
 ) => {
   try {
-    const token = socket.handshake.auth.token;
+    const { token, refreshToken } = socket.handshake.auth;
 
-    if (!token) {
+    if (!token && !refreshToken) {
       return next(new Error("인증 토큰이 필요합니다"));
     }
 
-    const decoded = verifyAccessToken(token);
+    let decoded: TokenPayload | null = null;
+    let newTokens: { accessToken: string; refreshToken: string } | null = null;
+
+    // 1. accessToken 검증 시도
+    if (token) {
+      try {
+        decoded = verifyAccessToken(token);
+      } catch (accessTokenError: any) {
+        // accessToken 만료 시 refreshToken으로 갱신 시도
+        if (accessTokenError.name === "TokenExpiredError" && refreshToken) {
+          console.log("[SOCKET] Access token expired, attempting refresh...");
+        } else if (!refreshToken) {
+          return next(new Error("토큰이 만료되었습니다"));
+        }
+      }
+    }
+
+    // 2. accessToken이 유효하지 않고 refreshToken이 있으면 갱신
+    if (!decoded && refreshToken) {
+      try {
+        const refreshDecoded = verifyRefreshToken(refreshToken);
+
+        if (!refreshDecoded || !refreshDecoded.id) {
+          return next(new Error("유효하지 않은 refresh token입니다"));
+        }
+
+        // 사용자 정보 조회
+        const user = await prisma.user.findUnique({
+          where: { id: refreshDecoded.id },
+          select: { id: true, email: true, role: true },
+        });
+
+        if (!user) {
+          return next(new Error("사용자를 찾을 수 없습니다"));
+        }
+
+        // 새 토큰 생성
+        const payload: TokenPayload = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+        };
+
+        newTokens = {
+          accessToken: generateAccessToken(payload),
+          refreshToken: generateRefreshToken(payload),
+        };
+
+        decoded = payload;
+        console.log("[SOCKET] Token refreshed successfully for user:", user.id);
+      } catch (refreshError) {
+        return next(new Error("Refresh token이 만료되었습니다. 다시 로그인해주세요."));
+      }
+    }
 
     if (!decoded || !decoded.id) {
       return next(new Error("유효하지 않은 토큰입니다"));
@@ -69,8 +129,20 @@ export const authenticateSocket = async (
       },
     });
 
+    // 새 토큰이 발급되었으면 연결 후 클라이언트에 전송
+    if (newTokens) {
+      socket.once("connect", () => {
+        socket.emit("auth:token-refreshed", newTokens);
+      });
+      // connect 이벤트가 이미 발생한 경우를 위해 즉시 전송
+      setImmediate(() => {
+        socket.emit("auth:token-refreshed", newTokens);
+      });
+    }
+
     next();
   } catch (error) {
+    console.error("[SOCKET] Authentication error:", error);
     next(new Error("인증 실패"));
   }
 };
@@ -276,13 +348,12 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
       // Service 레이어 사용 (Prisma 직접 호출 제거)
       const result = await matchService.endCall(data.sessionId, userId);
 
-      // 두 사용자에게 통화 종료 알림
-      io.to(result.session.userId1).emit("call:ended", {
-        sessionId: result.session.id,
-        duration: result.duration,
-      });
+      // 상대방에게만 통화 종료 알림 (요청한 사용자는 이미 종료 처리됨)
+      const partnerId = result.session.userId1 === userId
+        ? result.session.userId2
+        : result.session.userId1;
 
-      io.to(result.session.userId2).emit("call:ended", {
+      io.to(partnerId).emit("call:ended", {
         sessionId: result.session.id,
         duration: result.duration,
       });
