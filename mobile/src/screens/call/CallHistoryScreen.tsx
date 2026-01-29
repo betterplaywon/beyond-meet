@@ -36,7 +36,7 @@ const CallHistoryScreen: React.FC<Props> = ({ navigation }) => {
   const { data: user } = useMyProfile();
 
   // React Query로 통화 기록 조회
-  const { data, isFetching, error, refetch } = useCallHistory({
+  const { data, isFetching, refetch } = useCallHistory({
     userId: user?.id,
     page: 1,
     limit: 50,

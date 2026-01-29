@@ -55,7 +55,7 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
 
   // 파생 상태: 이미 친구인지 확인 (useMemo로 계산)
   const isAlreadyFriend = useMemo(() => {
-    return friendsList?.some(f => f.friendId === sessionInfo?.partner.id) ?? false;
+    return friendsList?.some(f => f.id === sessionInfo?.partner.id) ?? false;
   }, [friendsList, sessionInfo?.partner.id]);
 
   const handleAddFriend = () => {

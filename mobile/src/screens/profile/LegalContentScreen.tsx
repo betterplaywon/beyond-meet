@@ -472,7 +472,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   chapterHeading: {
-    ...typography.h3Bold,
+    ...typography.h3,
+    fontWeight: 'bold',
     color: colors.primary,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,

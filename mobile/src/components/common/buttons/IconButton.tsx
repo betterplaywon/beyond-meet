@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { colors } from '../../../styles/theme';
 import { BaseButtonProps, ButtonSize, IconButtonState } from './types';
 import { ICON_BUTTON_SIZES, getDisabledStyle } from './styles';

@@ -28,7 +28,7 @@ export const useAddFriend = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, friendId }: { userId: string; friendId: string }) =>
+    mutationFn: ({ userId: _userId, friendId }: { userId: string; friendId: string }) =>
       friendsApi.addFriend(friendId),
     onSuccess: (_, variables) => {
       // 친구 목록 쿼리 무효화하여 재조회
@@ -49,7 +49,7 @@ export const useRemoveFriend = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ userId, friendId }: { userId: string; friendId: string }) =>
+    mutationFn: ({ userId: _userId, friendId }: { userId: string; friendId: string }) =>
       friendsApi.removeFriend(friendId),
     onSuccess: (_, variables) => {
       // 서버에서 최신 친구 목록을 다시 가져옴 (단순하고 일관성 있는 패턴)
@@ -71,7 +71,7 @@ export const useBlockUser = () => {
 
   return useMutation({
     mutationFn: ({
-      userId,
+      userId: _userId,
       blockedUserId,
     }: {
       userId: string;
@@ -97,7 +97,7 @@ export const useUnblockUser = () => {
 
   return useMutation({
     mutationFn: ({
-      userId,
+      userId: _userId,
       blockedId,
     }: {
       userId: string;
