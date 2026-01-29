@@ -78,8 +78,21 @@ export const analyzeImage = async (
       accessToken: HUGGINGFACE_API_KEY,
     });
 
+    // 🔍 디버그 로깅: AI 분석 결과 전체 출력
+    console.log('[Moderation] AI 분석 결과:', JSON.stringify(result, null, 2));
+
     const nsfwResult = result.find((r: { label: string; score: number }) => r.label === 'nsfw');
+    const normalResult = result.find((r: { label: string; score: number }) => r.label === 'normal');
     const confidence = nsfwResult?.score || 0;
+
+    // 🔍 디버그 로깅: 점수 및 임계값 비교
+    console.log('[Moderation] 점수 분석:', {
+      nsfw_score: nsfwResult?.score?.toFixed(4),
+      normal_score: normalResult?.score?.toFixed(4),
+      threshold_minor: THRESHOLD_MINOR,
+      threshold_severe: THRESHOLD_SEVERE,
+      action: determineAction(confidence),
+    });
 
     return {
       confidence,
