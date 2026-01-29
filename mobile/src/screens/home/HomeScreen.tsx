@@ -3,7 +3,7 @@
  * Figma: Cupid Arrow - Home Screen 디자인 적용
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../../hooks/useSocket';
+import * as socketService from '../../services/socketService';
 import { useMyProfile } from '../../hooks/useProfile';
 import { useFriends } from '../../hooks/useFriends';
 import { Button, LanguageSelector } from '../../components/common';
@@ -33,16 +34,29 @@ const HomeScreen: React.FC = () => {
   const { data: user } = useMyProfile();
   const { data: friends = [] } = useFriends(user?.id);
   const socket = useSocket();
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  const handleRandomMatch = () => {
+  const handleRandomMatch = async () => {
+    // 이미 연결 중이면 중복 실행 방지
+    if (isConnecting) return;
+
     // Socket 연결 상태 확인
     if (!socket.isConnected()) {
-      Toast.show({
-        type: 'error',
-        text1: t('home.connectionError'),
-        text2: t('home.serverDisconnected'),
-      });
-      return;
+      setIsConnecting(true);
+
+      // 연결 시도 및 대기
+      const connected = await socketService.connectAndWait(10000);
+
+      setIsConnecting(false);
+
+      if (!connected) {
+        Toast.show({
+          type: 'error',
+          text1: t('home.connectionError'),
+          text2: t('home.serverDisconnected'),
+        });
+        return;
+      }
     }
 
     // Socket으로 매칭 요청
@@ -81,15 +95,19 @@ const HomeScreen: React.FC = () => {
 
           {/* 랜덤 매칭 버튼 (Pill + 아이콘) */}
           <Button
-            title={t('home.startMatch')}
+            title={isConnecting ? t('home.connecting') : t('home.startMatch')}
             variant="primary"
             size="medium"
             fullWidth
             borderRadius="pill"
+            loading={isConnecting}
+            disabled={isConnecting}
             icon={
-              <View style={styles.buttonIconCircle}>
-                <Icon name="videocam" size={20} color={colors.primary} />
-              </View>
+              !isConnecting ? (
+                <View style={styles.buttonIconCircle}>
+                  <Icon name="videocam" size={20} color={colors.primary} />
+                </View>
+              ) : undefined
             }
             iconPosition="left"
             onPress={handleRandomMatch}
