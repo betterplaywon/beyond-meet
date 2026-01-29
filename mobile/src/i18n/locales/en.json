@@ -86,6 +86,7 @@
     "newConnection": "Discover new\nconnections",
     "matchDescription": "Start a video call with someone new\nthrough random matching",
     "startMatch": "Start Random Match",
+    "connecting": "Connecting...",
     "todayCalls": "Today's Calls",
     "friends": "Friends",
     "totalCallTime": "Total Call Time",
