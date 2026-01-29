@@ -105,31 +105,40 @@ const setupEventHandlers = (): void => {
       error.message,
     );
   });
+
+  // 백엔드에서 토큰 갱신 시 새 토큰 수신
+  socket.on('auth:token-refreshed', (data: { accessToken: string; refreshToken: string }) => {
+    console.log('[SOCKET] 🔄 Received refreshed tokens from server');
+    useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+    currentConnectedToken = data.accessToken;
+  });
 };
 
 /**
  * Socket 연결
+ * accessToken과 refreshToken을 함께 전송하여 백엔드에서 토큰 갱신 처리
  */
 export const connect = (): void => {
-  const token = useAuthStore.getState().accessToken;
+  const { accessToken, refreshToken } = useAuthStore.getState();
 
   // 이미 연결되어 있고 토큰이 동일하면 재연결 불필요
-  if (socket?.connected && currentConnectedToken === token) {
+  if (socket?.connected && currentConnectedToken === accessToken) {
     console.log('[SOCKET] Already connected with current token');
     return;
   }
 
   // 토큰이 다르면 기존 연결 해제 후 재연결
-  if (socket?.connected && currentConnectedToken !== token) {
+  if (socket?.connected && currentConnectedToken !== accessToken) {
     console.log('[SOCKET] Token changed, disconnecting old socket...');
     socket.disconnect();
     socket = null;
   }
 
-  console.log('[SOCKET] Access Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+  console.log('[SOCKET] Access Token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'NO TOKEN');
 
-  if (!token) {
-    console.error('[SOCKET] ❌ No access token available');
+  // accessToken 또는 refreshToken 중 하나는 필요
+  if (!accessToken && !refreshToken) {
+    console.error('[SOCKET] ❌ No tokens available');
     return;
   }
 
@@ -141,14 +150,15 @@ export const connect = (): void => {
 
   socket = io(socketUrl, {
     auth: {
-      token,
+      token: accessToken,
+      refreshToken,
     },
     transports: ['websocket'],
     ...RECONNECTION_CONFIG,
   });
 
   // 연결된 토큰 기록
-  currentConnectedToken = token;
+  currentConnectedToken = accessToken;
 
   setupEventHandlers();
 };
@@ -301,6 +311,45 @@ export const onConnectionChange = (callback: ConnectionCallback): (() => void) =
   return () => {
     connectionCallbacks.delete(callback);
   };
+};
+
+/**
+ * Socket 연결 및 연결 완료까지 대기
+ * 백엔드에서 토큰 만료 시 자동 갱신 처리
+ * @param timeoutMs 연결 타임아웃 (기본 10초)
+ * @returns 연결 성공 여부
+ */
+export const connectAndWait = (timeoutMs: number = 10000): Promise<boolean> => {
+  // 이미 연결되어 있으면 즉시 성공
+  if (socket?.connected) {
+    return Promise.resolve(true);
+  }
+
+  const { accessToken, refreshToken } = useAuthStore.getState();
+
+  // accessToken 또는 refreshToken 중 하나는 필요
+  if (!accessToken && !refreshToken) {
+    return Promise.resolve(false);
+  }
+
+  // 연결 시도
+  connect();
+
+  // 연결 완료 대기
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      unsubscribe();
+      resolve(socket?.connected ?? false);
+    }, timeoutMs);
+
+    const unsubscribe = onConnectionChange((connected) => {
+      if (connected) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve(true);
+      }
+    });
+  });
 };
 
 /**

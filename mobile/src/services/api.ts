@@ -7,6 +7,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import { ENV } from '../config/env';
 import { useAuthStore } from '../store/authStore';
 import { ApiResponse } from '../@types';
+import { refreshAccessToken } from './tokenRefresh';
 import * as socketService from './socketService';
 
 /**
@@ -57,26 +58,11 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = useAuthStore.getState().refreshToken;
+        const accessToken = await refreshAccessToken();
 
-        if (!refreshToken) {
-          throw new Error('No refresh token');
+        if (!accessToken) {
+          throw new Error('Token refresh failed');
         }
-
-        // 토큰 갱신 요청
-        const response = await axios.post<ApiResponse<{
-          accessToken: string;
-          refreshToken: string;
-          user: { id: string; email: string; role: 'USER' | 'ADMIN' };
-        }>>(
-          `${ENV.API_BASE_URL}/auth/refresh`,
-          { refreshToken }
-        );
-
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data!;
-
-        // 새 토큰 저장 (emailVerified 및 기타 상태는 유지)
-        useAuthStore.getState().setTokens(accessToken, newRefreshToken);
 
         // Socket 재연결 (새 토큰으로 인증)
         console.log('[API] Token refreshed, reconnecting socket with new token...');
