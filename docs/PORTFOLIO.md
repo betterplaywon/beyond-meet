@@ -7,7 +7,8 @@
 **프로젝트 진행 일정**: 2024.11 ~ 2025.01 (약 50일)
 
 **기술 스택**:
-- **Mobile (React Native)**: React Native 0.82, React 19, TypeScript, Zustand, React Query 5, Socket.io-client 4.8, react-native-agora 4.5
+
+- **Mobile (React Native)**: React Native 0.82, React 19, TypeScript, Zustand, React Query 5, Socket.io-client 4.8, react-native-agora 4.5, i18next, react-native-view-shot
 - **Backend (Node.js)**: Express 5, TypeScript, Prisma 6.18, Socket.io 4.8, JWT, Zod 4.1
 - **Infrastructure**: Supabase (PostgreSQL + Storage), Upstash Redis, Agora WebRTC, Firebase FCM, Hugging Face AI, Render
 
@@ -34,11 +35,11 @@ WebRTC는 P2P 영상 통화를 구현하는 표준 기술이지만, NAT Traversa
 
 ⚙ 작업 내용
 
-- **Agora Engine 초기화**: `createAgoraRtcEngine`으로 RTC 엔진 초기화, `ChannelProfileCommunication` 모드로 채널 참가
-- **이벤트 핸들러 등록**: `onJoinChannelSuccess`, `onUserJoined`, `onUserOffline`, `onSnapshotTaken` 등 상태 변화 감지
-- **비디오 렌더링**: `RtcSurfaceView`로 로컬/리모트 영상 표시, 리모트는 전체 화면, 로컬은 우측 상단 PIP (120x160)
-- **플랫폼별 설정**: iOS는 Info.plist 권한 설정, Android는 `PermissionsAndroid.requestMultiple`로 런타임 권한 요청 + 비디오 인코더 설정 (640x480@15fps)
-- **실시간 컨트롤**: 마이크/비디오 토글(`muteLocalAudioStream`, `muteLocalVideoStream`), 카메라 전환(`switchCamera`)
+- **영상 엔진 초기화**: Agora SDK의 영상 처리 엔진을 생성하고, 1:1 통화에 최적화된 모드로 설정. 이 엔진이 카메라 입력 → 인코딩 → 네트워크 전송 → 디코딩 → 화면 출력까지 전 과정을 담당
+- **실시간 이벤트 감지**: 채널 입장 성공, 상대방 입장/퇴장, 스크린샷 완료 등 통화 상태 변화를 콜백 함수로 처리. 각 이벤트 발생 시 UI 상태를 즉시 업데이트
+- **영상 화면 렌더링**: 네이티브 영상 렌더링 컴포넌트를 사용하여 상대방 영상은 전체 화면, 내 영상은 우측 상단 작은 화면(PIP, 120x160px)으로 배치
+- **플랫폼별 권한 처리**: iOS는 앱 설치 시 Info.plist에 명시된 권한 요청, Android는 앱 실행 중 사용자 동의를 받는 런타임 권한 방식 적용. 비디오 인코더는 640x480 해상도, 15fps로 설정하여 품질과 데이터 사용량 균형
+- **실시간 미디어 컨트롤**: 마이크 음소거, 비디오 끄기, 전면/후면 카메라 전환 기능을 버튼 탭으로 즉시 제어
 
 ✅ 성과
 
@@ -50,24 +51,27 @@ WebRTC는 P2P 영상 통화를 구현하는 표준 기술이지만, NAT Traversa
 
 ### 2. AI 기반 실시간 콘텐츠 모더레이션 시스템
 
-사용 기술: Agora takeSnapshot API, Hugging Face Inference API, RNFS, Socket.io
+사용 기술: react-native-view-shot, Hugging Face Inference API, RNFS, Socket.io
 
 🚩 배경 및 목표
 비디오 데이팅 서비스 특성상 부적절한 콘텐츠 노출 위험이 높아 실시간 모니터링이 필수입니다. 수동 모더레이션은 베타 단계에서 불가능하고, 자체 AI 모델 개발은 시간과 비용이 과도하여 Hugging Face의 `Falconsai/nsfw_image_detection` 모델(월 30,000 요청 무료)을 선택했습니다.
 
 ⚙ 작업 내용
 
-- **프레임 캡처 방식 전환**: 초기 `react-native-view-shot` 사용 시 RtcSurfaceView 네이티브 렌더링 계층과 충돌로 캡처 실패 → Agora SDK의 `takeSnapshot` API로 전환
-- **비동기 캡처 처리**: Promise 패턴으로 `onSnapshotTaken` 콜백 래핑, 5초 타임아웃 설정
-- **신뢰도 기반 조치 시스템**: 신뢰도 < 0.3 정상 진행, 0.3-0.6 Socket.io로 경고 전송 + 모달 표시, ≥ 0.6 통화 강제 종료 + 자동 신고
-- **리소스 관리**: 4초 주기 캡처 → Base64 변환 → API 전송 → RNFS로 임시 파일 삭제
-- **Race Condition 방지**: `isCallEndedRef`로 통화 종료 상태 즉시 체크, Alert 대기 중 불필요한 캡처 방지
+- **영상 캡처 방식 진화**: 초기에는 Agora SDK 내장 스크린샷 기능(takeSnapshot)을 사용했으나, 플랫폼별 동작 불일치와 콜백 타이밍 문제가 발생. react-native-view-shot 라이브러리로 전환하여 ViewShot 컴포넌트로 원격 영상 영역을 감싸고 직접 캡처하는 방식으로 개선. Android는 RtcTextureView, iOS는 RtcSurfaceView를 사용하여 플랫폼별 최적화
+- **커스텀 훅으로 로직 분리**: useModeration 훅으로 모더레이션 관련 로직을 VideoCallScreen에서 분리. isCallEndedRef로 통화 종료 상태를 추적하고, isAnalyzingRef로 중복 분석 방지
+- **AI 신뢰도 기반 3단계 조치**: AI가 반환하는 "부적절함 확률"에 따라 차등 대응
+  - 70% 미만: 정상 진행
+  - 70~90%: 상대방에게 경고 모달 표시
+  - 90% 이상: 통화 즉시 강제 종료 + 자동 신고 생성
+- **리소스 관리**: 5초마다 영상 캡처 → 이미지를 텍스트(Base64)로 변환하여 API 전송 → 전송 완료 후 임시 파일 즉시 삭제하여 저장 공간 관리
+- **통화 종료 시 안전 처리**: useCallEnd 훅에서 cleanup 함수를 중앙 관리. 통화 종료 시 모더레이션 interval/timeout을 즉시 정리하여 불필요한 작업 방지
 
 ✅ 성과
 
 - Hugging Face 무료 한도(30k req/month) 내에서 실시간 모더레이션 운영
-- 4초 주기 캡처로 월 평균 사용량 약 15,000 요청 (한도의 50%)
-- 로컬 테스트에서 부적절한 콘텐츠 감지 시 1~2초 이내 경고 표시 확인
+- 5초 주기 캡처로 월 평균 사용량 약 12,000 요청 (한도의 40%)
+- ViewShot 기반 캡처로 iOS/Android 모두 안정적인 영상 프레임 추출
 
 ---
 
@@ -80,17 +84,46 @@ WebRTC는 P2P 영상 통화를 구현하는 표준 기술이지만, NAT Traversa
 
 ⚙ 작업 내용
 
-- **매칭 플로우**: 클라이언트 `match:request` 이벤트 → 서버 매칭 큐 추가 → 10초마다 큐 순회, 성별/연령/국가 필터로 페어링 → 매치 성공 시 Agora 채널 생성 + RTC 토큰 발급 → `match:found` 이벤트로 양측 전달
-- **12개 Socket 이벤트 설계**: Client→Server 7개, Server→Client 5개 (match, call, moderation, friend 도메인)
-- **타임아웃 처리**: 2분 경과 시 매칭 취소 + Toast 알림
-- **Socket 연결 상태 UI**: `socket.isConnected()` 실시간 표시로 네트워크 문제 인지 가능
-- **useSocketEvent 커스텀 훅**: Socket 이벤트 리스너를 컴포넌트 라이프사이클과 연동
+- **매칭 플로우 설계**:
+  1. 사용자가 "랜덤 매칭" 버튼 클릭 → 서버에 매칭 요청 신호 전송
+  2. 서버가 사용자를 대기열에 추가
+  3. 10초마다 대기열을 순회하며 성별/연령/국가 필터로 호환되는 상대 탐색
+  4. 매칭 성공 시 영상통화용 채널 생성 + 인증 토큰 발급
+  5. 양측에게 상대방 정보와 통화 채널 정보 전달
+- **12개 양방향 이벤트 설계**: 클라이언트→서버 7개(매칭 요청/취소, 통화 수락/거절/종료 등), 서버→클라이언트 5개(매칭 대기/성공/실패, 통화 상태 변경 등)
+- **타임아웃 처리**: 2분간 매칭되지 않으면 자동으로 대기 취소 + 사용자에게 Toast 알림
+- **연결 상태 실시간 표시**: 서버와의 연결 상태를 UI에 표시하여 네트워크 문제 발생 시 사용자가 즉시 인지 가능
+- **이벤트 리스너 자동 관리**: useSocketEvent 훅으로 화면 진입 시 이벤트 리스너 등록, 화면 이탈 시 자동 해제. useRef로 callback을 안정화하여 리스너 재등록 방지
+- **AppState 기반 자동 재연결**: useSocketReconnect 훅으로 앱이 백그라운드→포그라운드 전환 시 Socket 연결 상태를 확인하고, 끊어진 경우 ensureConnected()로 자동 재연결. 로그인 상태에서만 작동하도록 isAuthenticated 조건 체크
 
 ✅ 성과
 
 - 평균 10~20초 내 매칭 성공 (2명 동시 매칭 요청 시)
-- Socket.io 자동 재연결 기능으로 네트워크 변화에도 안정적인 매칭 유지
+- AppState 기반 재연결로 백그라운드 복귀 후에도 안정적인 매칭 유지
 - 로컬 테스트에서 동시 매칭 요청 20건 처리 성공
+
+---
+
+### 4. i18next 기반 다국어 지원 시스템
+
+사용 기술: i18next, react-i18next, AsyncStorage, React Native
+
+🚩 배경 및 목표
+글로벌 베타 테스트를 위해 다국어 지원이 필요했습니다. 초기에는 한국어 하드코딩으로 개발했으나, 일본/영어권 사용자 피드백을 위해 다국어 시스템을 도입했습니다. React 생태계에서 가장 널리 사용되는 i18next를 선택하여 학습 비용을 최소화했습니다.
+
+⚙ 작업 내용
+
+- **언어 감지 시스템**: 앱 최초 실행 시 디바이스 언어를 자동 감지. iOS는 SettingsManager.AppleLocale, Android는 I18nManager.localeIdentifier에서 언어 코드 추출. 지원하지 않는 언어면 한국어(ko)를 기본값으로 설정
+- **AsyncStorage 기반 언어 저장**: 사용자가 설정 화면에서 언어를 변경하면 AsyncStorage에 저장. 앱 재시작 시에도 선택한 언어 유지. languageDetector 플러그인으로 i18next 초기화 시 저장된 언어 자동 로드
+- **계층적 번역 키 구조**: 300개 이상의 번역 키를 도메인별로 분류 (common, auth, welcome, register, call, profile, friends, admin 등). 예: `t('call.waitingForOther')`, `t('auth.loginSubtitle')`
+- **3개 언어 지원**: 한국어(ko), 영어(en), 일본어(ja). 각 언어별 JSON 파일로 번역 관리. fallbackLng을 'ko'로 설정하여 번역 누락 시 한국어 표시
+- **언어 변경 컴포넌트**: LanguageSelector 컴포넌트로 설정 화면에서 언어 즉시 전환. changeLanguage 함수가 i18n.changeLanguage()와 AsyncStorage 저장을 동시에 처리
+
+✅ 성과
+
+- 한국어, 영어, 일본어 3개 언어 완전 지원
+- 디바이스 언어 자동 감지로 첫 사용자 경험 개선
+- 앱 전체 300개 이상 문자열의 일관된 다국어 적용
 
 ---
 
@@ -98,7 +131,7 @@ WebRTC는 P2P 영상 통화를 구현하는 표준 기술이지만, NAT Traversa
 
 ---
 
-### 4. Axios Interceptor 기반 자동 토큰 갱신
+### 5. Axios Interceptor 기반 자동 토큰 갱신
 
 사용 기술: Axios, Zustand, JWT, React Query
 
@@ -107,11 +140,14 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ⚙ 작업 내용
 
-- **Request Interceptor**: Zustand의 `useAuthStore`에서 `accessToken`을 읽어 모든 요청에 `Bearer` 헤더 자동 추가
-- **Response Interceptor**: 401 에러 감지 시 `refreshToken`으로 `/auth/refresh` 요청 → 새 토큰 Zustand 저장 → 실패한 원본 요청 재시도
-- **무한 루프 방지**: `originalRequest._retry` 플래그로 첫 번째 요청만 토큰 갱신
-- **에러 파싱 헬퍼**: `parseApiError`로 Axios 에러를 사용자 친화적 메시지로 변환
-- **전역 에러 핸들러**: 토큰 갱신 실패 시 React Query 전역 핸들러에서 로그아웃 처리
+- **요청 인터셉터**: 모든 API 요청이 서버로 전송되기 전에 가로채서, 저장된 Access Token을 HTTP 헤더에 자동 추가. 개별 API 함수에서 토큰 처리 코드 불필요
+- **응답 인터셉터**: 서버가 401(인증 실패) 응답을 보내면 자동으로:
+  1. Refresh Token으로 새 Access Token 발급 요청
+  2. 새 토큰을 상태에 저장
+  3. 실패했던 원본 요청을 새 토큰으로 재시도
+- **무한 루프 방지**: 재시도 플래그를 설정하여 "토큰 갱신 실패 → 재시도 → 또 실패 → 재시도..."의 무한 반복 차단. 한 번 재시도 후에도 실패하면 에러로 처리
+- **에러 메시지 변환**: 서버에서 오는 기술적 에러 메시지를 "비밀번호가 일치하지 않습니다" 같은 사용자 친화적 메시지로 변환
+- **전역 에러 처리**: 토큰 갱신마저 실패하면(Refresh Token도 만료) 자동으로 로그아웃 처리하여 로그인 화면으로 이동
 
 ✅ 성과
 
@@ -121,7 +157,7 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ---
 
-### 5. Prisma Serializable Transaction으로 Race Condition 방지
+### 6. Prisma Serializable Transaction으로 Race Condition 방지
 
 사용 기술: Prisma ORM, PostgreSQL, TypeScript
 
@@ -130,10 +166,10 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ⚙ 작업 내용
 
-- **Serializable Isolation Level 적용**: Prisma의 `$transaction` 메서드에 `{ isolationLevel: 'Serializable' }` 옵션 추가
-- **동작 방식**: 트랜잭션 간 완전한 격리 보장, 동시 트랜잭션이 순차적으로 실행된 것과 동일한 결과 제공
-- **PostgreSQL SSI**: Serializable Snapshot Isolation 알고리즘으로 충돌 감지 시 재시도
-- **트레이드오프 판단**: Serializable은 가장 느린 격리 수준이지만, 베타 환경에서 초당 1~2건 회원가입 예상으로 성능보다 정합성 우선
+- **문제 상황**: 동시에 여러 사용자가 회원가입 시도 시, "현재 가입자 수 확인 → 새 사용자 생성" 사이의 시간 차 동안 다른 요청이 끼어들어 20명 제한을 초과할 수 있음
+- **해결책 - 최고 격리 수준 적용**: Prisma 트랜잭션에 Serializable(직렬화) 격리 수준 적용. 동시에 실행되는 트랜잭션들이 마치 순차적으로 실행된 것처럼 결과를 보장
+- **동작 원리**: 데이터베이스가 트랜잭션 시작 시점의 데이터 스냅샷을 기준으로 작업하고, 커밋 시점에 충돌이 감지되면 나중 트랜잭션을 자동으로 롤백 후 재시도
+- **트레이드오프 판단**: Serializable은 가장 느린 격리 수준이지만, 베타 환경(초당 1~2건 회원가입)에서는 성능보다 데이터 정합성이 중요하다고 판단
 
 ✅ 성과
 
@@ -143,7 +179,7 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ---
 
-### 6. Controller-Service 패턴 백엔드 아키텍처
+### 7. Controller-Service 패턴 백엔드 아키텍처
 
 사용 기술: Express 5, TypeScript, Zod, Prisma
 
@@ -152,11 +188,11 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ⚙ 작업 내용
 
-- **얇은 컨트롤러**: 요청 파라미터 추출 + 서비스 호출 + 응답 포맷팅만 담당
-- **서비스 레이어**: 모든 비즈니스 로직, DB 쿼리, 외부 API 호출 처리 (함수형 접근)
-- **Zod 입력 검증**: 컨트롤러 진입 시점에 스키마 검증, `formatZodError`로 사용자 친화적 에러 메시지
-- **일관된 응답 포맷**: `{ success: true, data: {...} }` / `{ success: false, error: {...} }`
-- **전역 에러 핸들러**: `AppError` 클래스로 상태 코드 + 에러 코드 + 메시지 통합 관리
+- **얇은 컨트롤러 원칙**: 컨트롤러는 3가지만 담당 - (1) 요청에서 필요한 데이터 추출, (2) 서비스 함수 호출, (3) 응답 형식 맞추기. 실제 비즈니스 로직은 컨트롤러에 작성하지 않음
+- **서비스 레이어 분리**: 모든 비즈니스 로직(회원가입 검증, 매칭 알고리즘 등), DB 쿼리, 외부 API 호출은 서비스 파일에서 처리. 컨트롤러와 분리하여 테스트 용이성 확보
+- **입력 검증 (Zod 스키마)**: API 요청 데이터를 미리 정의한 스키마로 검증. 검증 실패 시 "이메일 형식이 올바르지 않습니다" 같은 구체적 에러 메시지 생성
+- **일관된 응답 포맷**: 모든 API가 동일한 구조로 응답 - 성공 시 `{ success: true, data: {...} }`, 실패 시 `{ success: false, error: { code, message } }`
+- **전역 에러 핸들러**: 커스텀 에러 클래스로 HTTP 상태 코드(400, 401, 500 등) + 에러 코드(EMAIL_EXISTS 등) + 사용자 메시지를 통합 관리. 예상치 못한 에러도 일관된 형식으로 응답
 
 ✅ 성과
 
@@ -166,7 +202,7 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ---
 
-### 7. React Query 캐싱 최적화
+### 8. React Query 캐싱 최적화
 
 사용 기술: TanStack React Query 5, TypeScript, Zustand
 
@@ -175,11 +211,11 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ⚙ 작업 내용
 
-- **Query Key Factory 패턴**: `queryKeys.profile.me()`, `queryKeys.friends.list(userId)` 등 계층적 구조로 중앙 관리
-- **계층적 무효화**: `invalidateQueries({ queryKey: ['profile'] })` 호출 시 모든 프로필 쿼리 무효화
-- **Stale Time 설정**: 프로필 5분, 친구 목록 3분, 통화 기록 1분 캐시 유지
-- **Mutation 후 선택적 Invalidation**: 프로필 수정 시 `queryKeys.profile.me()`만 무효화
-- **placeholderData**: 이전 데이터 유지하며 백그라운드 갱신으로 깜빡임 방지
+- **쿼리 키 중앙 관리**: API 데이터를 식별하는 키를 한 곳에서 관리. 예: 내 프로필은 `['profile', 'me']`, 친구 목록은 `['friends', 'list', userId]`. 계층 구조로 관련 데이터를 그룹화
+- **계층적 캐시 무효화**: 프로필 관련 캐시 전체를 무효화하고 싶을 때 `['profile']` 키만 지정하면 `['profile', 'me']`, `['profile', 'detail', userId]` 등 모든 하위 캐시가 한 번에 갱신됨
+- **데이터별 캐시 시간 차별화**: 자주 변경되지 않는 프로필은 5분, 친구 목록은 3분, 실시간성이 중요한 통화 기록은 1분간 캐시 유지
+- **수정 후 선택적 갱신**: 프로필 수정 후 내 프로필 캐시만 무효화 → 관련 없는 친구 목록까지 불필요하게 재조회하지 않음
+- **깜빡임 없는 로딩**: 새 데이터를 불러오는 동안에도 이전 데이터를 화면에 유지하여 로딩 중 화면이 비어 보이는 현상 방지
 
 ✅ 성과
 
@@ -193,7 +229,7 @@ JWT 기반 인증에서 Access Token은 보안을 위해 1시간 유효 기간�
 
 ---
 
-### 8. React Native CLI iOS/Android 플랫폼 관리
+### 9. React Native CLI iOS/Android 플랫폼 관리
 
 사용 기술: React Native CLI, CocoaPods, Gradle, TypeScript
 
@@ -202,10 +238,10 @@ React Native는 네이티브 코드를 추상화하지만, 각 플랫폼의 빌�
 
 ⚙ 작업 내용
 
-- **iOS 모듈 충돌 해결**: React Native 0.82 업그레이드 후 `React-RuntimeCore`와 `React-jsitooling` 모듈 간 네임스페이스 충돌 발생
-- **Podfile post_install 훅 8단계 스크립트**: modulemap 파일 수정, 중복 모듈 삭제, `-Xcc` 플래그 중복 제거, xcconfig 파일 정리
-- **Android SDK 버전 통일**: compileSdk 36, targetSdk 36, minSdk 24, Kotlin 2.1.20 통일
-- **환경 변수 플랫폼 분기**: `Platform.select`로 iOS는 `localhost:5000`, Android는 `10.0.2.2:5000` (에뮬레이터 호스트)
+- **iOS 모듈 충돌 해결**: React Native 0.82 업그레이드 후 내부 모듈 간 이름 충돌로 빌드 실패 발생. 같은 이름의 모듈이 두 곳에서 정의되어 컴파일러가 혼란
+- **자동 수정 스크립트 적용**: iOS 의존성 설치(pod install) 후 자동으로 8단계 정리 스크립트 실행 - 충돌 원인 파일 삭제, 중복 설정 제거, 컴파일러 플래그 정리. 매번 수동 수정 불필요
+- **Android SDK 버전 통일**: Agora, Firebase 등 여러 네이티브 라이브러리가 요구하는 Android SDK 버전이 달라 빌드 오류 발생. compileSdk 36, targetSdk 36, minSdk 24, Kotlin 2.1.20으로 모든 라이브러리 호환 버전 통일
+- **개발 환경 자동 분기**: iOS 시뮬레이터와 Android 에뮬레이터가 로컬 서버에 접속하는 주소가 다름(iOS: localhost, Android: 10.0.2.2). 플랫폼 감지하여 자동으로 올바른 주소 설정
 
 ✅ 성과
 
@@ -215,7 +251,7 @@ React Native는 네이티브 코드를 추상화하지만, 각 플랫폼의 빌�
 
 ---
 
-### 9. 6개 무료 티어 서비스 통합 ($0/월 운영)
+### 10. 6개 무료 티어 서비스 통합 ($0/월 운영)
 
 사용 기술: Supabase, Upstash, Agora, Firebase, Hugging Face, Render
 
@@ -224,10 +260,16 @@ React Native는 네이티브 코드를 추상화하지만, 각 플랫폼의 빌�
 
 ⚙ 작업 내용
 
-- **서비스 선정 기준**: 무료 한도 충분성(20명 베타 + 2배 여유), 프로덕션 전환 가능성, 개발자 친화성, 안정성(Uptime SLA 99%+)
-- **통합 서비스**: Supabase (500MB DB, 1GB Storage), Upstash (10k commands/day), Agora (10k min/month), Firebase FCM (unlimited), Hugging Face (30k req/month), Render (750 hours/month)
-- **비용 절감 전략**: AI 모더레이션 4초 주기 캡처(3초→4초로 25% 요청 감소), Render Keep-alive 스크립트(GitHub Actions 5분마다 헬스 체크)
-- **모니터링**: 각 서비스 대시보드에서 주간 사용량 체크, 한도 80% 도달 시 알림 설정
+- **서비스 선정 4가지 기준**: (1) 무료 한도가 20명 베타 기준 2배 이상 여유, (2) 향후 유료 전환 가능(프로덕션 확장 대비), (3) 개발자 친화적 문서와 SDK 제공, (4) 99% 이상 가동률 보장
+- **통합 서비스 구성**:
+  - Supabase: PostgreSQL 데이터베이스(500MB) + 프로필 사진 저장소(1GB)
+  - Upstash: Redis 캐시(토큰, 세션 저장) - 일 10,000 명령
+  - Agora: WebRTC 영상 통화 - 월 10,000분
+  - Firebase: 푸시 알림(FCM) - 무제한
+  - Hugging Face: AI 콘텐츠 분석 - 월 30,000 요청
+  - Render: Node.js 서버 호스팅 - 월 750시간
+- **비용 최적화 전략**: AI 캡처 주기를 3초→4초로 변경하여 API 요청 25% 감소. 무료 서버의 자동 절전 모드(15분 미사용 시 중지) 대응을 위해 5분마다 자동 헬스체크 요청
+- **사용량 모니터링**: 각 서비스 대시보드에서 주간 체크, 무료 한도 80% 도달 시 알림 설정하여 사전 대응
 
 ✅ 성과
 
@@ -241,7 +283,7 @@ React Native는 네이티브 코드를 추상화하지만, 각 플랫폼의 빌�
 
 ---
 
-### 10. 첫 백엔드 개발 경험
+### 11. 첫 백엔드 개발 경험
 
 사용 기술: Node.js, Express 5, Prisma ORM, Socket.io, JWT, TypeScript
 
@@ -250,11 +292,11 @@ React Native는 네이티브 코드를 추상화하지만, 각 플랫폼의 빌�
 
 ⚙ 작업 내용
 
-- **Node.js/Express 서버 구조 이해**: 미들웨어 체인 개념, 라우팅 구조, `next()` 함수로 미들웨어 연결
-- **Prisma ORM 스키마 설계**: ERD 설계(9개 모델), 관계 설정(1:N, N:M, Self-referencing), 인덱스 최적화
-- **JWT 인증 플로우 구현**: Access Token(1시간) + Refresh Token(7일) 이중 구조, 토큰 검증 미들웨어
-- **Socket.io 실시간 통신 설계**: 이벤트 기반 아키텍처, Socket Authentication, Room 개념 활용
-- **AI 도움 활용**: DB 인덱싱, Redis 캐싱 전략은 Claude 제안 코드를 분석하고 학습하는 방식으로 진행
+- **Express 미들웨어 체인 이해**: HTTP 요청이 여러 처리 함수(미들웨어)를 순차적으로 통과하는 구조 학습. 인증 확인 → 입력 검증 → 비즈니스 로직 → 에러 처리 순서로 요청 흐름 설계
+- **데이터베이스 스키마 설계**: 9개 데이터 모델(User, MatchSession, CallRecord 등) 정의. 테이블 간 관계 설정 - 1:N(사용자-통화기록), N:M(친구 관계), 자기 참조(같은 테이블 내 친구 관계). 자주 조회되는 컬럼에 인덱스 추가하여 쿼리 성능 최적화
+- **JWT 이중 토큰 구조 구현**: Access Token(1시간, API 인증용)과 Refresh Token(7일, 토큰 갱신용) 분리. 짧은 Access Token으로 탈취 시 피해 최소화, 긴 Refresh Token으로 사용 편의성 확보
+- **Socket.io 실시간 통신 설계**: HTTP와 달리 서버↔클라이언트 양방향 즉시 통신 가능. Room 개념을 활용하여 특정 사용자 그룹(매칭된 두 사람)에게만 이벤트 전송
+- **AI 도움 활용**: DB 인덱싱 전략, Redis 캐싱 패턴 등 경험 없는 영역은 Claude가 제안한 코드를 분석하고 원리를 학습하는 방식으로 진행
 
 ✅ 성과
 
@@ -262,3 +304,28 @@ React Native는 네이티브 코드를 추상화하지만, 각 플랫폼의 빌�
 - 프론트엔드-백엔드 간 협업 이해도 향상
 - 6개 외부 서비스 통합 경험
 - 1인 풀스택 프로젝트 완수 경험 (기획 → 설계 → 개발 → 배포)
+
+---
+
+### 12. 어드민 대시보드 풀스택 구현
+
+사용 기술: Express 5, Prisma, React Native, React Query 5, Zustand
+
+🚩 배경 및 목표
+베타 운영 중 AI 모더레이션 결과 확인, 사용자 신고 관리, 서비스 통계 조회가 필요했습니다. 별도 웹 어드민을 만들기보다 모바일 앱 내 조건부 탭으로 구현하여 개발 비용을 절감했습니다.
+
+⚙ 작업 내용
+
+- **권한 검증 이중 체크**: (1) DB에 저장된 사용자 역할(role) 필드 확인, (2) 환경변수에 등록된 관리자 이메일 목록과 대조. 둘 중 하나라도 만족하면 관리자 권한 부여 (fallback 보장)
+- **통계 API 병렬 처리**: 5개 통계(총 사용자 수, 활성 사용자, 총 통화 수, 평균 통화 시간, 신고 건수)를 동시에 조회. 순차 실행 대비 약 5배 빠른 응답
+- **AI 모더레이션 로그 조회**: 콘텐츠 분석 결과(신뢰도 점수) + 취해진 조치(정상/경고/강제종료) 기록을 필터링하여 조회
+- **신고 관리 UI**: 신고 상태별 필터링(대기중/검토중/처리완료/기각) 지원. 각 상태에 맞는 색상 배지로 시각적 구분
+- **무한 스크롤 페이지네이션**: 스크롤 시 다음 페이지 데이터를 자동으로 불러오며, 이전 데이터는 그대로 유지. 전체 목록을 한 번에 불러오지 않아 초기 로딩 속도 향상
+- **조건부 네비게이션**: 관리자 여부 확인 후 어드민 탭을 동적으로 표시/숨김. 일반 사용자에게는 탭 자체가 보이지 않음
+- **요청 횟수 제한**: 어드민 API에 15분당 50회 요청 제한 적용. 자동화 공격이나 실수로 인한 서버 과부하 방지
+
+✅ 성과
+
+- 별도 웹 어드민 없이 모바일 앱 내에서 관리 기능 제공
+- AI 모더레이션 결과 실시간 확인 및 신고 내역 관리 가능
+- Role 기반 접근 제어로 일반 사용자 접근 차단

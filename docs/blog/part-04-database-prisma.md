@@ -662,66 +662,210 @@ enum CallEventType {
 
 ## 🔗 Step 4: 관계형 데이터 모델링 이해하기
 
-### 4-1. 1:N 관계가 뭔가?
+스키마를 작성하면서 "관계"라는 개념이 계속 나왔다. 처음엔 왜 필요한지 몰랐는데, 직접 부딪히면서 이해하게 됐다.
 
-"User → CallRecord" 관계를 보다가 1:N이라는 용어를 처음 알았다.
+### 4-1. 왜 "관계"가 필요한가?
 
-- **1:N**: 한 명의 User가 여러 CallRecord를 가질 수 있다
-- 예: User A가 10번 통화했으면 CallRecord 10개
+처음에는 모든 데이터를 한 테이블에 넣으면 되지 않나? 싶었다.
 
-그런데 통화는 caller와 receiver가 있어서 관계가 2개다. Prisma에서는 이렇게 표현한다:
+예를 들어, 통화 기록을 이렇게 저장한다고 해보자:
 
-```prisma
-// User 모델에서
-callsAsCaller    CallRecord[]   @relation("CallerCalls")
-callsAsReceiver  CallRecord[]   @relation("ReceiverCalls")
-
-// CallRecord 모델에서
-caller          User      @relation("CallerCalls", fields: [callerId], references: [id])
-receiver        User      @relation("ReceiverCalls", fields: [receiverId], references: [id])
+```
+| 통화ID | 발신자이름 | 발신자이메일      | 수신자이름 | 수신자이메일      | 통화시간 |
+|--------|------------|-------------------|------------|-------------------|----------|
+| 1      | 철수       | cs@test.com       | 영희       | yh@test.com       | 300초    |
+| 2      | 철수       | cs@test.com       | 민수       | ms@test.com       | 120초    |
+| 3      | 철수       | cs@test.com       | 영희       | yh@test.com       | 450초    |
 ```
 
-`@relation("CallerCalls")`로 이름을 명시해야 Prisma가 구분할 수 있다.
+**문제점**:
 
-### 4-2. N:M 관계와 자기 참조
+- 철수의 이메일이 3번 중복 저장됨 (저장 공간 낭비)
+- 철수가 이메일을 바꾸면 3개 행을 모두 수정해야 함 (수정 누락 위험)
+- 영희 정보도 2번 중복됨
 
-친구 관계는 더 복잡했다. User ↔ User 관계인데, 이걸 **자기 참조 관계**라고 한다.
+**해결책 - 테이블 분리**:
+
+```
+[users 테이블]
+| id  | 이름 | 이메일          |
+|-----|------|-----------------|
+| U1  | 철수 | cs@test.com     |
+| U2  | 영희 | yh@test.com     |
+| U3  | 민수 | ms@test.com     |
+
+[call_records 테이블]
+| id | caller_id | receiver_id | 통화시간 |
+|----|-----------|-------------|----------|
+| 1  | U1        | U2          | 300초    |
+| 2  | U1        | U3          | 120초    |
+| 3  | U1        | U2          | 450초    |
+```
+
+이렇게 하면:
+
+- 사용자 정보는 한 번만 저장
+- 이메일 변경 시 users 테이블만 수정
+- `caller_id`로 users 테이블을 **참조** → 이게 바로 "관계"
+
+### 4-2. 1:N (일대다) 관계
+
+**개념**: 한쪽이 여러 개를 가질 수 있는 관계
+
+가장 흔한 관계 유형이다. "User → CallRecord" 관계를 보다가 1:N이라는 용어를 처음 알았다.
+
+```
+┌──────────────┐              ┌──────────────────┐
+│     User     │              │    CallRecord    │
+├──────────────┤              ├──────────────────┤
+│ id (PK)      │◀────────┐    │ id (PK)          │
+│ email        │         ├────│ callerId (FK)    │
+│ nickname     │         │    │ receiverId (FK)  │
+│ ...          │         │    │ duration         │
+│              │◀────────┘    │ ...              │
+└──────────────┘              └──────────────────┘
+
+        1                              N
+   (한 명의 User)            (여러 개의 CallRecord)
+```
+
+- **PK (Primary Key)**: 각 행을 고유하게 식별하는 키
+- **FK (Foreign Key)**: 다른 테이블의 PK를 참조하는 키
+
+**Beyond Meet 예시**:
+
+- User A가 10번 통화했으면 → CallRecord 10개가 User A를 참조
+- 그런데 통화는 **caller(발신자)**와 **receiver(수신자)**가 있어서 관계가 2개다
 
 ```prisma
-// User 모델에서
-friendships      Friendship[]   @relation("UserFriendships")
-friends          Friendship[]   @relation("FriendOf")
+// User 모델에서 - 배열([])은 "여러 개를 가질 수 있다"는 의미
+callsAsCaller    CallRecord[]   @relation("CallerCalls")    // 내가 건 통화들
+callsAsReceiver  CallRecord[]   @relation("ReceiverCalls")  // 내가 받은 통화들
+
+// CallRecord 모델에서 - 단일 User를 참조
+caller    User   @relation("CallerCalls", fields: [callerId], references: [id])
+receiver  User   @relation("ReceiverCalls", fields: [receiverId], references: [id])
+```
+
+**`@relation("CallerCalls")`는 왜 필요한가?**
+
+같은 두 테이블 사이에 관계가 여러 개면 Prisma가 구분을 못 한다. 이름을 붙여서 "이 관계는 발신자용, 저 관계는 수신자용"이라고 알려주는 것이다.
+
+### 4-3. 자기 참조 관계 (Self-Relation)
+
+**개념**: 같은 테이블 내에서 서로를 참조하는 관계
+
+친구 관계를 설계할 때 막막했다. User와 User 사이의 관계인데, 어떻게 표현하지?
+
+```
+"철수의 친구는 영희다"
+
+철수(User) ──친구──▶ 영희(User)
+   │                    │
+   └── 같은 테이블 ──────┘
+```
+
+이걸 **자기 참조 관계**라고 한다. 해결책은 **중간 테이블**을 만드는 것이다.
+
+```
+┌──────────────┐           ┌──────────────────┐
+│     User     │           │    Friendship    │
+├──────────────┤           ├──────────────────┤
+│ id (PK)      │◀──────────│ userId (FK)      │  "누가"
+│ nickname     │           │ friendId (FK)    │  "누구를" 친구 추가했는지
+│ ...          │◀──────────│ createdAt        │
+└──────────────┘           └──────────────────┘
+```
+
+**데이터 예시**:
+
+```
+[Friendship 테이블]
+| id | userId | friendId | createdAt  |
+|----|--------|----------|------------|
+| 1  | 철수   | 영희     | 2024-01-01 |  → 철수가 영희를 친구 추가
+| 2  | 영희   | 철수     | 2024-01-02 |  → 영희가 철수를 친구 추가 (양방향)
+| 3  | 철수   | 민수     | 2024-01-03 |  → 철수가 민수를 친구 추가
+```
+
+**Prisma 코드**:
+
+```prisma
+// User 모델에서 - 양방향 조회를 위해 2개의 관계 정의
+friendships   Friendship[]   @relation("UserFriendships")  // 내가 추가한 친구들
+friends       Friendship[]   @relation("FriendOf")         // 나를 추가한 사람들
 
 // Friendship 모델에서
-user            User      @relation("UserFriendships", fields: [userId], references: [id])
-friend          User      @relation("FriendOf", fields: [friendId], references: [id])
+user    User   @relation("UserFriendships", fields: [userId], references: [id])
+friend  User   @relation("FriendOf", fields: [friendId], references: [id])
 ```
 
 처음엔 "왜 이렇게 복잡하게 해야 하지?" 싶었다. 그런데 이렇게 하면:
 
-- `user.friendships`: 내가 추가한 친구 목록
-- `user.friends`: 나를 친구로 추가한 사람 목록
+```typescript
+// 철수가 추가한 친구 목록 조회
+const 철수 = await prisma.user.findUnique({
+  where: { nickname: "철수" },
+  include: { friendships: true }, // 영희, 민수
+});
+
+// 철수를 친구로 추가한 사람들 조회
+const 철수 = await prisma.user.findUnique({
+  where: { nickname: "철수" },
+  include: { friends: true }, // 영희
+});
+```
 
 양방향으로 조회할 수 있었다.
 
-### 4-3. Nullable 관계 (GDPR 대응)
+### 4-4. Nullable 관계 (GDPR 대응)
 
 Report 모델을 보면 `String?`로 nullable 필드가 많다:
 
 ```prisma
-reporterId      String?      // nullable
+reporterId      String?      // nullable (값이 없을 수 있음)
 reportedUserId  String?      // nullable
 
 reporter        User?        @relation(..., onDelete: SetNull)
 reportedUser    User?        @relation(..., onDelete: SetNull)
 ```
 
-왜 nullable로 했을까? 찾아보니 **GDPR 대응** 때문이었다.
+**왜 nullable로 했을까?**
 
-- 사용자가 "내 정보 삭제해줘"라고 요청하면 User 레코드를 지워야 함
-- 하지만 Report는 증거로 남겨야 함
-- `onDelete: SetNull`로 설정하면 User 삭제 시 reporterId만 null로 바뀜
-- 신고 기록은 유지되되, 사용자 정보는 익명화됨
+찾아보니 **GDPR(개인정보보호법) 대응** 때문이었다.
+
+```
+[시나리오]
+1. 철수가 영희를 신고함 → Report 레코드 생성 (reporterId: 철수)
+2. 철수가 "내 계정 삭제해줘" 요청
+3. 철수의 User 레코드 삭제 필요
+
+[문제]
+- Report는 증거로 남겨야 함
+- 하지만 Report.reporterId가 철수를 참조하고 있음
+- 철수를 삭제하면 참조 무결성 오류 발생!
+
+[해결: onDelete: SetNull]
+- 철수 삭제 시 reporterId만 null로 변경
+- Report 기록은 유지 (신고 내용, 시간 등)
+- 단, "누가 신고했는지"는 익명화됨
+```
+
+```
+Before: { reporterId: "철수ID", reason: "부적절한 행동", ... }
+After:  { reporterId: null, reason: "부적절한 행동", ... }
+```
+
+신고 기록은 유지되되, 사용자 정보는 익명화된다.
+
+### 4-5. 관계 유형 정리
+
+| 관계 유형 | 설명 | Beyond Meet 예시 |
+|-----------|------|------------------|
+| **1:1** | 하나가 하나만 가짐 | (이 프로젝트에선 미사용) |
+| **1:N** | 하나가 여러 개를 가짐 | User → CallRecord, User → DeviceToken |
+| **N:M** | 여러 개가 여러 개를 가짐 | User ↔ User (Friendship 중간 테이블) |
+| **자기 참조** | 같은 테이블 내 참조 | Friendship, BlockList |
 
 ---
 

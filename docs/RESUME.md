@@ -6,7 +6,7 @@
 
 **프로젝트 기간:** 2024.11.06 ~ 2025.01.14
 
-**기술 스택:** React Native 0.82, React 19, TypeScript, Zustand, React Query 5, Socket.io, Node.js, Express 5, Prisma 6, Supabase, Agora WebRTC
+**기술 스택:** React Native 0.82, React 19, TypeScript, Zustand, React Query 5, Socket.io, i18next, Node.js, Express 5, Prisma 6, Supabase, Agora WebRTC
 
 **개발 인원:** 1인 (풀스택)
 
@@ -23,46 +23,54 @@ $0/월 인프라로 베타 운영 중
 
 ### 1. Agora SDK 기반 WebRTC 영상 통화 구현
 
-React Native 환경에서 Agora SDK를 활용하여 P2P 영상 통화 시스템을 구현했습니다. `RtcSurfaceView`로 PIP 방식 이중 화면을 구성하고, Platform별 비디오 인코더 및 네이티브 권한 처리를 적용하여 5분간 안정적인 화상 통화를 제공합니다.
+React Native 환경에서 Agora SDK를 활용하여 P2P 영상 통화 시스템을 구현했습니다. 영상 처리 엔진이 카메라 입력부터 네트워크 전송, 화면 출력까지 전 과정을 담당하며, 상대방 영상은 전체 화면, 내 영상은 우측 상단 PIP(120x160px)로 배치했습니다. iOS/Android 플랫폼별 권한 처리와 비디오 인코더 최적화(640x480@15fps)로 5분간 안정적인 화상 통화를 제공합니다.
 
 ### 2. AI 기반 실시간 콘텐츠 모더레이션 시스템
 
-Agora `takeSnapshot` API와 Hugging Face NSFW Detection을 결합하여 통화 중 부적절한 콘텐츠를 실시간 탐지하는 시스템을 구현했습니다. 신뢰도 기반 조치 시스템(경고/강제 종료)과 Race Condition 방지 로직으로 Hugging Face 무료 한도 내 안정적 운영을 달성했습니다.
+react-native-view-shot 라이브러리와 Hugging Face NSFW Detection을 결합하여 통화 중 부적절한 콘텐츠를 실시간 탐지하는 시스템을 구현했습니다. 초기에는 Agora SDK 내장 스크린샷 기능을 사용했으나, 네이티브 레이어 영상 캡처 한계로 ViewShot 기반 캡처 방식으로 전환했습니다. AI가 반환하는 "부적절함 확률"에 따라 3단계 차등 대응(70% 미만: 정상, 70~90%: 경고 모달, 90% 이상: 강제 종료+자동 신고)을 적용하고, 통화 종료 시 불필요한 캡처/분석을 즉시 중단하는 안전 처리 로직으로 Hugging Face 무료 한도 내 안정적 운영을 달성했습니다.
 
 ### 3. Socket.io 기반 실시간 매칭 시스템
 
-WebSocket으로 실시간 매칭 상태를 동기화하고, 서버 사이드 주기적 매칭 알고리즘(10초 주기)과 결합하여 평균 10~20초 내 매칭을 제공합니다. 12개 Socket 이벤트 설계, 2분 타임아웃 처리, 연결 상태 UI로 UX 일관성을 확보했습니다.
+WebSocket으로 실시간 매칭 상태를 동기화하고, 서버가 10초마다 대기열을 순회하며 성별/연령/국가 필터로 호환되는 상대를 탐색하여 평균 10~20초 내 매칭을 제공합니다. 12개 양방향 이벤트 설계(클라이언트→서버 7개, 서버→클라이언트 5개), 2분 타임아웃 자동 취소, 연결 상태 실시간 UI 표시, 커스텀 훅을 통한 이벤트 리스너 자동 관리로 메모리 누수를 방지했습니다. AppState 기반 자동 재연결 훅(useSocketReconnect)으로 백그라운드→포그라운드 전환 시 끊어진 연결을 자동 복구합니다.
+
+### 4. i18next 기반 다국어 지원 시스템
+
+한국어, 영어, 일본어 3개 언어를 지원하는 다국어 시스템을 구현했습니다. 디바이스 언어 자동 감지, AsyncStorage 기반 사용자 선택 언어 저장, useTranslation 훅으로 전체 앱에 일관된 번역 적용, 설정 화면에서 언어 즉시 전환 기능을 제공합니다. 300개 이상의 번역 키를 계층 구조(common, auth, call, profile 등)로 관리하여 유지보수성을 확보했습니다.
 
 ## 시스템 설계
 
-### 4. Axios Interceptor 기반 자동 토큰 갱신
+### 5. Axios Interceptor 기반 자동 토큰 갱신
 
-JWT 토큰 만료 시 자동 재발급 및 요청 재시도 로직을 구현했습니다. Request/Response Interceptor 패턴으로 모든 요청에 토큰 자동 추가, `_retry` 플래그로 무한 루프 방지, 토큰 갱신 실패 시 전역 로그아웃 처리를 적용했습니다.
+JWT 토큰 만료 시 자동 재발급 및 요청 재시도 로직을 구현했습니다. 요청 인터셉터로 모든 API 요청에 토큰 자동 추가, 응답 인터셉터로 401 에러 시 Refresh Token으로 새 토큰 발급 → 원본 요청 재시도를 처리합니다. 재시도 플래그로 무한 루프 방지, 서버 에러 메시지를 사용자 친화적 메시지로 변환, 토큰 갱신 실패 시 자동 로그아웃 처리를 적용했습니다.
 
-### 5. Prisma Serializable Transaction으로 Race Condition 방지
+### 6. Prisma Serializable Transaction으로 Race Condition 방지
 
-베타 20명 제한 환경에서 동시 가입 요청 시 제한 초과를 방지하기 위해 Prisma Serializable Isolation Level 트랜잭션을 적용했습니다. 동시 요청 부하 테스트에서 정확히 제한 인원까지만 가입을 허용합니다.
+베타 20명 제한 환경에서 동시 가입 요청 시 "현재 가입자 수 확인 → 새 사용자 생성" 사이에 다른 요청이 끼어드는 문제를 방지하기 위해 Prisma Serializable(직렬화) 격리 수준을 적용했습니다. 동시 트랜잭션이 순차 실행된 것처럼 결과를 보장하며, 동시 요청 부하 테스트에서 정확히 제한 인원까지만 가입을 허용합니다.
 
-### 6. Controller-Service 패턴 백엔드 아키텍처
+### 7. Controller-Service 패턴 백엔드 아키텍처
 
-비즈니스 로직을 서비스 레이어로 분리하여 유지보수성과 테스트 용이성을 확보했습니다. 8개 도메인(auth, user, match, call, friends, admin, moderation, push)을 명확히 분리하고, Zod 스키마 기반 입력 검증과 일관된 응답 포맷을 적용했습니다.
+얇은 컨트롤러 원칙(데이터 추출, 서비스 호출, 응답 포맷팅만 담당)을 적용하고 비즈니스 로직을 서비스 레이어로 분리하여 유지보수성과 테스트 용이성을 확보했습니다. Zod 스키마로 입력 검증, 일관된 응답 포맷({ success, data/error }), 전역 에러 핸들러로 HTTP 상태 코드+에러 코드+메시지 통합 관리를 구현했습니다. 8개 도메인(auth, user, match, call, friends, admin, moderation, push)을 명확히 분리했습니다.
 
-### 7. React Query 캐싱 최적화
+### 8. React Query 캐싱 최적화
 
-서버 상태 관리를 React Query로 전환하고, Query Key Factory 패턴으로 계층적 캐시 관리를 구현했습니다. Stale Time 설정과 Mutation 후 선택적 Invalidation으로 화면 전환 시 불필요한 재조회를 제거하여 네트워크 요청 약 40% 감소를 달성했습니다.
+서버 상태 관리를 React Query로 전환하고, 쿼리 키를 계층 구조로 중앙 관리(예: ['profile', 'me'], ['friends', 'list', userId])하여 관련 캐시를 한 번에 무효화할 수 있도록 구현했습니다. 데이터별 캐시 시간 차별화(프로필 5분, 친구 3분, 통화 기록 1분), 수정 후 선택적 갱신, 깜빡임 없는 로딩(이전 데이터 유지)으로 네트워크 요청 약 40% 감소를 달성했습니다.
 
 ## 개발 생산성/DX 개선
 
-### 8. React Native CLI iOS/Android 플랫폼 관리
+### 9. React Native CLI iOS/Android 플랫폼 관리
 
-React Native 0.82 업그레이드 후 발생한 iOS 모듈 충돌 문제를 Podfile `post_install` 훅 8단계 자동화 스크립트로 해결했습니다. Android SDK 버전 통일, 환경 변수 플랫폼 분기(`Platform.select`)로 양 플랫폼 안정적 빌드 환경을 구축했습니다.
+React Native 0.82 업그레이드 후 발생한 iOS 내부 모듈 간 이름 충돌 문제를 Podfile post_install 훅 8단계 자동화 스크립트(충돌 원인 파일 삭제, 중복 설정 제거, 컴파일러 플래그 정리)로 해결했습니다. Agora/Firebase 등 네이티브 라이브러리의 Android SDK 버전 통일(compileSdk 36), iOS/Android 에뮬레이터별 로컬 서버 주소 자동 분기로 양 플랫폼 안정적 빌드 환경을 구축했습니다.
 
-### 9. 6개 무료 티어 서비스 통합 ($0/월 운영)
+### 10. 6개 무료 티어 서비스 통합 ($0/월 운영)
 
-Supabase, Upstash, Agora, Firebase, Hugging Face, Render 등 6개 무료 티어 서비스를 통합하여 월 $0 인프라 비용으로 프로덕션급 환경을 구축했습니다. 베타 20명 기준 사용량 계산 및 한도 80% 도달 시 알림 설정으로 안정적 운영을 보장합니다.
+Supabase(DB 500MB + Storage 1GB), Upstash(Redis 일 10,000명령), Agora(월 10,000분), Firebase(FCM 무제한), Hugging Face(월 30,000요청), Render(월 750시간) 등 6개 무료 티어 서비스를 통합하여 월 $0 인프라 비용으로 프로덕션급 환경을 구축했습니다. AI 캡처 주기 최적화(3초→4초, 25% 요청 감소), 서버 자동 절전 대응(5분마다 헬스체크), 한도 80% 도달 시 알림 설정으로 안정적 운영을 보장합니다.
 
 ## 풀스택 역량 확장
 
-### 10. 첫 백엔드 개발 경험
+### 11. 첫 백엔드 개발 경험
 
-웹 프론트엔드 개발자에서 Node.js/Express 서버 구현까지 경험하며 풀스택 역량을 확장했습니다. Prisma ORM 스키마 설계, JWT 인증 플로우, Socket.io 실시간 통신, 6개 외부 서비스 통합을 학습하고 적용했습니다.
+웹 프론트엔드 개발자에서 Node.js/Express 서버 구현까지 경험하며 풀스택 역량을 확장했습니다. Express 미들웨어 체인(인증→검증→로직→에러처리) 설계, 9개 데이터 모델과 관계 설정(1:N, N:M, 자기 참조), JWT 이중 토큰 구조(Access 1시간 + Refresh 7일), Socket.io Room 기반 실시간 통신, 6개 외부 서비스 통합을 학습하고 적용했습니다.
+
+### 12. 어드민 대시보드 풀스택 구현
+
+권한 검증 이중 체크(DB role 필드 + 환경변수 관리자 이메일)와 어드민 전용 API를 구현했습니다. 백엔드에서 5개 통계 쿼리 병렬 처리(순차 대비 5배 빠른 응답), 15분당 50회 요청 제한으로 과부하 방지를 적용했습니다. 모바일에서 React Query 무한 스크롤, 신고 상태별 필터링(대기중/검토중/처리완료/기각) UI, 관리자 여부에 따른 어드민 탭 조건부 렌더링으로 AI 모니터링 로그 및 신고 내역 관리 기능을 제공합니다.
