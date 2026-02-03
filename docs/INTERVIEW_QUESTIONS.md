@@ -509,6 +509,7 @@ Beyond Meet에서는 명확한 기준으로 구분했습니다:
 - 랜덤 매칭 요청/응답 (match:request → match:found)
 - 통화 시그널링 (call:accept, call:reject, call:end)
 - 모더레이션 경고 (moderation:warning)
+- 토큰 자동 갱신 (auth:token-refreshed)
 - 이유: 즉시 응답이 필요하고, 서버에서 클라이언트로 푸시해야 함
 
 [REST API 사용 (요청-응답)]
@@ -516,6 +517,7 @@ Beyond Meet에서는 명확한 기준으로 구분했습니다:
 - 친구 목록 조회 (/friends)
 - 통화 기록 저장 (/calls)
 - 파일 업로드 (/users/me/photos)
+- 이메일 인증 (/auth/send-verification-code, /auth/verify-code)
 - 이유: 데이터 영속성 필요, 소켓 끊겨도 데이터 유지
 
 [하이브리드 케이스]
@@ -527,6 +529,68 @@ Beyond Meet에서는 명확한 기준으로 구분했습니다:
 **코드 증거**:
 - Socket: [backend/src/sockets/match-handler.ts](backend/src/sockets/match-handler.ts)
 - REST: [backend/src/routes/](backend/src/routes/)
+
+---
+
+#### Q10-1. Socket 연결 시 토큰 자동 갱신은 어떻게 구현했나요?
+
+**모범 답변**:
+```typescript
+// Beyond Meet의 Socket 토큰 자동 갱신 구현
+
+// 1. 클라이언트: 연결 시 refreshToken도 함께 전송
+const socket = io(SOCKET_URL, {
+  auth: {
+    token: accessToken,
+    refreshToken: refreshToken  // 추가
+  },
+  transports: ['websocket'],
+});
+
+// 2. 서버: 토큰 검증 시 만료된 경우 자동 갱신
+io.use(async (socket, next) => {
+  const { token, refreshToken } = socket.handshake.auth;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.userId = decoded.userId;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError' && refreshToken) {
+      // refreshToken으로 새 토큰 발급
+      const newTokens = await refreshTokens(refreshToken);
+
+      // 새 토큰을 클라이언트에 전송
+      socket.emit('auth:token-refreshed', {
+        accessToken: newTokens.accessToken,
+        refreshToken: newTokens.refreshToken
+      });
+
+      socket.userId = newTokens.userId;
+      next();
+    } else {
+      next(new Error('Authentication failed'));
+    }
+  }
+});
+
+// 3. 클라이언트: 새 토큰 수신 시 저장
+socket.on('auth:token-refreshed', (data) => {
+  useAuthStore.getState().setTokens(
+    data.accessToken,
+    data.refreshToken
+  );
+});
+
+// [장점]
+// - HTTP와 Socket 모두 동일한 토큰 갱신 로직
+// - 사용자 경험 향상 (재연결 불필요)
+// - 토큰 만료로 인한 연결 끊김 방지
+```
+
+**코드 증거**:
+- 서버: [backend/src/sockets/match-handler.ts](backend/src/sockets/match-handler.ts)
+- 클라이언트: [mobile/src/services/socketService.ts](mobile/src/services/socketService.ts)
 
 ---
 
@@ -743,7 +807,211 @@ const analyzeWithRetry = async (imageBase64: string, retries = 3) => {
 
 ---
 
-### 2.4 추천 알고리즘 관련
+### 2.4 이메일 인증 시스템 관련
+
+#### Q14-1. 이메일 인증 시스템은 어떻게 구현했나요?
+
+**모범 답변**:
+```typescript
+// Beyond Meet의 이메일 인증 파이프라인
+
+// 1. Resend 서비스 설정
+import { Resend } from 'resend';
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// 2. 인증 코드 생성 및 저장 (Redis)
+const sendVerificationCode = async (email: string) => {
+  // 6자리 인증 코드 생성
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Redis에 저장 (TTL: 10분)
+  await redis.set(`email_verification:${email}`, JSON.stringify({
+    code,
+    attempts: 0,
+    createdAt: Date.now()
+  }), 'EX', 600);
+
+  // 이메일 발송
+  await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL,
+    to: email,
+    subject: 'Beyond Meet 이메일 인증',
+    html: `인증 코드: <strong>${code}</strong> (10분간 유효)`
+  });
+};
+
+// 3. 인증 코드 확인
+const verifyCode = async (email: string, code: string) => {
+  const data = await redis.get(`email_verification:${email}`);
+  if (!data) throw new AppError(400, 'CODE_EXPIRED', '인증 코드가 만료되었습니다');
+
+  const { code: savedCode, attempts } = JSON.parse(data);
+
+  // 시도 횟수 제한 (5회)
+  if (attempts >= 5) {
+    throw new AppError(429, 'TOO_MANY_ATTEMPTS', '시도 횟수를 초과했습니다');
+  }
+
+  if (code !== savedCode) {
+    // 시도 횟수 증가
+    await redis.set(`email_verification:${email}`, JSON.stringify({
+      ...JSON.parse(data),
+      attempts: attempts + 1
+    }), 'KEEPTTL');
+    throw new AppError(400, 'INCORRECT_CODE', '잘못된 인증 코드입니다');
+  }
+
+  // 인증 완료 상태 저장 (TTL: 30분)
+  await redis.set(`email_verified:${email}`, 'true', 'EX', 1800);
+  await redis.del(`email_verification:${email}`);
+};
+
+// 4. 회원가입 시 인증 상태 확인
+const register = async (data: RegisterInput) => {
+  const isVerified = await redis.get(`email_verified:${data.email}`);
+  if (!isVerified) {
+    throw new AppError(403, 'EMAIL_NOT_VERIFIED', '이메일 인증이 필요합니다');
+  }
+  // ... 회원가입 진행
+};
+
+// [보안 고려사항]
+// - 인증 코드 TTL (10분)
+// - 시도 횟수 제한 (5회)
+// - Rate Limiting (재발송 10회/5분)
+// - 인증 완료 후 코드 즉시 삭제
+```
+
+**코드 증거**:
+- 서비스: [backend/src/services/email-service.ts](backend/src/services/email-service.ts)
+- 컨트롤러: [backend/src/controllers/auth-controller.ts](backend/src/controllers/auth-controller.ts)
+
+---
+
+#### Q14-2. 이메일 인증을 회원가입 전에 하는 이유는?
+
+**모범 답변**:
+```
+회원가입 전 이메일 인증(Pre-registration Verification) 방식을 선택한 이유:
+
+[1. 불필요한 계정 생성 방지]
+- 잘못된 이메일로 계정 생성 후 인증 실패 → 고아 계정 발생
+- 인증 먼저 → 유효한 이메일만 계정 생성 가능
+
+[2. 사용자 경험 개선]
+- 이메일 입력 → 인증 → 나머지 정보 입력
+- 마지막에 인증 실패하는 것보다 처음에 확인하는 게 나음
+
+[3. DB 정합성]
+- 미인증 사용자 관리 불필요
+- 모든 User 레코드는 인증된 이메일 보장
+
+[4. 초대 코드 시스템과 연동]
+- 초대 코드는 한 번만 사용 가능
+- 이메일 미인증으로 가입 실패 시 코드 낭비 방지
+
+[구현 흐름]
+1. Welcome 화면 → 이메일 입력
+2. 인증 코드 발송 → 코드 입력
+3. 인증 완료 → Redis에 상태 저장 (30분)
+4. 회원가입 폼 → 인증 상태 확인 후 진행
+
+[대안: 회원가입 후 인증의 단점]
+- 미인증 사용자 추적 필요
+- 일정 기간 후 삭제 로직 필요
+- 인증 독촉 이메일 발송 필요
+```
+
+**코드 증거**: [mobile/src/screens/auth/EmailVerificationScreen.tsx](mobile/src/screens/auth/EmailVerificationScreen.tsx)
+
+---
+
+### 2.5 다국어 지원 (i18n) 관련
+
+#### Q14-3. 다국어 지원은 어떻게 구현했나요?
+
+**모범 답변**:
+```typescript
+// Beyond Meet의 다국어(i18n) 구현
+
+// 1. i18next 설정 (mobile/src/i18n/index.ts)
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import ko from './locales/ko.json';
+import en from './locales/en.json';
+import ja from './locales/ja.json';
+
+i18n.use(initReactI18next).init({
+  resources: {
+    ko: { translation: ko },
+    en: { translation: en },
+    ja: { translation: ja },
+  },
+  lng: 'ko',  // 기본 언어
+  fallbackLng: 'ko',
+  interpolation: { escapeValue: false },
+});
+
+// 2. Zustand로 언어 상태 관리 (languageStore.ts)
+interface LanguageState {
+  language: 'ko' | 'en' | 'ja';
+  setLanguage: (lang: 'ko' | 'en' | 'ja') => void;
+}
+
+export const useLanguageStore = create<LanguageState>()(
+  persist(
+    (set) => ({
+      language: 'ko',
+      setLanguage: (lang) => {
+        i18n.changeLanguage(lang);
+        set({ language: lang });
+      },
+    }),
+    { name: 'language-storage' }
+  )
+);
+
+// 3. 컴포넌트에서 사용
+const HomeScreen = () => {
+  const { t } = useTranslation();
+
+  return (
+    <View>
+      <Text>{t('home.welcome')}</Text>
+      <Button title={t('home.startMatching')} />
+    </View>
+  );
+};
+
+// 4. 번역 파일 구조 (locales/ko.json)
+{
+  "home": {
+    "welcome": "환영합니다",
+    "startMatching": "매칭 시작"
+  },
+  "call": {
+    "connecting": "연결 중...",
+    "ended": "통화가 종료되었습니다"
+  }
+}
+
+// [지원 언어]
+// - 한국어 (ko) - 기본
+// - 영어 (en)
+// - 일본어 (ja)
+
+// [장점]
+// - 앱 재시작 없이 즉시 언어 변경
+// - AsyncStorage에 선택 저장 (persist)
+// - 중앙화된 번역 관리
+```
+
+**코드 증거**:
+- i18n 설정: [mobile/src/i18n/index.ts](mobile/src/i18n/index.ts)
+- 언어 스토어: [mobile/src/store/languageStore.ts](mobile/src/store/languageStore.ts)
+- 번역 파일: [mobile/src/i18n/locales/](mobile/src/i18n/locales/)
+
+---
 
 #### Q15. 매칭 알고리즘을 어떻게 설계했나요?
 
@@ -810,7 +1078,7 @@ const checkGenderPreference = (a: User, b: User) => {
 
 ---
 
-### 2.5 데이터 흐름 설계 관련
+### 2.7 데이터 흐름 설계 관련
 
 #### Q16. 전체 시스템의 데이터 흐름을 설명해주세요.
 
@@ -934,7 +1202,7 @@ io.use((socket, next) => {
 
 ---
 
-### 2.6 WebRTC & Agora 심화
+### 2.8 WebRTC & Agora 심화
 
 #### Q31. WebRTC의 핵심 개념을 설명해주세요.
 
@@ -1142,7 +1410,7 @@ agoraEngine.joinChannel(
 
 ---
 
-### 2.7 서버 기초 지식
+### 2.9 서버 기초 지식
 
 #### Q35. Express 미들웨어란 무엇인가요?
 
@@ -1315,7 +1583,7 @@ await prisma.$transaction(async (tx) => {
 
 ---
 
-### 2.8 아키텍처 패턴
+### 2.10 아키텍처 패턴
 
 #### Q38. 싱글톤 패턴을 Socket 서비스에 적용한 이유는?
 
@@ -1903,6 +2171,22 @@ export const off = (event: string, callback: Function) => {
 - [ ] AI 모더레이션 파이프라인 설명
 - [ ] Hugging Face API 연동 과정
 - [ ] Graceful Degradation 구현
+
+### 이메일 인증 시스템
+- [ ] Pre-registration 이메일 인증 선택 이유
+- [ ] Redis 기반 인증 코드 저장 (TTL, 시도 횟수 제한)
+- [ ] Resend 서비스 연동
+- [ ] 보안 고려사항 (Rate Limiting, 코드 만료)
+
+### 다국어 지원 (i18n)
+- [ ] i18next + react-i18next 설정
+- [ ] Zustand persist로 언어 설정 저장
+- [ ] 번역 파일 구조 (ko, en, ja)
+
+### Socket 토큰 관리
+- [ ] Socket 연결 시 토큰 자동 갱신 구현
+- [ ] auth:token-refreshed 이벤트 흐름
+- [ ] HTTP와 Socket 토큰 갱신 일관성
 
 ### 트러블슈팅
 - [ ] iOS requestAnimationFrame 해결

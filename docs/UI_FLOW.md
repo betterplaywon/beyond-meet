@@ -42,25 +42,25 @@ Radius:  Small(4) Medium(8) Large(16) Circle(50%)
 ## 화면 플로우
 
 ```
-Splash → Welcome → Register/Login → Onboarding (권한) → Main Tabs
-                                                          │
-                    ┌────────────────────────┬────────────┼────────────┐
-                    ▼                        ▼            ▼            ▼
-                  Home                    Friends      Profile      Admin*
-                    │                        │            │            │
-                    ▼                        ▼            ▼      ┌─────┼─────┐
-              [랜덤 매칭]              [친구 통화 요청]   [설정]  초대코드 모더레이션 신고
-                    │                        │
-                    └──────────┬─────────────┘
-                               ▼
-                        Incoming Call
-                               │
-                               ▼
-                        Video Call (5분)
-                               │
-                               ▼
-                         Call End
-                        [친구 추가]
+Splash → Welcome → Email Verification → Register/Login → Onboarding (권한) → Main Tabs
+                         │                                                       │
+                  [이메일 인증]                ┌────────────────────────┬────────┼────────────┐
+                                             ▼                        ▼        ▼            ▼
+                                           Home                    Friends   Profile      Admin*
+                                             │                        │         │            │
+                                             ▼                        ▼         ▼      ┌─────┼─────┐
+                                       [랜덤 매칭]              [친구 통화 요청] [설정]  초대코드 모더레이션 신고
+                                             │                        │
+                                             └──────────┬─────────────┘
+                                                        ▼
+                                                 Incoming Call
+                                                        │
+                                                        ▼
+                                                 Video Call (5분)
+                                                        │
+                                                        ▼
+                                                  Call End
+                                                 [친구 추가]
 
 * Admin 탭은 ADMIN role 전용
 ```
@@ -71,6 +71,7 @@ Splash → Welcome → Register/Login → Onboarding (권한) → Main Tabs
 
 | 화면 | 목적 |
 |------|------|
+| Email Verification | 회원가입 전 이메일 인증 |
 | Home | 랜덤 매칭 시작 |
 | Friends | 친구 목록, 온라인 상태, 직접 통화 |
 | Profile | 프로필 조회/편집, 통화 기록, 설정 |
@@ -112,3 +113,38 @@ Splash → Welcome → Register/Login → Onboarding (권한) → Main Tabs
 - **모달**: Slide up, 반투명 배경
 - **토스트**: 상단 3초 자동 닫힘
 - **햅틱**: 중요 액션 Heavy, 일반 Light
+
+---
+
+## 다국어 지원 (i18n)
+
+### 지원 언어
+
+| 언어 | 코드 | 상태 |
+|------|------|------|
+| 한국어 | ko | 기본 |
+| 영어 | en | 지원 |
+| 일본어 | ja | 지원 |
+
+### 구현
+
+- **라이브러리**: i18next, react-i18next
+- **상태 관리**: Zustand (`languageStore.ts`)
+- **번역 파일**: `mobile/src/i18n/locales/`
+
+### 언어 변경
+
+- 설정 화면에서 언어 선택 가능
+- 앱 재시작 없이 즉시 적용
+- 선택한 언어는 로컬 저장소에 저장
+
+### 사용 예시
+
+```typescript
+import { useTranslation } from 'react-i18next';
+
+const MyComponent = () => {
+  const { t } = useTranslation();
+  return <Text>{t('common.welcome')}</Text>;
+};
+```

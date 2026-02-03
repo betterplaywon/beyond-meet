@@ -19,6 +19,10 @@
 | POST | `/auth/reset-password` | 비밀번호 재설정 | Public |
 | POST | `/auth/change-password` | 비밀번호 변경 (로그인 상태) | Private |
 | DELETE | `/auth/account` | 회원 탈퇴 | Private |
+| POST | `/auth/send-verification-code` | 회원가입 전 이메일 인증 코드 발송 | Public |
+| POST | `/auth/verify-code` | 회원가입 전 인증 코드 확인 | Public |
+| POST | `/auth/verify-email` | 이메일 인증 (로그인 상태) | Private |
+| POST | `/auth/resend-verification` | 인증 코드 재발송 | Private |
 
 ### Users
 | Method | Endpoint | 설명 | Access |
@@ -229,6 +233,59 @@
 {
   "success": true,
   "data": { "message": "계정이 삭제되었습니다." }
+}
+```
+
+### 회원가입 전 이메일 인증 코드 발송
+`POST /api/auth/send-verification-code`
+
+```json
+// Request
+{ "email": "user@example.com" }
+
+// Response
+{
+  "success": true,
+  "data": { "message": "인증 코드가 이메일로 전송되었습니다." }
+}
+```
+
+### 회원가입 전 인증 코드 확인
+`POST /api/auth/verify-code`
+
+```json
+// Request
+{ "email": "user@example.com", "code": "123456" }
+
+// Response
+{
+  "success": true,
+  "data": { "message": "이메일이 인증되었습니다." }
+}
+```
+
+### 이메일 인증 (로그인 상태)
+`POST /api/auth/verify-email`
+
+```json
+// Request
+{ "code": "123456" }
+
+// Response
+{
+  "success": true,
+  "data": { "message": "이메일이 인증되었습니다." }
+}
+```
+
+### 인증 코드 재발송
+`POST /api/auth/resend-verification`
+
+```json
+// Response
+{
+  "success": true,
+  "data": { "message": "인증 코드가 재발송되었습니다." }
 }
 ```
 
@@ -581,6 +638,17 @@ socket.on('moderation:call-force-ended', (data) => {
 | `ADMIN_REQUIRED` | 403 | 관리자 권한 필요 |
 | `RATE_LIMIT_EXCEEDED` | 429 | 요청 횟수 초과 |
 | `INTERNAL_SERVER_ERROR` | 500 | 서버 오류 |
+| `EMAIL_NOT_VERIFIED` | 403 | 이메일 미인증 |
+| `EMAIL_SEND_FAILED` | 500 | 이메일 전송 실패 |
+| `NO_PENDING_VERIFICATION` | 400 | 대기 중인 인증 요청 없음 |
+| `CODE_EXPIRED` | 400 | 인증 코드 만료 |
+| `INCORRECT_CODE` | 400 | 잘못된 인증 코드 |
+| `TOO_MANY_ATTEMPTS` | 429 | 인증 시도 횟수 초과 |
+| `REDIS_NOT_CONFIGURED` | 500 | Redis 설정 오류 |
+| `USER_BLOCKED` | 403 | 차단된 사용자 |
+| `NOT_FRIENDS` | 403 | 친구 관계 아님 |
+| `MAX_PHOTOS_EXCEEDED` | 400 | 최대 사진 수 초과 (6장) |
+| `INVALID_AGE_RANGE` | 400 | 유효하지 않은 나이 범위 |
 
 ---
 
@@ -606,5 +674,6 @@ socket.on('moderation:call-force-ended', (data) => {
 | 인증 API (login) | 5회 | 15분 |
 | 비밀번호 재설정 | 3회 | 15분 |
 | 일반 API | 100회 | 15분 |
-| 파일 업로드 | 3회 | 1분 |
-| 관리자 API | 100회 | 15분 |
+| 파일 업로드 | 10회 | 1시간 |
+| 관리자 API | 50회 | 15분 |
+| 이메일 인증 재발송 | 10회 | 5분 |

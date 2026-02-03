@@ -43,12 +43,12 @@ cd ios && pod install && cd ..
 ```
 backend/src/
 ├── controllers/    # Request handlers (thin, delegate to services)
-├── services/       # Business logic (auth, match, call, push, admin, storage, moderation, user)
+├── services/       # Business logic (auth, match, call, push, admin, storage, moderation, user, email)
 ├── routes/         # Express route definitions (auth, user, friends, call, agora, push, admin, moderation)
-├── middlewares/    # auth.ts, errorHandler.ts, rateLimiter.ts, admin.ts, upload.ts
+├── middlewares/    # auth.ts, errorHandler.ts, rateLimiter.ts, admin.ts, upload.ts, validation.ts
 ├── sockets/        # Socket.io handlers (match-handler.ts)
-├── config/         # database.ts (Prisma), redis.ts, firebase.ts, supabase.ts
-└── utils/          # jwt.ts, password.ts, validation.ts, image-validator.ts
+├── config/         # database.ts (Prisma), redis.ts, firebase.ts, supabase.ts, resend.ts
+└── utils/          # jwt.ts, password.ts, validation.ts, image-validator.ts, age.ts, user-status.ts, relationship-checks.ts
 ```
 
 ### Mobile Structure
@@ -56,14 +56,16 @@ backend/src/
 ```
 mobile/src/
 ├── screens/        # Screen components by feature (auth/, home/, match/, call/, profile/, friends/, admin/)
-├── components/     # Reusable UI (common/, call/, moderation/)
+├── components/     # Reusable UI (common/, common/buttons/, call/, moderation/)
 ├── navigation/     # RootNavigator, AuthNavigator, MainNavigator, AdminNavigator
-├── services/       # API clients (api.ts, socketService.ts, pushService.ts, notificationService.ts)
-├── hooks/          # Custom hooks (useAuth, useSocket, useFriends, useProfile, useCallHistory, useAdmin, usePushNotifications, useNotificationSetup, useFriendStatusSync)
-├── store/          # Zustand stores (authStore.ts, callStore.ts, index.ts)
+├── services/       # API clients (api.ts, socketService.ts, pushService.ts, notificationService.ts, tokenRefresh.ts)
+├── hooks/          # Custom hooks (useAuth, useSocket, useFriends, useProfile, useCallHistory, useAdmin, usePushNotifications, useNotificationSetup, useFriendStatusSync, useEmailVerification)
+├── hooks/call/     # Call-related hooks (useAgoraEngine, useCallEnd, useCallSocketEvents, useCallTimer, useModeration)
+├── store/          # Zustand stores (authStore.ts, callStore.ts, languageStore.ts, index.ts)
 ├── api/            # API endpoint functions (auth.api.ts, agora.api.ts, client.ts)
 ├── constants/      # Query keys (queryKeys.ts)
 ├── styles/         # Design system (theme.ts)
+├── i18n/           # Internationalization (locales: ko, en, ja)
 └── config/         # env.ts (centralized environment variables)
 ```
 
@@ -97,7 +99,7 @@ mobile/src/
 
 Client → Server: `match:request`, `match:cancel`, `call:accept`, `call:reject`, `call:end`, `moderation:warning`, `moderation:force-end`
 
-Server → Client: `match:waiting`, `match:found`, `match:failed`, `match:cancelled`, `call:incoming`, `call:requested`, `call:accepted`, `call:rejected`, `call:ended`, `call:failed`, `friend:status-changed`, `moderation:warning-received`, `moderation:call-force-ended`
+Server → Client: `match:waiting`, `match:found`, `match:failed`, `match:cancelled`, `call:incoming`, `call:requested`, `call:accepted`, `call:rejected`, `call:ended`, `call:failed`, `friend:status-changed`, `moderation:warning-received`, `moderation:call-force-ended`, `auth:token-refreshed`
 
 ## Database Migration (Supabase)
 
@@ -191,6 +193,7 @@ import { uploadProfilePhoto, deleteProfilePhoto } from '../services/storage-serv
 | Firebase | FCM push notifications           | `backend/src/config/firebase.ts`                |
 | Upstash  | Redis cache                      | `backend/src/config/redis.ts`                   |
 | Hugging Face | AI content moderation        | `backend/src/services/moderation-service.ts`    |
+| Resend   | Email verification               | `backend/src/config/resend.ts`, `services/email-service.ts` |
 
 ## Reference Documentation
 

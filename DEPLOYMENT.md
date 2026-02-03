@@ -47,6 +47,10 @@ MODERATION_THRESHOLD_MINOR=0.7
 MODERATION_THRESHOLD_SEVERE=0.9
 MODERATION_ENABLED=true
 
+# Resend (Email Verification)
+RESEND_API_KEY="re_..."
+RESEND_FROM_EMAIL="noreply@yourdomain.com"
+
 # Other
 ALLOWED_ORIGINS=[DOMAIN]
 BETA_USER_LIMIT=30
@@ -73,6 +77,7 @@ AGORA_APP_ID=[APP_ID]
 | Agora | WebRTC | 10,000분/월 |
 | Firebase | Push 알림 | 무제한 |
 | Hugging Face | AI 모더레이션 | 30,000건/월 |
+| Resend | 이메일 인증 | 100건/일 |
 
 ---
 

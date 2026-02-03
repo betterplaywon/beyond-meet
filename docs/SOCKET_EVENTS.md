@@ -6,7 +6,10 @@
 import { io } from 'socket.io-client';
 
 const socket = io(API_BASE_URL, {
-  auth: { token: accessToken },
+  auth: {
+    token: accessToken,
+    refreshToken: refreshToken  // 토큰 자동 갱신을 위해 필요
+  },
   transports: ['websocket']
 });
 
@@ -19,6 +22,22 @@ socket.on('connect_error', (err) => console.error('Connection error:', err));
 - `인증 토큰이 필요합니다` - 토큰 미제공
 - `유효하지 않은 토큰입니다` - 토큰 검증 실패
 - `인증 실패` - 기타 인증 오류
+
+**토큰 자동 갱신:**
+
+소켓 연결 시 accessToken이 만료된 경우, 서버에서 자동으로 refreshToken을 사용하여 새 토큰을 발급합니다.
+
+```javascript
+// 토큰 갱신 수신
+socket.on('auth:token-refreshed', (data) => {
+  // {
+  //   accessToken: 'new-access-token',
+  //   refreshToken: 'new-refresh-token'
+  // }
+  // 로컬 스토리지에 새 토큰 저장
+  useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+});
+```
 
 ---
 
@@ -51,6 +70,7 @@ socket.on('connect_error', (err) => console.error('Connection error:', err));
 | `friend:status-changed` | 친구 상태 변경 |
 | `moderation:warning-received` | 경고 수신 |
 | `moderation:call-force-ended` | 강제 종료 |
+| `auth:token-refreshed` | 토큰 자동 갱신 |
 
 ---
 

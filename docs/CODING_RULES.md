@@ -308,6 +308,8 @@ callbacksRef.current = { onClick, onChange };
 | `loginSchema` | 로그인 입력 검증 |
 | `resetPasswordSchema` | 비밀번호 재설정 검증 |
 | `updateProfileSchema` | 프로필 업데이트 검증 |
+| `sendVerificationCodeSchema` | 이메일 인증 코드 발송 |
+| `verifyCodeSchema` | 인증 코드 확인 |
 
 ### 비밀번호 규칙
 

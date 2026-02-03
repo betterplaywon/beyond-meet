@@ -18,19 +18,19 @@
 │  ┌────────────────────────────────────────────────────────────────┐ │
 │  │ Controllers: Auth, User, Match, Call, Admin, Moderation, Agora │ │
 │  │ Services:    Auth, User, Match, Call, Admin, Moderation, Push, │ │
-│  │              Storage                                            │ │
-│  │ Socket.io:   실시간 매칭/통화 이벤트                             │ │
+│  │              Storage, Email                                     │ │
+│  │ Socket.io:   실시간 매칭/통화 이벤트 + 토큰 자동 갱신            │ │
 │  │ Hugging Face API: AI 콘텐츠 모더레이션                          │ │
 │  └────────────────────────────────────────────────────────────────┘ │
-└──────────┬─────────────────┬─────────────────┬──────────────────────┘
-           │                 │                 │
-           ▼                 ▼                 ▼
-┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│    Supabase      │ │  Upstash Redis   │ │  Firebase FCM    │
-│   PostgreSQL     │ │  (10k 명령/일)    │ │  (푸시 알림)      │
-│  + Storage (1GB) │ │                  │ │                  │
-│   (500MB 무료)   │ │                  │ │                  │
-└──────────────────┘ └──────────────────┘ └──────────────────┘
+└──────┬─────────────────┬─────────────────┬─────────────────┬────────┘
+       │                 │                 │                 │
+       ▼                 ▼                 ▼                 ▼
+┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐ ┌─────────┐
+│   Supabase   │ │  Upstash Redis   │ │  Firebase FCM    │ │ Resend  │
+│  PostgreSQL  │ │  (10k 명령/일)    │ │  (푸시 알림)      │ │ (이메일) │
+│ + Storage    │ │                  │ │                  │ │100건/일 │
+│ (500MB 무료) │ │                  │ │                  │ │         │
+└──────────────┘ └──────────────────┘ └──────────────────┘ └─────────┘
 ```
 
 ---
@@ -49,7 +49,8 @@ backend/src/
 │   ├── admin-service.ts
 │   ├── moderation-service.ts
 │   ├── push-service.ts
-│   └── storage-service.ts    # Supabase Storage 파일 업로드/삭제
+│   ├── storage-service.ts    # Supabase Storage 파일 업로드/삭제
+│   └── email-service.ts      # 이메일 인증 (Resend)
 ├── routes/             # API routes
 │   ├── auth-routes.ts
 │   ├── user-routes.ts
@@ -71,7 +72,8 @@ backend/src/
 │   ├── database.ts         # Prisma client
 │   ├── redis.ts            # Upstash Redis
 │   ├── firebase.ts         # FCM
-│   └── supabase.ts         # Supabase client
+│   ├── supabase.ts         # Supabase client
+│   └── resend.ts           # Resend 이메일 서비스
 └── utils/
     ├── jwt.ts              # JWT 생성/검증
     ├── password.ts         # bcrypt 해싱
@@ -83,7 +85,7 @@ backend/src/
 ```
 mobile/src/
 ├── screens/            # Screen components by feature
-│   ├── auth/           # LoginScreen, RegisterScreen, SplashScreen, WelcomeScreen
+│   ├── auth/           # LoginScreen, RegisterScreen, SplashScreen, WelcomeScreen, EmailVerificationScreen
 │   ├── home/           # HomeScreen
 │   ├── match/          # MatchingScreen
 │   ├── call/           # VideoCallScreen, CallHistoryScreen, CallEndScreen
@@ -92,6 +94,7 @@ mobile/src/
 │   └── admin/          # AdminScreen, ModerationLogsScreen, ReportsScreen
 ├── components/
 │   ├── common/         # Avatar, Button, Input, NotificationPermissionModal, Picker
+│   │   └── buttons/    # PrimaryButton, SecondaryButton 등
 │   ├── call/           # CallControls, CallTimer, IncomingCallModal
 │   └── moderation/     # ModerationWarningModal
 ├── navigation/
@@ -117,11 +120,25 @@ mobile/src/
 │   ├── useAdmin.ts
 │   ├── usePushNotifications.ts
 │   ├── useNotificationSetup.ts
-│   └── useFriendStatusSync.ts
+│   ├── useFriendStatusSync.ts
+│   ├── useEmailVerification.ts  # 이메일 인증 훅
+│   └── call/                    # 통화 관련 훅
+│       ├── useAgoraEngine.ts
+│       ├── useCallEnd.ts
+│       ├── useCallSocketEvents.ts
+│       ├── useCallTimer.ts
+│       └── useModeration.ts
 ├── store/
 │   ├── authStore.ts        # 인증 상태 (Zustand)
 │   ├── callStore.ts        # 통화 상태 (Zustand)
+│   ├── languageStore.ts    # 언어 설정 (Zustand)
 │   └── index.ts
+├── i18n/                   # 다국어 지원
+│   ├── index.ts
+│   └── locales/
+│       ├── ko.json         # 한국어
+│       ├── en.json         # 영어
+│       └── ja.json         # 일본어
 ├── api/
 │   ├── auth.api.ts
 │   ├── agora.api.ts
@@ -142,12 +159,13 @@ mobile/src/
 
 | 영역 | 기술 |
 |------|------|
-| Frontend | React Native, TypeScript, Zustand, React Query (@tanstack/react-query) |
+| Frontend | React Native, TypeScript, Zustand, React Query (@tanstack/react-query), i18next |
 | Backend | Node.js, Express, TypeScript, Prisma, Zod |
 | Database | PostgreSQL (Supabase), Redis (Upstash) |
 | Storage | Supabase Storage (프로필 사진) |
 | Video | Agora SDK |
 | Push | Firebase Cloud Messaging |
+| Email | Resend (이메일 인증) |
 | AI | Hugging Face API (NSFW 감지: Falconsai/nsfw_image_detection) |
 
 ---
@@ -161,6 +179,8 @@ matching:queue                    → 매칭 대기열 (Set)
 session:{sessionId}:caller        → 세션 caller ID
 recent:call:{userId1}:{userId2}   → 최근 통화 (TTL: 30분)
 moderation:quota:{year}-{month}   → AI 모더레이션 월간 사용량
+email_verification:{email}        → 이메일 인증 코드 (TTL: 10분)
+email_verified:{email}            → 인증 완료 상태 (TTL: 30분)
 ```
 
 ---
@@ -207,14 +227,19 @@ moderation:quota:{year}-{month}   → AI 모더레이션 월간 사용량
 └──────┬──────┘                    └──────┬──────┘
        │                                  │
        │─── Connect ─────────────────────►│
-       │    auth: { token: accessToken }  │
+       │    auth: { token: accessToken,   │
+       │            refreshToken }        │
        │                                  │
        │                    authenticateSocket()
        │                    - 토큰 검증
+       │                    - (만료 시) refreshToken으로 자동 갱신
        │                    - userId를 socket에 저장
        │                    - user.onlineStatus = ONLINE
        │                                  │
        │◄── 'connect' ────────────────────│
+       │                                  │
+       │◄── 'auth:token-refreshed' ───────│ (토큰 자동 갱신 시)
+       │    { accessToken, refreshToken } │
        │                                  │
        │                    setupMatchHandlers()
        │                    - socket.join(userId)
