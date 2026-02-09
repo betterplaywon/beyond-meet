@@ -169,7 +169,7 @@ export const endCall = async (callId: string, data: EndCallInput) => {
     // 사용자 온라인 상태 업데이트
     await tx.user.updateMany({
       where: {
-        id: { in: [call.callerId, call.receiverId] },
+        id: { in: [call.callerId, call.receiverId].filter((id): id is string => id !== null) },
       },
       data: {
         onlineStatus: "ONLINE",

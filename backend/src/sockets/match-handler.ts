@@ -279,6 +279,10 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
     try {
       const session = await matchService.acceptMatch(data.sessionId, userId);
 
+      if (!session.userId1 || !session.userId2) {
+        throw new Error("세션 사용자 정보가 없습니다");
+      }
+
       // 수락한 사용자 (userId2)의 토큰 및 UID 생성
       const user2TokenData = matchService.generateAgoraToken(
         session.channelName,
@@ -398,7 +402,7 @@ export const setupMatchHandlers = (io: Server, socket: AuthenticatedSocket) => {
           where: { id: data.sessionId },
         });
 
-        if (!session) {
+        if (!session || !session.userId1 || !session.userId2) {
           console.log("[MODERATION] Session not found:", data.sessionId);
           return;
         }
