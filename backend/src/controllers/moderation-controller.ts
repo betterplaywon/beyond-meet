@@ -56,7 +56,7 @@ export const analyzeFrame = async (
           select: { userId1: true, userId2: true },
         });
 
-        if (session) {
+        if (session && session.userId1 && session.userId2) {
           const reportedUserId = session.userId1 === userId ? session.userId2 : session.userId1;
 
           await moderationService.createAutoReport({

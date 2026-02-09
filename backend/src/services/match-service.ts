@@ -143,8 +143,8 @@ export const createMatchSession = async (
 
   return {
     id: session.id,
-    userId1: session.userId1,
-    userId2: session.userId2,
+    userId1: session.userId1!,
+    userId2: session.userId2!,
     channelName: session.channelName,
     token: "", // Socket 핸들러에서 각 사용자별로 생성
     uid: 0, // Socket 핸들러에서 각 사용자별로 생성
@@ -496,7 +496,7 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
   await prisma.user.updateMany({
     where: {
       id: {
-        in: [session.userId1, session.userId2],
+        in: [session.userId1, session.userId2].filter((id): id is string => id !== null),
       },
     },
     data: {
@@ -509,8 +509,8 @@ export const rejectMatch = async (sessionId: string, userId: string) => {
     rejected: true,
     session: {
       id: session.id,
-      userId1: session.userId1,
-      userId2: session.userId2,
+      userId1: session.userId1!,
+      userId2: session.userId2!,
     },
   };
 };
@@ -613,7 +613,7 @@ export const endCall = async (sessionId: string, userId: string) => {
   await prisma.user.updateMany({
     where: {
       id: {
-        in: [session.userId1, session.userId2],
+        in: [session.userId1, session.userId2].filter((id): id is string => id !== null),
       },
     },
     data: {
@@ -627,8 +627,8 @@ export const endCall = async (sessionId: string, userId: string) => {
     duration,
     session: {
       id: session.id,
-      userId1: session.userId1,
-      userId2: session.userId2,
+      userId1: session.userId1!,
+      userId2: session.userId2!,
     },
   };
 };
