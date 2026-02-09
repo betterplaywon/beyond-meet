@@ -256,11 +256,17 @@ export const getCallHistory = async (
 
     return {
       id: call.id,
-      partner: {
-        id: partner.id,
-        nickname: partner.nickname,
-        profilePhotos: partner.profilePhotos,
-      },
+      partner: partner
+        ? {
+            id: partner.id,
+            nickname: partner.nickname,
+            profilePhotos: partner.profilePhotos,
+          }
+        : {
+            id: null,
+            nickname: '탈퇴한 사용자',
+            profilePhotos: [],
+          },
       // status는 명확한 값만 반환 (COMPLETED, MISSED, REJECTED 등)
       status: call.status,
       // startTime이 없으면 createdAt 사용 (항상 유효한 값 보장)
@@ -316,8 +322,13 @@ export const getSessionInfo = async (sessionId: string, userId: string) => {
     throw new AppError(403, "FORBIDDEN", "이 세션에 접근할 수 없습니다");
   }
 
-  // 상대방 정보 추출
-  const partner = session.userId1 === userId ? session.user2 : session.user1;
+  // 상대방 정보 추출 (탈퇴한 사용자는 NULL일 수 있음)
+  const partnerUser = session.userId1 === userId ? session.user2 : session.user1;
+  const partner = partnerUser ?? {
+    id: null,
+    nickname: '탈퇴한 사용자',
+    profilePhotos: [],
+  };
 
   return {
     session: {

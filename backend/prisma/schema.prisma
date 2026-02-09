@@ -84,8 +84,8 @@ enum UserRole {
 
 model MatchSession {
   id              String    @id @default(uuid())
-  userId1         String    @map("user_id_1")
-  userId2         String    @map("user_id_2")
+  userId1         String?   @map("user_id_1")
+  userId2         String?   @map("user_id_2")
   channelName     String    @unique @map("channel_name")
   status          MatchStatus @default(PENDING)
   matchType       MatchType @map("match_type")
@@ -96,8 +96,8 @@ model MatchSession {
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // Relations
-  user1           User      @relation("User1Sessions", fields: [userId1], references: [id])
-  user2           User      @relation("User2Sessions", fields: [userId2], references: [id])
+  user1           User?     @relation("User1Sessions", fields: [userId1], references: [id], onDelete: SetNull)
+  user2           User?     @relation("User2Sessions", fields: [userId2], references: [id], onDelete: SetNull)
   callRecords     CallRecord[]
   callEvents      CallEvent[]
   moderationLogs  ContentModerationLog[]
@@ -124,8 +124,8 @@ enum MatchType {
 model CallRecord {
   id              String    @id @default(uuid())
   sessionId       String    @map("session_id")
-  callerId        String    @map("caller_id")
-  receiverId      String    @map("receiver_id")
+  callerId        String?   @map("caller_id")
+  receiverId      String?   @map("receiver_id")
   status          CallStatus @default(INITIATED)
   startTime       DateTime? @map("start_time")
   endTime         DateTime? @map("end_time")
@@ -135,9 +135,9 @@ model CallRecord {
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // Relations
-  session         MatchSession @relation(fields: [sessionId], references: [id])
-  caller          User      @relation("CallerCalls", fields: [callerId], references: [id])
-  receiver        User      @relation("ReceiverCalls", fields: [receiverId], references: [id])
+  session         MatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  caller          User?     @relation("CallerCalls", fields: [callerId], references: [id], onDelete: SetNull)
+  receiver        User?     @relation("ReceiverCalls", fields: [receiverId], references: [id], onDelete: SetNull)
 
   // Performance: 통화 기록 조회 최적화
   @@index([callerId, createdAt(sort: Desc)])
@@ -164,7 +164,7 @@ model CallEvent {
   metadata        Json?
 
   // Relations
-  session         MatchSession @relation(fields: [sessionId], references: [id])
+  session         MatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("call_events")
 }
@@ -192,8 +192,8 @@ model Friendship {
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // Relations
-  user            User      @relation("UserFriendships", fields: [userId], references: [id])
-  friend          User      @relation("FriendOf", fields: [friendId], references: [id])
+  user            User      @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend          User      @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendId])
   // Performance: 친구 목록 조회 최적화
@@ -209,8 +209,8 @@ model BlockList {
   createdAt       DateTime  @default(now()) @map("created_at")
 
   // Relations
-  user            User      @relation("BlockedBy", fields: [userId], references: [id])
-  blockedUser     User      @relation("Blocking", fields: [blockedUserId], references: [id])
+  user            User      @relation("BlockedBy", fields: [userId], references: [id], onDelete: Cascade)
+  blockedUser     User      @relation("Blocking", fields: [blockedUserId], references: [id], onDelete: Cascade)
 
   @@unique([userId, blockedUserId])
   @@map("block_list")
@@ -224,7 +224,7 @@ model DeviceToken {
   lastUpdated     DateTime  @default(now()) @map("last_updated")
 
   // Relations
-  user            User      @relation(fields: [userId], references: [id])
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("device_tokens")
 }
@@ -283,8 +283,8 @@ model ContentModerationLog {
   metadata        Json?
 
   // Relations
-  session         MatchSession @relation(fields: [sessionId], references: [id])
-  user            User         @relation(fields: [userId], references: [id])
+  session         MatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([userId])

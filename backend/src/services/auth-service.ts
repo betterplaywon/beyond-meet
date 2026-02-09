@@ -421,31 +421,19 @@ export const deleteAccount = async (userId: string, password: string): Promise<v
     throw new AppError(400, 'INVALID_PASSWORD', '비밀번호가 올바르지 않습니다');
   }
 
-  // 2. 진행 중인 통화 확인
-  const activeSession = await prisma.matchSession.findFirst({
+  // 2. 진행 중인 세션 강제 종료
+  await prisma.matchSession.updateMany({
     where: {
       OR: [{ userId1: userId }, { userId2: userId }],
       status: { in: ['PENDING', 'ACTIVE'] },
     },
+    data: { status: 'CANCELLED' },
   });
 
-  if (activeSession) {
-    throw new AppError(
-      409,
-      'ACTIVE_CALL_IN_PROGRESS',
-      '진행 중인 통화가 있습니다. 통화 종료 후 다시 시도해주세요.'
-    );
-  }
-
-  // 3. 트랜잭션으로 모든 관련 데이터 삭제
+  // 3. 트랜잭션으로 데이터 삭제 (CASCADE 설정으로 간소화)
   await prisma.$transaction(
     async (tx) => {
-      // 3.1 ContentModerationLog 삭제
-      await tx.contentModerationLog.deleteMany({
-        where: { userId },
-      });
-
-      // 3.2 Report 익명화 (reporterId, reportedUserId를 null로 설정)
+      // Report 익명화 (SET NULL - CASCADE가 아닌 수동 처리)
       await tx.report.updateMany({
         where: { reporterId: userId },
         data: { reporterId: null },
@@ -455,61 +443,9 @@ export const deleteAccount = async (userId: string, password: string): Promise<v
         data: { reportedUserId: null },
       });
 
-      // 3.3 사용자 관련 MatchSession ID 수집
-      const userSessions = await tx.matchSession.findMany({
-        where: {
-          OR: [{ userId1: userId }, { userId2: userId }],
-        },
-        select: { id: true },
-      });
-      const sessionIds = userSessions.map((s) => s.id);
-
-      // 3.4 CallEvent 삭제
-      if (sessionIds.length > 0) {
-        await tx.callEvent.deleteMany({
-          where: { sessionId: { in: sessionIds } },
-        });
-      }
-
-      // 3.5 CallRecord 삭제
-      await tx.callRecord.deleteMany({
-        where: {
-          OR: [{ callerId: userId }, { receiverId: userId }],
-        },
-      });
-
-      // 3.6 MatchSession 삭제
-      await tx.matchSession.deleteMany({
-        where: {
-          OR: [{ userId1: userId }, { userId2: userId }],
-        },
-      });
-
-      // 3.7 Friendship 삭제 (양방향)
-      await tx.friendship.deleteMany({
-        where: {
-          OR: [{ userId }, { friendId: userId }],
-        },
-      });
-
-      // 3.8 BlockList 삭제 (양방향)
-      await tx.blockList.deleteMany({
-        where: {
-          OR: [{ userId }, { blockedUserId: userId }],
-        },
-      });
-
-      // 3.9 DeviceToken 삭제
-      await tx.deviceToken.deleteMany({
-        where: { userId },
-      });
-
-      // 3.10 EmailVerification 삭제
-      await tx.emailVerification.deleteMany({
-        where: { userId },
-      });
-
-      // 3.11 User 삭제
+      // User 삭제 → CASCADE로 관련 데이터 자동 삭제
+      // (Friendship, BlockList, DeviceToken, EmailVerification, ContentModerationLog)
+      // MatchSession, CallRecord의 사용자 FK는 SET NULL (상대방 기록 보존)
       await tx.user.delete({
         where: { id: userId },
       });
