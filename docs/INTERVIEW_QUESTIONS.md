@@ -2136,6 +2136,750 @@ export const off = (event: string, callback: Function) => {
 
 ---
 
+## 6. 최신 React 기술 심화
+
+#### Q43. React 18의 Concurrent Rendering이란?
+
+**모범 답변**:
+```
+Concurrent Rendering은 React 18에서 도입된 렌더링 방식으로,
+렌더링 작업을 중단하고 재개할 수 있게 해줍니다.
+
+[핵심 개념]
+
+1. Time Slicing (시간 분할)
+   - 긴 렌더링 작업을 작은 단위로 분할
+   - 각 단위 사이에 브라우저가 사용자 입력 처리 가능
+   - 결과: UI가 멈추지 않고 반응성 유지
+
+2. 우선순위 기반 렌더링
+   - 긴급한 업데이트 (사용자 입력) → 높은 우선순위
+   - 덜 긴급한 업데이트 (목록 필터링) → 낮은 우선순위
+   - 높은 우선순위 작업이 낮은 우선순위를 중단 가능
+
+3. Concurrent Mode vs Concurrent Features
+   - Concurrent Mode: React 17에서 실험적으로 존재 (전체 앱에 적용)
+   - Concurrent Features: React 18에서 점진적 도입 (opt-in 방식)
+   - createRoot()로 Concurrent Features 활성화
+
+[React 17 vs 18 비교]
+
+// React 17: Synchronous Rendering (동기)
+// 렌더링 시작하면 끝날 때까지 중단 불가
+// 긴 목록 렌더링 → UI 멈춤
+
+// React 18: Concurrent Rendering (동시성)
+// 렌더링 중에도 사용자 입력 처리 가능
+// 긴 목록 렌더링 중에도 타이핑 가능
+
+[활성화 방법]
+// React 17
+ReactDOM.render(<App />, document.getElementById('root'));
+
+// React 18
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+[Beyond Meet 적용 가능성]
+- 친구 목록 검색 시 useTransition으로 필터링 지연
+- 매칭 대기 중 UI 애니메이션 부드럽게 유지
+- 하지만 React Native는 아직 제한적 지원
+```
+
+---
+
+#### Q44. useTransition과 useDeferredValue의 차이점은?
+
+**모범 답변**:
+```typescript
+// 둘 다 "덜 긴급한" 업데이트를 표시하는 훅이지만 사용 방식이 다릅니다.
+
+// [useTransition - 상태 업데이트 자체를 지연]
+const SearchableList = () => {
+  const [query, setQuery] = useState('');
+  const [isPending, startTransition] = useTransition();
+
+  const handleChange = (e) => {
+    // 입력 필드는 즉시 업데이트 (긴급)
+    setQuery(e.target.value);
+
+    // 목록 필터링은 낮은 우선순위로 표시
+    startTransition(() => {
+      setFilteredItems(filterItems(items, e.target.value));
+    });
+  };
+
+  return (
+    <div>
+      <input value={query} onChange={handleChange} />
+      {isPending && <Spinner />}  {/* 전환 중 로딩 표시 */}
+      <ItemList items={filteredItems} />
+    </div>
+  );
+};
+
+// [useDeferredValue - 값 자체를 지연]
+const SearchableList = () => {
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
+
+  // query는 즉시 변경, deferredQuery는 지연됨
+  const filteredItems = useMemo(
+    () => filterItems(items, deferredQuery),
+    [deferredQuery]  // 지연된 값 사용
+  );
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {/* query !== deferredQuery면 로딩 상태 */}
+      <div style={{ opacity: query !== deferredQuery ? 0.7 : 1 }}>
+        <ItemList items={filteredItems} />
+      </div>
+    </div>
+  );
+};
+
+// [사용 케이스 구분]
+
+| 상황 | 권장 훅 | 이유 |
+|------|---------|------|
+| 상태 업데이트 제어 가능 | useTransition | 업데이트를 직접 래핑 |
+| props로 받은 값 | useDeferredValue | 부모 컴포넌트 수정 불가 |
+| 로딩 상태 필요 | useTransition | isPending 제공 |
+| 간단한 지연만 필요 | useDeferredValue | 코드 더 간단 |
+
+// [Beyond Meet 적용 예시]
+// 친구 목록 검색
+const FriendsSearch = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isPending, startTransition] = useTransition();
+  const { data: friends } = useFriends();
+
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);  // 입력은 즉시
+
+    startTransition(() => {
+      // 필터링은 나중에 (타이핑 끊기지 않음)
+      setFilteredFriends(friends.filter(f =>
+        f.nickname.includes(text)
+      ));
+    });
+  };
+};
+```
+
+---
+
+#### Q45. React Server Components(RSC)란?
+
+**모범 답변**:
+```typescript
+// React Server Components는 서버에서만 실행되는 컴포넌트입니다.
+// 클라이언트로 JavaScript가 전송되지 않습니다.
+
+// [Server Component vs Client Component]
+
+// Server Component (기본값 - Next.js 13+ App Router)
+// app/users/page.tsx
+async function UsersPage() {
+  // 서버에서 직접 DB 접근 가능!
+  const users = await prisma.user.findMany();
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+
+// Client Component ('use client' 지시어 필요)
+// app/components/Counter.tsx
+'use client';
+
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);  // 상태 사용 가능
+
+  return (
+    <button onClick={() => setCount(c => c + 1)}>
+      Count: {count}
+    </button>
+  );
+}
+
+// [Server Components의 장점]
+
+1. 번들 크기 감소
+   - 서버 컴포넌트의 JS는 클라이언트로 전송되지 않음
+   - 대형 라이브러리(moment, lodash)를 서버에서만 사용 가능
+
+2. 직접 백엔드 접근
+   - DB, 파일 시스템, 내부 API 직접 호출
+   - API 엔드포인트 없이 데이터 페칭
+
+3. 자동 코드 분할
+   - Client Component가 자동으로 lazy loading됨
+
+4. 스트리밍
+   - 컴포넌트 단위로 점진적 렌더링 가능
+
+// [제약 사항]
+
+Server Component에서 불가능한 것:
+- useState, useEffect 등 React 훅
+- 브라우저 API (window, document)
+- 이벤트 핸들러 (onClick, onChange)
+- Context (createContext)
+
+// [Server Component 구성 패턴]
+
+// 서버: 데이터 페칭 + 레이아웃
+// app/dashboard/page.tsx
+async function DashboardPage() {
+  const stats = await fetchStats();  // 서버에서 페칭
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <StatsDisplay stats={stats} />
+      <InteractiveChart />  {/* Client Component */}
+    </div>
+  );
+}
+
+// 클라이언트: 인터랙션이 필요한 부분만
+// app/components/InteractiveChart.tsx
+'use client';
+
+export function InteractiveChart() {
+  const [zoom, setZoom] = useState(1);
+  // ... 인터랙티브 차트 로직
+}
+
+// [Beyond Meet과의 관계]
+// 현재 Beyond Meet은 React Native (모바일 앱)
+// RSC는 웹 환경 (Next.js)에서 사용
+// 향후 웹 버전 개발 시 적용 가능:
+// - 프로필 페이지: Server Component (정적 데이터)
+// - 채팅/통화 UI: Client Component (실시간 인터랙션)
+```
+
+---
+
+#### Q46. Suspense의 동작 원리와 활용법은?
+
+**모범 답변**:
+```typescript
+// Suspense는 비동기 작업 중 fallback UI를 보여주는 컴포넌트입니다.
+
+// [기본 사용법]
+function App() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <AsyncComponent />  {/* 로딩 중이면 Loading 표시 */}
+    </Suspense>
+  );
+}
+
+// [동작 원리]
+
+1. 컴포넌트가 Promise를 throw
+2. Suspense가 이를 catch
+3. Promise가 resolve될 때까지 fallback 표시
+4. resolve되면 실제 컴포넌트 렌더링
+
+// [React 18의 Suspense 활용]
+
+// 1. 코드 분할 (React.lazy)
+const HeavyComponent = lazy(() => import('./HeavyComponent'));
+
+function App() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <HeavyComponent />
+    </Suspense>
+  );
+}
+
+// 2. Data Fetching (with React Query, SWR 등)
+// React Query v5 + Suspense
+const UserProfile = () => {
+  const { data } = useSuspenseQuery({
+    queryKey: ['user', userId],
+    queryFn: () => fetchUser(userId),
+  });
+
+  // data는 항상 존재 (undefined 아님)
+  return <div>{data.name}</div>;
+};
+
+// 사용하는 곳
+<Suspense fallback={<ProfileSkeleton />}>
+  <UserProfile />
+</Suspense>
+
+// 3. 중첩 Suspense (점진적 로딩)
+<Suspense fallback={<PageSkeleton />}>
+  <Header />
+  <Suspense fallback={<ContentSkeleton />}>
+    <MainContent />
+  </Suspense>
+  <Suspense fallback={<SidebarSkeleton />}>
+    <Sidebar />
+  </Suspense>
+</Suspense>
+
+// 4. Streaming SSR (Next.js App Router)
+// 서버에서 컴포넌트가 준비되는 대로 스트리밍
+async function Page() {
+  return (
+    <div>
+      <Header />  {/* 즉시 전송 */}
+      <Suspense fallback={<Spinner />}>
+        <SlowComponent />  {/* 준비되면 스트리밍 */}
+      </Suspense>
+    </div>
+  );
+}
+
+// [Suspense의 장점]
+
+1. 선언적 로딩 상태
+   - if (isLoading) return <Loading /> 패턴 제거
+   - 컴포넌트가 데이터만 신경 쓰면 됨
+
+2. 로딩 상태 통합
+   - 여러 비동기 작업을 하나의 fallback으로 처리
+   - 일관된 UX
+
+3. Concurrent Features와 통합
+   - useTransition과 함께 사용 가능
+   - 부드러운 전환 효과
+
+// [Beyond Meet 적용 가능 예시]
+// React Query의 useSuspenseQuery 활용
+const FriendsList = () => {
+  const { data: friends } = useSuspenseQuery({
+    queryKey: friendsKeys.all,
+    queryFn: () => friendsApi.getFriends(),
+  });
+
+  return <FlatList data={friends} ... />;
+};
+
+// 사용처
+<Suspense fallback={<FriendsListSkeleton />}>
+  <FriendsList />
+</Suspense>
+```
+
+---
+
+#### Q47. React 18의 자동 배칭(Automatic Batching)이란?
+
+**모범 답변**:
+```typescript
+// 자동 배칭은 여러 상태 업데이트를 하나의 리렌더링으로 묶는 기능입니다.
+
+// [React 17 vs React 18]
+
+// React 17: 이벤트 핸들러 내부에서만 배칭
+function handleClick() {
+  setCount(c => c + 1);  // 리렌더링 안 함
+  setFlag(f => !f);       // 리렌더링 안 함
+  // 여기서 1번 리렌더링 (배칭 O)
+}
+
+// 하지만 setTimeout, Promise에서는 배칭 안 됨
+setTimeout(() => {
+  setCount(c => c + 1);  // 리렌더링 1회
+  setFlag(f => !f);       // 리렌더링 1회
+  // 총 2번 리렌더링 (배칭 X) - React 17
+}, 1000);
+
+// React 18: 모든 곳에서 자동 배칭
+setTimeout(() => {
+  setCount(c => c + 1);  // 리렌더링 안 함
+  setFlag(f => !f);       // 리렌더링 안 함
+  // 1번 리렌더링 (자동 배칭 O) - React 18
+}, 1000);
+
+// Promise, fetch 콜백에서도 동일
+fetch('/api/data').then(() => {
+  setCount(c => c + 1);
+  setFlag(f => !f);
+  // React 18: 1번 리렌더링
+});
+
+// [배칭 비활성화가 필요한 경우: flushSync]
+import { flushSync } from 'react-dom';
+
+function handleClick() {
+  flushSync(() => {
+    setCount(c => c + 1);
+  });
+  // DOM이 즉시 업데이트됨
+
+  flushSync(() => {
+    setFlag(f => !f);
+  });
+  // DOM이 즉시 업데이트됨
+}
+
+// [flushSync 사용 케이스]
+// 1. DOM 측정이 필요한 경우
+const handleExpand = () => {
+  flushSync(() => {
+    setExpanded(true);
+  });
+  // 이 시점에서 DOM이 확장됨
+  const height = ref.current.getBoundingClientRect().height;
+  console.log('Expanded height:', height);
+};
+
+// 2. 외부 라이브러리와 동기화
+const handleScroll = () => {
+  flushSync(() => {
+    setScrollPosition(newPosition);
+  });
+  // 외부 차트 라이브러리가 새 위치 인식
+  chartLibrary.scrollTo(newPosition);
+};
+
+// [성능 향상 원리]
+// 3번의 setState → 1번의 리렌더링
+// - 가상 DOM diffing 1회
+// - 실제 DOM 업데이트 1회
+// - 레이아웃/페인트 1회
+
+// [Beyond Meet에서의 예시]
+// 통화 종료 시 여러 상태 업데이트
+const handleCallEnd = () => {
+  setIsInCall(false);
+  setCurrentSession(null);
+  setRemoteUid(0);
+  setCallDuration(0);
+  // React 18: 자동으로 1번만 리렌더링
+};
+```
+
+---
+
+#### Q48. Hydration이란 무엇이고, Selective Hydration은?
+
+**모범 답변**:
+```typescript
+// Hydration은 서버에서 렌더링된 HTML에 JavaScript 이벤트 핸들러를 연결하는 과정입니다.
+
+// [SSR + Hydration 흐름]
+
+// 1. 서버: HTML 문자열 생성
+const html = renderToString(<App />);
+// 결과: <button>Count: 0</button> (정적 HTML)
+
+// 2. 클라이언트: HTML 즉시 표시 (JavaScript 로딩 전)
+// 사용자는 콘텐츠를 빠르게 볼 수 있음 (FCP 향상)
+
+// 3. JavaScript 로드 완료 후: Hydration
+hydrateRoot(document.getElementById('root'), <App />);
+// React가 기존 DOM에 이벤트 핸들러 연결
+// 이제 버튼 클릭이 동작함
+
+// [Hydration Mismatch 에러]
+// 서버와 클라이언트 렌더링 결과가 다를 때 발생
+
+// ❌ 잘못된 예
+function Clock() {
+  return <span>{new Date().toLocaleTimeString()}</span>;
+  // 서버: "10:00:00"
+  // 클라이언트: "10:00:05" (시간 차이)
+  // → Hydration Mismatch!
+}
+
+// ✅ 올바른 예
+function Clock() {
+  const [time, setTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 클라이언트에서만 시간 설정
+    setTime(new Date().toLocaleTimeString());
+  }, []);
+
+  return <span>{time ?? 'Loading...'}</span>;
+}
+
+// [React 18의 Selective Hydration]
+
+// React 17: 전체 앱이 hydrate되어야 인터랙션 가능
+// React 18: Suspense 경계 단위로 독립적 hydration
+
+// 예시: 댓글이 무거운 페이지
+function Page() {
+  return (
+    <div>
+      <Header />      {/* 즉시 hydrate */}
+      <MainContent /> {/* 즉시 hydrate */}
+      <Suspense fallback={<CommentsSkeleton />}>
+        <Comments />  {/* 나중에 hydrate (Streaming) */}
+      </Suspense>
+    </div>
+  );
+}
+
+// [Selective Hydration의 장점]
+
+1. 우선순위 기반 Hydration
+   - 사용자가 클릭한 영역 먼저 hydrate
+   - 댓글 로딩 중 헤더 클릭 → 헤더 먼저 hydrate
+
+2. 스트리밍과 결합
+   - HTML이 준비되는 대로 전송
+   - JavaScript도 준비되는 대로 hydrate
+   - 전체 로딩 완료를 기다릴 필요 없음
+
+3. 점진적 사용자 경험
+   - 페이지 일부가 먼저 인터랙티브
+   - 전체 TTI(Time to Interactive) 개선
+
+// [Streaming SSR + Selective Hydration 흐름]
+
+1. 서버: Header HTML 생성 → 즉시 전송
+2. 클라이언트: Header 표시 + Hydrate 시작
+3. 서버: MainContent HTML 생성 → 전송
+4. 클라이언트: MainContent 표시 + Hydrate
+5. 서버: Comments 데이터 로드 중... (Suspense fallback 전송됨)
+6. 클라이언트: Comments 위치에 Skeleton 표시
+7. 서버: Comments HTML 완성 → 전송
+8. 클라이언트: Skeleton → Comments로 교체 + Hydrate
+
+// [Beyond Meet 웹 버전 적용 시]
+// 무거운 컴포넌트를 Suspense로 감싸서 점진적 로딩
+<Suspense fallback={<CallHistorySkeleton />}>
+  <CallHistory />  {/* 많은 데이터 로드 */}
+</Suspense>
+```
+
+---
+
+#### Q49. React의 Fiber 아키텍처를 설명해주세요.
+
+**모범 답변**:
+```
+Fiber는 React 16에서 도입된 새로운 재조정(Reconciliation) 알고리즘입니다.
+
+[등장 배경: Stack Reconciler의 한계]
+
+React 15 이하 (Stack Reconciler):
+- 재귀적으로 컴포넌트 트리 순회
+- 한번 시작하면 중단 불가능
+- 긴 작업 → 메인 스레드 블로킹 → UI 멈춤
+
+예시:
+렌더링 시작 → [컴포넌트 A → B → C → D → ...] → 완료
+             └─ 이 구간 동안 사용자 입력 무시
+
+[Fiber의 핵심 아이디어]
+
+1. 작업 단위화 (Unit of Work)
+   - 각 컴포넌트 = 하나의 Fiber 노드
+   - 작업을 작은 단위로 분할
+
+2. 중단 및 재개 가능
+   - 각 Fiber 작업 후 브라우저에 제어권 양보 가능
+   - 높은 우선순위 작업이 끼어들 수 있음
+
+3. 우선순위 시스템
+   - 긴급: 사용자 입력, 애니메이션
+   - 보통: 데이터 페칭 결과 반영
+   - 낮음: 화면 밖 컴포넌트 렌더링
+
+[Fiber 노드 구조]
+
+// 각 컴포넌트마다 생성되는 Fiber 객체
+interface Fiber {
+  type: any;           // 컴포넌트 함수 또는 'div' 같은 문자열
+  key: string | null;  // reconciliation용 키
+  stateNode: any;      // DOM 노드 또는 클래스 인스턴스
+
+  // 트리 구조 (연결 리스트)
+  return: Fiber | null;   // 부모 Fiber
+  child: Fiber | null;    // 첫 번째 자식 Fiber
+  sibling: Fiber | null;  // 다음 형제 Fiber
+
+  // 작업 관련
+  pendingProps: any;      // 새로 들어온 props
+  memoizedProps: any;     // 이전 렌더의 props
+  memoizedState: any;     // 이전 렌더의 state
+  updateQueue: any;       // 상태 업데이트 큐
+
+  // 효과(Effect) 관련
+  flags: Flags;           // 수행할 작업 (Placement, Update, Deletion)
+  subtreeFlags: Flags;    // 자식 트리의 작업 플래그
+}
+
+[Fiber 작업 흐름: 2단계 처리]
+
+1. Render Phase (중단 가능)
+   - Fiber 트리 순회하며 변경사항 계산
+   - 부수 효과(side effects) 수집
+   - DOM 조작 없음 (메모리에서만 작업)
+
+2. Commit Phase (중단 불가)
+   - 계산된 변경사항을 실제 DOM에 반영
+   - 생명주기 메서드 호출
+   - 동기적으로 실행 (일관성 보장)
+
+[Concurrent Rendering과의 관계]
+
+Fiber 아키텍처가 있기에 Concurrent Rendering 가능:
+
+// 작업 A 실행 중 높은 우선순위 B 발생
+작업 A 시작 → [Fiber 1] → [Fiber 2] → B 발생!
+             ↓
+작업 A 중단 → 작업 B 실행 → 완료
+             ↓
+작업 A 재개 → [Fiber 3] → [Fiber 4] → 완료
+
+// 이것이 useTransition, useDeferredValue의 동작 원리
+
+[메모리 구조: Double Buffering]
+
+current Fiber Tree  ←→  workInProgress Fiber Tree
+(현재 화면에 표시)        (다음 렌더링 계산 중)
+
+- 렌더링 완료 시 포인터만 교체 (빠른 전환)
+- 오류 발생 시 current 유지 (안전한 롤백)
+```
+
+---
+
+#### Q50. React Native에서 최신 React 기능을 어떻게 활용하나요?
+
+**모범 답변**:
+```typescript
+// React Native는 React의 Concurrent Features를 점진적으로 지원하고 있습니다.
+
+// [React Native의 새 아키텍처 (New Architecture)]
+
+// 1. Fabric - 새로운 렌더링 시스템
+// - C++로 작성된 새로운 UI 렌더러
+// - Concurrent Rendering 지원
+// - 동기적 레이아웃 측정 가능
+
+// 2. TurboModules - 새로운 네이티브 모듈 시스템
+// - Lazy loading (필요할 때만 로드)
+// - 동기/비동기 네이티브 호출 선택 가능
+// - 타입 안전성 향상
+
+// 3. JSI (JavaScript Interface)
+// - JavaScript와 네이티브 간 직접 통신
+// - Bridge 제거 → 성능 향상
+// - 동기적 네이티브 호출 가능
+
+// [React 18 기능의 RN 지원 현황]
+
+| 기능 | 지원 상태 | 비고 |
+|------|----------|------|
+| Automatic Batching | ✅ 지원 | 0.69+ |
+| useTransition | ⚠️ 제한적 | New Architecture 필요 |
+| useDeferredValue | ⚠️ 제한적 | New Architecture 필요 |
+| Suspense (lazy) | ✅ 지원 | 코드 분할용 |
+| Suspense (data) | ⚠️ 제한적 | 라이브러리 의존 |
+| Server Components | ❌ 미지원 | 웹 전용 |
+
+// [Beyond Meet에서 활용 가능한 최신 기능]
+
+// 1. Automatic Batching (이미 동작 중)
+const handleCallEnd = () => {
+  setIsInCall(false);
+  setCurrentSession(null);
+  setCallDuration(0);
+  // React Native 0.69+에서 자동 배칭
+};
+
+// 2. React.lazy로 화면 코드 분할
+const AdminScreen = React.lazy(() => import('./screens/admin/AdminScreen'));
+
+// 3. useSyncExternalStore (Zustand 내부 사용)
+// 외부 스토어와 React 동기화에 최적화된 훅
+// Zustand가 내부적으로 사용
+
+// [New Architecture 활성화 방법]
+
+// android/gradle.properties
+newArchEnabled=true
+
+// ios/Podfile
+ENV['RCT_NEW_ARCH_ENABLED'] = '1'
+
+// [New Architecture 활성화 시 이점]
+
+1. Concurrent Features 완전 지원
+   - useTransition으로 부드러운 화면 전환
+   - useDeferredValue로 검색 최적화
+
+2. 동기적 레이아웃 측정
+   // 이전: 비동기로 measure 필요
+   ref.current.measure((x, y, width, height) => { ... });
+
+   // New Architecture: 동기적 측정 가능
+   const { width, height } = ref.current.measureSync();
+
+3. 빠른 네이티브 호출
+   // TurboModules: JSI 기반 직접 호출
+   const result = NativeModule.calculateSync(data);
+
+// [Beyond Meet 마이그레이션 고려사항]
+
+1. 의존성 호환성 확인
+   - react-native-agora: New Architecture 지원 여부
+   - 기타 네이티브 모듈 확인
+
+2. 점진적 마이그레이션
+   - Bridgeless Mode 비활성화로 호환성 유지 가능
+   - 모든 라이브러리 준비 후 완전 전환
+
+3. 성능 프로파일링
+   - Flipper로 마이그레이션 전후 성능 비교
+   - JavaScript Thread, UI Thread 부하 측정
+
+// [실제 적용 예시: useTransition으로 검색 최적화]
+const FriendsScreen = () => {
+  const [query, setQuery] = useState('');
+  const [isPending, startTransition] = useTransition();
+  const { data: friends } = useFriends();
+
+  const filteredFriends = useMemo(() =>
+    friends?.filter(f => f.nickname.includes(query)) ?? [],
+    [friends, query]
+  );
+
+  const handleSearch = (text: string) => {
+    // New Architecture에서 완전 동작
+    startTransition(() => {
+      setQuery(text);
+    });
+  };
+
+  return (
+    <View>
+      <SearchInput onChangeText={handleSearch} />
+      {isPending && <ActivityIndicator />}
+      <FriendsList friends={filteredFriends} />
+    </View>
+  );
+};
+```
+
+---
+
 ## 준비 체크리스트
 
 ### 기술 스택
@@ -2197,3 +2941,13 @@ export const off = (event: string, callback: Function) => {
 - [ ] Beyond Meet 프로젝트 구조 설명
 - [ ] 3-Tier 매칭 알고리즘 설명
 - [ ] 데이터 흐름 (매칭 → 통화 → 종료)
+
+### 최신 React 기술
+- [ ] Concurrent Rendering 개념 (Time Slicing, 우선순위)
+- [ ] useTransition vs useDeferredValue 차이
+- [ ] React Server Components (RSC) 이해
+- [ ] Suspense 동작 원리 (Data Fetching, Streaming SSR)
+- [ ] 자동 배칭 (Automatic Batching) 개념
+- [ ] Hydration과 Selective Hydration
+- [ ] Fiber 아키텍처 (작업 단위, 중단/재개)
+- [ ] React Native New Architecture (Fabric, TurboModules, JSI)
