@@ -109,7 +109,9 @@ const CallEndScreen: React.FC<Props> = ({ navigation, route }) => {
     : formatDuration(sessionInfo?.session.duration || null);
 
   // friendAdded 상태 대신 mutation.isSuccess 사용
-  const showAddFriendButton = !isAlreadyFriend && !addFriendMutation.isSuccess;
+  // 탈퇴한 사용자(id가 null)에게는 친구 추가 버튼을 표시하지 않음
+  const isPartnerDeleted = !sessionInfo?.partner?.id;
+  const showAddFriendButton = !isPartnerDeleted && !isAlreadyFriend && !addFriendMutation.isSuccess;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
