@@ -12,11 +12,9 @@
 
 Beyond Meet는 WebRTC 기반 1:1 영상 통화 데이팅 앱입니다.
 
-- **플랫폼**: iOS, Android (React Native)
+- **플랫폼**: Android (React Native)
 - **개발 기간**: 50일 (2025-11-04 ~ 2025-12-24)
-- **현재 진행**: Day 7 (진행률 90% - 계획 대비 4-5주 앞섬) 🎉
-- **Beta 전략**: 20명 한정 초대 코드 시스템
-- **운영 비용**: $0/월 (Beta 단계)
+- **운영 비용**: $7/월 (Beta 단계)
 
 ---
 
@@ -85,19 +83,13 @@ beyond-meet/
 
 | 서비스         | 용도                 | 무료 한도              | 상태      |
 | -------------- | -------------------- | ---------------------- | --------- |
-| **Render.com** | 백엔드 호스팅        | 750시간/월             | ⚠️ 미설정 |
+| **Render.com** | 백엔드 호스팅        | 750시간/월             | ✅ 연결됨 |
 | **Supabase**   | PostgreSQL + Storage | 500MB DB + 1GB Storage | ✅ 연결됨 |
-| **Upstash**    | Redis 캐시           | 10,000 명령/일         | ⚠️ 미설정 |
-| **Firebase**   | FCM 푸시 알림        | 무제한                 | ⚠️ 미설정 |
-| **Agora**      | 영상 통화            | 10,000분/월            | ⚠️ 미설정 |
+| **Upstash**    | Redis 캐시           | 10,000 명령/일         | ✅ 연결됨 |
+| **Firebase**   | FCM 푸시 알림        | 무제한                 | ✅ 연결됨 |
+| **Agora**      | 영상 통화            | 10,000분/월            | ✅ 연결됨 |
 
 ---
-
-## 📊 현재 진행 상황 (2025-11-10 기준)
-
-### 전체 진행률: 90% (Day 7/50일) ⭐ +20% 증가
-
-#### ✅ Backend: 100% 완료 🎉
 
 **구현 완료:**
 
@@ -141,17 +133,6 @@ beyond-meet/
   - ✅ NotificationPermissionModal (권한 요청 UI)
   - ✅ 알림 타입별 화면 이동 (call_incoming, match_found, friend_request, call_ended)
   - ✅ 토큰 자동 갱신 및 서버 등록
-
-#### ⚠️ Infrastructure: 10% 완료
-
-**진행 필요:**
-
-- ❌ Render.com 배포 ⭐⭐⭐⭐⭐
-- ❌ Supabase DB 마이그레이션 실행 ⭐⭐⭐⭐⭐
-- ❌ Agora 프로젝트 설정 ⭐⭐⭐⭐⭐
-- ❌ Firebase FCM 설정 ⭐⭐⭐⭐⭐
-- ❌ Upstash Redis 설정 ⭐⭐⭐⭐
-- ❌ UptimeRobot 모니터링 ⭐⭐⭐
 
 ---
 
@@ -631,7 +612,3 @@ MIT License
 - **Docs**: [docs/](docs/)
 
 ---
-
-**버전**: 1.4.0
-**최종 업데이트**: 2025-11-10
-**상태**: 개발 진행 중 (90% 완료 - 백엔드 & 프론트엔드 100% 완료!) 🚀🎉
